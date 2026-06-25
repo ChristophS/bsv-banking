@@ -1,0 +1,1225 @@
+﻿<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>BSV Finanzdashboard</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">BSV</span>
+      <div>
+        <p class="eyebrow">Finanzverwaltung</p>
+        <h1>Banking Dashboard</h1>
+      </div>
+    </div>
+    <div class="database-state">
+      <span class="state-dot" aria-hidden="true"></span>
+      Lokale Datenbank
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <nav class="tabs" aria-label="Dashboard-Bereiche">
+      <button
+        class="tab is-active"
+        type="button"
+        role="tab"
+        aria-selected="true"
+        aria-controls="transactions-panel"
+        id="transactions-tab"
+        data-tab="transactions"
+      >
+        Transaktionen
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="vorgaenge-panel"
+        id="vorgaenge-tab"
+        data-tab="vorgaenge"
+      >
+        Vorgänge
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="todo-panel"
+        id="todo-tab"
+        data-tab="todos"
+      >
+        To-Dos
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="termine-panel"
+        id="termine-tab"
+        data-tab="termine"
+      >
+        Termine
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="budget-panel"
+        id="budget-tab"
+        data-tab="budget"
+      >
+        Budget
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="mail-panel"
+        id="mail-tab"
+        data-tab="mail"
+      >
+        Mails
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="other-tasks-panel"
+        id="other-tasks-tab"
+        data-tab="other-tasks"
+      >
+        Sonstige Aufgaben
+      </button>
+    </nav>
+
+    <section class="overview-strip" aria-label="Vorgangsübersicht">
+      <div class="overview-cards" id="overview-cards"></div>
+    </section>
+
+    <section
+      class="panel"
+      id="transactions-panel"
+      role="tabpanel"
+      aria-labelledby="transactions-tab"
+    >
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Gesamtübersicht</p>
+          <h2>Transaktionen</h2>
+          <p class="panel-description">
+            Alle importierten Kontobewegungen auf einen Blick.
+          </p>
+        </div>
+        <div class="result-count" aria-live="polite">
+          <strong id="transaction-count">0</strong>
+          <span id="transaction-count-label">Transaktionen</span>
+        </div>
+      </div>
+
+      <div class="transaction-actions">
+        <button id="toggle-balance-history" type="button">
+          Kontoverlauf anzeigen
+        </button>
+        <button id="toggle-rules" type="button">
+          Regeln verwalten
+        </button>
+        <button class="primary-action" id="refresh-transactions" type="button">
+          Aktuelle Kontobewegungen anfordern
+        </button>
+        <span id="refresh-status" aria-live="polite"></span>
+      </div>
+
+      <section class="utility-panel" id="balance-history-panel" hidden>
+        <div class="utility-heading">
+          <div>
+            <p class="eyebrow">Zeitlicher Verlauf</p>
+            <h3>Kontostände</h3>
+          </div>
+          <div class="history-period">
+            <label>
+              <span>Von</span>
+              <input id="history-date-from" type="date">
+            </label>
+            <label>
+              <span>Bis</span>
+              <input id="history-date-to" type="date">
+            </label>
+            <button id="load-balance-history" type="button">Anzeigen</button>
+          </div>
+        </div>
+        <div class="series-selector" id="history-series-selector"></div>
+        <div class="chart-frame">
+          <svg
+            id="balance-history-chart"
+            role="img"
+            aria-label="Grafischer Kontoverlauf"
+            viewBox="0 0 1000 360"
+            preserveAspectRatio="xMidYMid meet"
+          ></svg>
+          <div class="loading-state chart-loading" id="history-loading" hidden>
+            <span class="spinner" aria-hidden="true"></span>
+            Kontoverlauf wird berechnet
+          </div>
+          <div class="chart-empty" id="history-empty" hidden>
+            Für die Auswahl sind keine Kontostände verfügbar.
+          </div>
+        </div>
+      </section>
+
+      <section class="utility-panel" id="rules-panel" hidden>
+        <div class="utility-heading">
+          <div>
+            <p class="eyebrow">Automatische Klassifikation</p>
+            <h3>Regeln</h3>
+            <p>
+              Regeln greifen nur bei vollständig unklassifizierten
+              Transaktionen und überschreiben keine manuellen Eingaben.
+            </p>
+          </div>
+        </div>
+        <div class="rules-layout">
+          <div>
+            <div class="subsection-heading">
+              <h4>Aktuelle Regeln</h4>
+              <span id="rule-count">0 Regeln</span>
+            </div>
+            <label class="rule-search">
+              <span>Regeln durchsuchen</span>
+              <input
+                id="rule-search"
+                type="search"
+                autocomplete="off"
+                placeholder="Name, Bedingung oder Klassifikation"
+              >
+            </label>
+            <div class="rule-list" id="rule-list"></div>
+          </div>
+          <form class="rule-form" id="rule-form">
+            <h4 id="rule-form-title">Neue Regel</h4>
+            <label class="is-wide">
+              <span>Name</span>
+              <input name="name" type="text" maxlength="2000" required>
+            </label>
+            <fieldset class="rule-conditions is-wide">
+              <legend>Bedingungen</legend>
+              <div class="rule-condition-heading">
+                <p>
+                  UND und UND NICHT werden vor ODER und ODER NICHT
+                  ausgewertet.
+                </p>
+                <button id="rule-add-condition" type="button">
+                  + Bedingung
+                </button>
+              </div>
+              <div id="rule-conditions"></div>
+            </fieldset>
+            <label>
+              <span>Transaktionstyp</span>
+              <input
+                name="transaction_type"
+                type="text"
+                maxlength="2000"
+                required
+              >
+            </label>
+            <label>
+              <span>Oberkategorie</span>
+              <input
+                name="top_category"
+                type="text"
+                maxlength="2000"
+                required
+              >
+            </label>
+            <label>
+              <span>Unterkategorie</span>
+              <input
+                name="sub_category"
+                type="text"
+                maxlength="2000"
+                required
+              >
+            </label>
+            <label>
+              <span>Sphäre</span>
+              <select name="sphere" required>
+                <option value="Ideeller Bereich">Ideeller Bereich</option>
+                <option value="Zweckbetrieb">Zweckbetrieb</option>
+                <option value="Wirtschaftlicher Geschäftsbetrieb">
+                  Wirtschaftlicher Geschäftsbetrieb
+                </option>
+                <option value="Vermögensverwaltung">
+                  Vermögensverwaltung
+                </option>
+              </select>
+            </label>
+            <label class="is-wide">
+              <span>Fachliche Beschreibung</span>
+              <textarea
+                name="professional_description"
+                maxlength="2000"
+                rows="3"
+              ></textarea>
+            </label>
+            <label class="checkbox-field">
+              <input name="enabled" type="checkbox" checked>
+              <span>Regel aktivieren</span>
+            </label>
+            <label class="checkbox-field">
+              <input name="apply_now" type="checkbox" checked>
+              <span>Direkt auf unklassifizierte Transaktionen anwenden</span>
+            </label>
+            <div class="rule-form-actions is-wide">
+              <button
+                class="primary-action"
+                id="rule-submit"
+                type="submit"
+              >
+                Regel erstellen
+              </button>
+              <button id="rule-cancel-edit" type="button" hidden>
+                Bearbeitung abbrechen
+              </button>
+              <span id="rule-form-status" aria-live="polite"></span>
+            </div>
+          </form>
+        </div>
+        <div class="rule-section-divider"></div>
+        <div class="utility-heading">
+          <div>
+            <p class="eyebrow">Automatischer Vorgangsabschluss</p>
+            <h3>Abschlussregeln</h3>
+            <p>
+              Abschlussregeln laufen nach der Klassifikation. Ein Vorgang
+              wird nur automatisch abgeschlossen, wenn alle verknüpften
+              Transaktionen vollständig klassifiziert sind und zu einer
+              aktiven Abschlussregel passen.
+            </p>
+          </div>
+        </div>
+        <div class="rules-layout">
+          <div>
+            <div class="subsection-heading">
+              <h4>Aktuelle Abschlussregeln</h4>
+              <span id="completion-rule-count">0 Regeln</span>
+            </div>
+            <label class="rule-search">
+              <span>Abschlussregeln durchsuchen</span>
+              <input
+                id="completion-rule-search"
+                type="search"
+                autocomplete="off"
+                placeholder="Name, Bedingung oder Klassifikation"
+              >
+            </label>
+            <div class="rule-list" id="completion-rule-list"></div>
+          </div>
+          <form class="rule-form" id="completion-rule-form">
+            <h4 id="completion-rule-form-title">Neue Abschlussregel</h4>
+            <label class="is-wide">
+              <span>Name</span>
+              <input name="name" type="text" maxlength="2000" required>
+            </label>
+            <fieldset class="rule-conditions is-wide">
+              <legend>Bedingungen</legend>
+              <div class="rule-condition-heading">
+                <p>
+                  Die Bedingungen prüfen Buchungs- und Klassifikationsfelder.
+                </p>
+                <button id="completion-rule-add-condition" type="button">
+                  + Bedingung
+                </button>
+              </div>
+              <div id="completion-rule-conditions"></div>
+            </fieldset>
+            <label class="checkbox-field">
+              <input name="enabled" type="checkbox" checked>
+              <span>Abschlussregel aktivieren</span>
+            </label>
+            <label class="checkbox-field">
+              <input name="apply_now" type="checkbox" checked>
+              <span>Direkt auf bestehende Vorgänge anwenden</span>
+            </label>
+            <div class="rule-form-actions is-wide">
+              <button
+                class="primary-action"
+                id="completion-rule-submit"
+                type="submit"
+              >
+                Abschlussregel erstellen
+              </button>
+              <button
+                id="completion-rule-cancel-edit"
+                type="button"
+                hidden
+              >
+                Bearbeitung abbrechen
+              </button>
+              <span
+                id="completion-rule-form-status"
+                aria-live="polite"
+              ></span>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <div class="balance-overview">
+        <div class="balance-card balance-card-primary">
+          <span class="balance-label" id="total-balance-label">
+            Kontostand gesamt
+          </span>
+          <strong id="total-balance">–</strong>
+          <span class="balance-note" id="total-balance-note">
+            Kontostände werden geladen
+          </span>
+        </div>
+        <div class="account-balances" id="account-balances"></div>
+      </div>
+
+      <div class="toolbar">
+        <label class="search-field" for="transaction-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
+          </svg>
+          <input
+            id="transaction-search"
+            type="search"
+            autocomplete="off"
+            placeholder="Transaktionen durchsuchen"
+          >
+          <kbd>Strg K</kbd>
+        </label>
+        <div class="date-filter" aria-label="Zeitraum">
+          <label>
+            <span>Von</span>
+            <input id="date-from" type="date">
+          </label>
+          <span class="date-separator" aria-hidden="true">bis</span>
+          <label>
+            <span>Bis</span>
+            <input id="date-to" type="date">
+          </label>
+          <button id="reset-period" type="button">Letzte 3 Monate</button>
+          <button id="max-period" type="button">Gesamter Zeitraum</button>
+        </div>
+      </div>
+
+      <div class="table-frame">
+        <table class="data-table" id="transaction-table">
+          <thead>
+            <tr>
+              <th aria-sort="descending">
+                <button type="button" data-sort="datum">
+                  Datum <span class="sort-indicator" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" data-sort="kontoname">
+                  Kontoname <span class="sort-indicator" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" data-sort="zahlungsbeteiligter">
+                  Zahlungsbeteiligter
+                  <span class="sort-indicator" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th class="purpose-column">
+                <button type="button" data-sort="verwendungszweck">
+                  Verwendungszweck
+                  <span class="sort-indicator" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th class="amount-column">
+                <button type="button" data-sort="betrag">
+                  Betrag <span class="sort-indicator" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th class="amount-column balance-column">
+                <button type="button" data-sort="kontostand_konto">
+                  Kontostand Konto
+                  <span class="sort-indicator" aria-hidden="true"></span>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="transaction-rows"></tbody>
+        </table>
+
+        <div class="loading-state" id="transaction-loading">
+          <span class="spinner" aria-hidden="true"></span>
+          Transaktionen werden geladen
+        </div>
+        <div class="empty-state" id="transaction-empty" hidden>
+          <div class="empty-icon" aria-hidden="true">0</div>
+          <h3>Keine Transaktionen gefunden</h3>
+          <p>Passen Sie den Suchbegriff an.</p>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="panel"
+      id="vorgaenge-panel"
+      role="tabpanel"
+      aria-labelledby="vorgaenge-tab"
+      hidden
+    >
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Zentrale Bearbeitung</p>
+          <h2>Vorgänge</h2>
+          <p class="panel-description">
+            Alle Vorgänge mit Status und zugeordneten Transaktionen.
+          </p>
+        </div>
+        <div class="result-count" aria-live="polite">
+          <strong id="vorgang-count">0</strong>
+          <span id="vorgang-count-label">Vorgänge</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <label class="search-field" for="vorgang-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
+          </svg>
+          <input
+            id="vorgang-search"
+            type="search"
+            autocomplete="off"
+            placeholder="Vorgänge durchsuchen"
+          >
+        </label>
+        <label class="checkbox-filter" for="vorgang-hide-completed">
+          <input id="vorgang-hide-completed" type="checkbox">
+          <span>Abgeschlossene Vorg&auml;nge ausblenden</span>
+        </label>
+        <button class="primary-action" id="vorgang-create" type="button">
+          Neuer Vorgang
+        </button>
+      </div>
+
+      <div class="table-frame">
+        <table class="data-table vorgang-table" id="vorgang-table">
+          <thead>
+            <tr>
+              <th>Letztes Datum</th>
+              <th>Titel</th>
+              <th>Vorgangstyp</th>
+              <th>Status</th>
+              <th>Bezug</th>
+              <th class="amount-column">Transaktionen</th>
+              <th class="amount-column">Weitere</th>
+              <th>Aktion</th>
+            </tr>
+          </thead>
+          <tbody id="vorgang-rows"></tbody>
+        </table>
+        <div class="loading-state" id="vorgang-loading" hidden>
+          <span class="spinner" aria-hidden="true"></span>
+          Vorgänge werden geladen
+        </div>
+        <div class="empty-state" id="vorgang-empty" hidden>
+          <div class="empty-icon" aria-hidden="true">0</div>
+          <h3>Keine Vorgänge gefunden</h3>
+          <p>Passen Sie den Suchbegriff oder Filter an.</p>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="panel"
+      id="todo-panel"
+      role="tabpanel"
+      aria-labelledby="todo-tab"
+      hidden
+    >
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Aufgabenverwaltung</p>
+          <h2>To-Dos</h2>
+          <p class="panel-description">
+            Aufgaben manuell erfassen und mit Vorgängen verknüpfen.
+          </p>
+        </div>
+        <div class="result-count" aria-live="polite">
+          <strong id="todo-count">0</strong>
+          <span id="todo-count-label">To-Dos</span>
+        </div>
+      </div>
+
+      <div class="todo-toolbar">
+        <label class="search-field" for="todo-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
+          </svg>
+          <input
+            id="todo-search"
+            type="search"
+            autocomplete="off"
+            placeholder="To-Dos oder Vorgangs-ID durchsuchen"
+          >
+        </label>
+        <label class="todo-hide-completed">
+          <input id="todo-hide-completed" type="checkbox">
+          <span>Abgeschlossene ausblenden</span>
+        </label>
+      </div>
+
+      <div class="todo-workspace">
+        <form class="todo-form" id="todo-form" autocomplete="off">
+          <div>
+            <p class="eyebrow">Manuelle Erfassung</p>
+            <h3 id="todo-form-title">Neues To-Do</h3>
+          </div>
+          <label>
+            <span>Titel</span>
+            <input
+              id="todo-title"
+              name="title"
+              type="text"
+              maxlength="300"
+              required
+            >
+          </label>
+          <label>
+            <span>Beschreibung</span>
+            <textarea
+              id="todo-description"
+              name="description"
+              maxlength="10000"
+              rows="5"
+            ></textarea>
+          </label>
+          <div class="todo-form-row">
+            <label>
+              <span>Fällig am</span>
+              <input id="todo-due-date" name="due_date" type="date">
+            </label>
+            <label>
+              <span>Priorität</span>
+              <select id="todo-priority" name="priority">
+                <option value="normal">Normal</option>
+                <option value="hoch">Hoch</option>
+                <option value="niedrig">Niedrig</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>Verknüpfte Vorgänge (optional)</span>
+            <select
+              id="todo-vorgaenge"
+              name="vorgangs_ids"
+              multiple
+              size="7"
+            ></select>
+            <small>Mehrfachauswahl mit Strg beziehungsweise Cmd.</small>
+          </label>
+          <div class="todo-form-actions">
+            <button class="primary-action" id="todo-submit" type="submit">
+              To-Do erstellen
+            </button>
+            <button
+              class="secondary-action"
+              id="todo-create-vorgang"
+              type="button"
+            >
+              To-Do + Vorgang
+            </button>
+            <button
+              class="secondary-action"
+              id="todo-cancel-edit"
+              type="button"
+              hidden
+            >
+              Bearbeitung abbrechen
+            </button>
+          </div>
+          <span id="todo-form-status" aria-live="polite"></span>
+        </form>
+
+        <section class="todo-list-section">
+          <div class="todo-loading" id="todo-loading" hidden>
+            <span class="spinner" aria-hidden="true"></span>
+            To-Dos werden geladen
+          </div>
+          <div class="todo-list" id="todo-list"></div>
+          <div class="todo-empty" id="todo-empty" hidden>
+            Keine To-Dos für diese Auswahl vorhanden.
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section
+      class="panel"
+      id="termine-panel"
+      role="tabpanel"
+      aria-labelledby="termine-tab"
+      hidden
+    >
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Kalender</p>
+          <h2>Termine</h2>
+          <p class="panel-description">
+            Termine manuell erfassen oder aus Vorgängen übernehmen.
+          </p>
+        </div>
+        <div class="result-count" aria-live="polite">
+          <strong id="termin-count">0</strong>
+          <span id="termin-count-label">Termine</span>
+        </div>
+      </div>
+
+      <div class="todo-toolbar">
+        <label class="search-field" for="termin-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
+          </svg>
+          <input
+            id="termin-search"
+            type="search"
+            autocomplete="off"
+            placeholder="Termine oder Vorgangs-ID durchsuchen"
+          >
+        </label>
+        <label class="todo-hide-completed">
+          <input id="termin-hide-completed" type="checkbox">
+          <span>Abgeschlossene ausblenden</span>
+        </label>
+      </div>
+
+      <div class="todo-workspace">
+        <form class="todo-form" id="termin-form" autocomplete="off">
+          <div>
+            <p class="eyebrow">Manuelle Erfassung</p>
+            <h3 id="termin-form-title">Neuer Termin</h3>
+          </div>
+          <label>
+            <span>Titel</span>
+            <input
+              id="termin-title"
+              name="title"
+              type="text"
+              maxlength="300"
+              required
+            >
+          </label>
+          <label>
+            <span>Beschreibung</span>
+            <textarea
+              id="termin-description"
+              name="description"
+              maxlength="10000"
+              rows="4"
+            ></textarea>
+          </label>
+          <div class="todo-form-row">
+            <label>
+              <span>Beginn</span>
+              <input id="termin-starts-at" name="starts_at" type="datetime-local" required>
+            </label>
+            <label>
+              <span>Ende</span>
+              <input id="termin-ends-at" name="ends_at" type="datetime-local">
+            </label>
+          </div>
+          <div class="todo-form-row">
+            <label>
+              <span>Ort</span>
+              <input id="termin-location" name="location" type="text" maxlength="500">
+            </label>
+            <label>
+              <span>Status</span>
+              <select id="termin-status" name="status">
+                <option value="geplant">Geplant</option>
+                <option value="abgeschlossen">Abgeschlossen</option>
+                <option value="abgesagt">Abgesagt</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>Verknüpfte Vorgänge (optional)</span>
+            <select
+              id="termin-vorgaenge"
+              name="vorgangs_ids"
+              multiple
+              size="7"
+            ></select>
+            <small>Mehrfachauswahl mit Strg beziehungsweise Cmd.</small>
+          </label>
+          <div class="todo-form-actions">
+            <button class="primary-action" id="termin-submit" type="submit">
+              Termin erstellen
+            </button>
+            <button
+              class="secondary-action"
+              id="termin-cancel-edit"
+              type="button"
+              hidden
+            >
+              Bearbeitung abbrechen
+            </button>
+          </div>
+          <span id="termin-form-status" aria-live="polite"></span>
+        </form>
+
+        <section class="todo-list-section">
+          <div class="todo-loading" id="termin-loading" hidden>
+            <span class="spinner" aria-hidden="true"></span>
+            Termine werden geladen
+          </div>
+          <div class="todo-list" id="termin-list"></div>
+          <div class="todo-empty" id="termin-empty" hidden>
+            Keine Termine für diese Auswahl vorhanden.
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section
+      class="panel"
+      id="budget-panel"
+      role="tabpanel"
+      aria-labelledby="budget-tab"
+      hidden
+    >
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Saisonplanung</p>
+          <h2>Budget</h2>
+          <p class="panel-description">
+            Einnahmen und Ausgaben nach Saison und Kategorie.
+          </p>
+        </div>
+        <div class="result-count">
+          <strong id="budget-count">0</strong>
+          <span>Budgetpositionen</span>
+        </div>
+      </div>
+
+      <div class="table-frame">
+        <table class="data-table budget-table" id="budget-table">
+          <thead>
+            <tr>
+              <th>Saison</th>
+              <th>Oberkategorie</th>
+              <th>Unterkategorie</th>
+              <th class="amount-column">Einnahmen</th>
+              <th class="amount-column">Ausgaben</th>
+              <th class="amount-column">Budget</th>
+            </tr>
+          </thead>
+          <tbody id="budget-rows"></tbody>
+        </table>
+        <div class="loading-state" id="budget-loading" hidden>
+          <span class="spinner" aria-hidden="true"></span>
+          Budget wird geladen
+        </div>
+        <div class="empty-state" id="budget-empty" hidden>
+          <div class="empty-icon budget-icon" aria-hidden="true">€</div>
+          <h3>Noch keine Budgetpositionen</h3>
+          <p>Einträge aus der Budgettabelle erscheinen automatisch hier.</p>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="panel mail-panel"
+      id="mail-panel"
+      role="tabpanel"
+      aria-labelledby="mail-tab"
+      hidden
+    >
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Microsoft Graph OAuth2</p>
+          <h2>Mails</h2>
+          <p class="panel-description">
+            Ungelesene Mails prüfen, Mailverläufe zusammenfassen, Anhänge
+            lesen, taggen und beantworten.
+          </p>
+        </div>
+        <div class="result-count" aria-live="polite">
+          <strong id="mail-count">0</strong>
+          <span>Mails</span>
+        </div>
+      </div>
+
+      <div class="mail-toolbar">
+        <label class="search-field" for="mail-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
+          </svg>
+          <input
+            id="mail-search"
+            type="search"
+            autocomplete="off"
+            placeholder="Mails durchsuchen"
+          >
+        </label>
+        <label class="mail-threshold-field">
+          <span>Löschen ab Spam-Score über</span>
+          <span class="mail-threshold-input">
+            <input
+              id="mail-spam-threshold"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              value="70"
+            >
+            <span>%</span>
+          </span>
+        </label>
+        <button
+          class="mail-delete-spam"
+          id="mail-delete-spam"
+          type="button"
+          disabled
+        >
+          Keine Spam-Mails zu löschen
+        </button>
+        <button
+          class="mail-delete-selected"
+          id="mail-delete-selected"
+          type="button"
+          disabled
+        >
+          Keine Mails markiert
+        </button>
+        <button class="primary-action" id="mail-refresh" type="button">
+          Mails neu laden
+        </button>
+        <span id="mail-delete-status" aria-live="polite"></span>
+      </div>
+
+      <div class="mail-loading" id="mail-loading" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <div>
+          <strong>Mails und Spam-Scores werden geladen</strong>
+          <p>
+            Mailinhalte und Anhänge werden mit stabiler Inbox-ID lokal
+            gespeichert; Mailverläufe werden anhand der Conversation-ID
+            gebündelt.
+          </p>
+        </div>
+      </div>
+
+      <div class="mail-workspace">
+        <aside class="mail-list-pane" aria-label="Mailliste">
+          <div class="mail-list" id="mail-list"></div>
+          <div class="mail-list-empty" id="mail-empty" hidden>
+            Keine ungelesenen Mails gefunden.
+          </div>
+        </aside>
+        <section class="mail-detail-pane" id="mail-detail">
+          <div class="mail-detail-empty">
+            <strong>Mail auswählen</strong>
+            <p>
+              Mailtext und Anhänge werden anschließend nebeneinander angezeigt.
+            </p>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section
+      class="panel"
+      id="other-tasks-panel"
+      role="tabpanel"
+      aria-labelledby="other-tasks-tab"
+      hidden
+    >
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Automatisierte Auswertungen</p>
+          <h2>Sonstige Aufgaben</h2>
+          <p class="panel-description">
+            Wiederkehrende Vereinsaufgaben aus angebundenen Systemen.
+          </p>
+        </div>
+      </div>
+
+      <section class="task-card">
+        <div class="task-card-heading">
+          <div>
+            <h3>Spielerprämien ermitteln</h3>
+            <p>
+              Wertet Meisterschafts- und Pokalspiele aus DFBnet aus.
+              Freundschaftsspiele werden ignoriert.
+            </p>
+          </div>
+        </div>
+
+        <form class="premium-form" id="player-premium-form">
+          <label class="premium-season-field">
+            <span>Saison</span>
+            <select id="player-premium-season" name="season" required></select>
+          </label>
+          <fieldset class="premium-team-field">
+            <legend>Mannschaften</legend>
+            <div id="player-premium-teams"></div>
+          </fieldset>
+          <div class="premium-form-actions">
+            <button
+              class="primary-action"
+              id="player-premium-submit"
+              type="submit"
+            >
+              Spielerprämien ermitteln
+            </button>
+            <span id="player-premium-status" aria-live="polite"></span>
+          </div>
+        </form>
+
+        <div class="premium-loading" id="player-premium-loading" hidden>
+          <span class="spinner" aria-hidden="true"></span>
+          <div>
+            <strong>DFBnet wird ausgewertet</strong>
+            <p>
+              Der sichtbare Browser kann währenddessen geöffnet bleiben.
+            </p>
+          </div>
+        </div>
+
+        <div class="premium-results" id="player-premium-results" hidden>
+          <div class="subsection-heading">
+            <h4>Auswertung</h4>
+            <span id="player-premium-result-meta"></span>
+          </div>
+          <div id="player-premium-tables"></div>
+        </div>
+
+        <section class="premium-payment-review">
+          <div class="premium-payment-heading">
+            <div>
+              <h4>Zahlungsdaten prüfen</h4>
+              <p>
+                Liest die Zahlungsdaten der auszuzahlenden Spieler
+                bei jedem Abruf neu und schreibgeschützt aus DFBnet Verein aus.
+              </p>
+            </div>
+            <button
+              class="primary-action"
+              id="player-payment-submit"
+              type="button"
+            >
+              Zahlungsdaten abrufen
+            </button>
+          </div>
+          <span id="player-payment-status" aria-live="polite"></span>
+
+          <section
+            class="payment-offset-panel"
+            id="player-offset-panel"
+            hidden
+          >
+            <label>
+              <span>Deckelliste</span>
+              <input
+                id="player-offset-deckel-path"
+                type="text"
+                value="C:\Users\chsue\OneDrive\Dokumente\Getränkeliste BSV Vereinsheim.xlsx"
+                spellcheck="false"
+              >
+            </label>
+            <div class="payment-offset-actions">
+              <button
+                class="secondary-action"
+                id="player-offset-apply"
+                type="button"
+              >
+                Zuordnungen bestätigen
+              </button>
+              <button
+                class="secondary-action"
+                id="player-offset-add-manual"
+                type="button"
+              >
+                Manuelle Gegenposition
+              </button>
+              <button
+                class="primary-action"
+                id="player-payment-export"
+                type="button"
+              >
+                Bankdateien erstellen
+              </button>
+              <span id="player-offset-status" aria-live="polite"></span>
+            </div>
+          </section>
+
+          <div class="premium-loading" id="player-payment-loading" hidden>
+            <span class="spinner" aria-hidden="true"></span>
+            <div>
+              <strong>Mitglieder und Zahlungsdaten werden geprüft</strong>
+              <p>In DFBnet Verein werden keine Daten verändert.</p>
+            </div>
+          </div>
+
+          <div id="player-payment-results" hidden>
+            <div
+              class="payment-review-summary"
+              id="player-payment-summary"
+            ></div>
+            <div
+              class="payment-offset-review"
+              id="player-offset-review"
+            ></div>
+            <div
+              class="payment-manual-offsets"
+              id="player-offset-manual-list"
+            ></div>
+            <div id="player-payment-teams"></div>
+            <p class="payment-review-note">
+              Auch formal gültige Zahlungsdaten müssen vor einer späteren
+              SEPA-Erstellung manuell bestätigt werden.
+            </p>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <dialog class="payment-entry-dialog" id="player-payment-dialog">
+    <form id="player-payment-form" autocomplete="off">
+      <header>
+        <div>
+          <p class="eyebrow">Manuelle Zahlungsdaten</p>
+          <h2 id="player-payment-dialog-title">Zahlungsdaten eintragen</h2>
+          <p>
+            Die Daten gelten nur im aktuell laufenden Dashboard und werden
+            nicht an DFBnet zurückgeschrieben.
+          </p>
+        </div>
+        <button
+          class="close-button"
+          id="player-payment-dialog-close"
+          type="button"
+          aria-label="Dialog schließen"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </header>
+      <div class="payment-entry-content">
+        <label>
+          <span>Kontoinhaber</span>
+          <input
+            id="player-payment-account-holder"
+            name="account_holder"
+            type="text"
+            maxlength="200"
+            required
+          >
+        </label>
+        <label>
+          <span>IBAN</span>
+          <input
+            id="player-payment-iban"
+            name="iban"
+            type="text"
+            maxlength="64"
+            spellcheck="false"
+            required
+          >
+        </label>
+        <label>
+          <span>BIC</span>
+          <input
+            id="player-payment-bic"
+            name="bic"
+            type="text"
+            maxlength="32"
+            spellcheck="false"
+            required
+          >
+        </label>
+        <p class="payment-entry-note">
+          Vorhandene Zahlungsdaten werden für diesen Lauf vollständig ersetzt.
+          Beim nächsten Dashboard-Start müssen sie erneut abgerufen werden.
+        </p>
+        <div class="payment-entry-actions">
+          <button
+            class="secondary-action"
+            id="player-payment-dialog-cancel"
+            type="button"
+          >
+            Abbrechen
+          </button>
+          <button class="primary-action" type="submit">
+            Für diesen Lauf übernehmen
+          </button>
+          <span id="player-payment-form-status" aria-live="polite"></span>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="detail-dialog" id="transaction-dialog">
+    <div class="dialog-shell">
+      <header class="dialog-header">
+        <div>
+          <p class="eyebrow" id="detail-eyebrow">Transaktionsdetails</p>
+          <h2 id="detail-title">Transaktion</h2>
+          <p id="detail-subtitle"></p>
+        </div>
+        <button
+          class="close-button"
+          id="detail-close"
+          type="button"
+          aria-label="Detailfenster schließen"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </header>
+      <div class="dialog-content" id="detail-content"></div>
+    </div>
+  </dialog>
+
+  <dialog class="detail-dialog entity-preview-dialog" id="entity-preview-dialog">
+    <div class="dialog-shell">
+      <header class="dialog-header">
+        <div>
+          <p class="eyebrow" id="entity-preview-eyebrow">Entität</p>
+          <h2 id="entity-preview-title">Details</h2>
+          <p id="entity-preview-subtitle"></p>
+        </div>
+        <button
+          class="close-button"
+          id="entity-preview-close"
+          type="button"
+          aria-label="Detailfenster schließen"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </header>
+      <div class="dialog-content" id="entity-preview-content"></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="error-toast" role="alert" hidden></div>
+</body>
+</html>
+

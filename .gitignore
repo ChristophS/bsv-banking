@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments and IDE metadata
+.venv/
+venv/
+.idea/
+
+# Local banking configuration and secrets
+config.toml
+config.local.toml
+config.*.local.toml
+.env
+.env.*
+*.env
+
+# Sensitive runtime data: browser session, logs, screenshots
+.runtime/
+runtime/
+logs/
+screenshots/
+playwright-report/
+test-results/
+
+# Sensitive transaction archive, normalized data and SQLite database
+data/

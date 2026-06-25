@@ -1,0 +1,62 @@
+[bank]
+provider = "volksbank"
+# Ausschliesslich die offizielle HTTPS-Loginseite der Bank eintragen.
+login_url = "https://www.vb-oberberg.de/services_auth/auth-frontend/?v=15909c7f1a5ee9b29e27093144f588d2&client_id=online-banking&redirect_uri=https:%2F%2Fwww.vb-oberberg.de%2Fservices_cloud%2Fportal%2Fportal-oauth%2Flogin"
+
+[credentials]
+# "env" fuellt nur die Loginfelder und sendet das Loginformular ab.
+# MFA bleibt immer manuell. Mit "manual" werden alle folgenden Werte ignoriert.
+mode = "env"
+env_file = "D:/.secrets/bsv_banking.env"
+username_variable = "VOLKSBANK_USERNAME"
+password_variable = "VOLKSBANK_PASSWORD"
+username_selector = "#vrNetKey"
+password_selector = "#pin"
+submit_selector = "button[type='submit']"
+
+[export]
+# Aus Sicherheitsgruenden werden nur genau diese beiden Werte akzeptiert.
+format = "CSV"
+period = "FROM_SEARCH"
+output_dir = ".runtime/exports"
+download_timeout_seconds = 60
+
+[[accounts]]
+name = "Hauptkonto"
+iban = "DE31 3846 2135 0101 2060 17"
+filename = "hauptkonto.csv"
+
+[[accounts]]
+name = "Rücklagen"
+iban = "DE09 3846 2135 0101 2060 25"
+filename = "ruecklagen.csv"
+
+[[accounts]]
+name = "Ausstattung"
+iban = "DE98 3846 2135 0103 0380 14"
+filename = "ausstattung.csv"
+
+[[accounts]]
+name = "Sparkonto"
+iban = "DE25 3846 2135 0101 2064 16"
+filename = "sparkonto.csv"
+
+[detection]
+# Mindestens eines der beiden Kriterien muss gesetzt sein. Ein stabiler,
+# bankspezifischer data-testid- oder aria-basierter Selektor ist zu bevorzugen.
+success_selector = "main[data-testid='account-overview']"
+success_url_pattern = '^https://www\.vb-oberberg\.de/services_cloud/portal/'
+
+# Zeit fuer manuellen Login inklusive MFA.
+timeout_seconds = 300
+poll_interval_seconds = 0.5
+
+# Das Kriterium muss so lange ohne Unterbrechung zutreffen.
+stable_seconds = 2.0
+
+[runtime]
+# Alle Pfade sind relativ zu dieser Konfigurationsdatei.
+profile_dir = ".runtime/session/chromium"
+log_dir = ".runtime/logs"
+screenshot_dir = ".runtime/screenshots"
+navigation_timeout_seconds = 45

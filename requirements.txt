@@ -1,0 +1,5 @@
+playwright>=1.40,<2.0
+python-dotenv>=1.0,<2.0
+pypdf>=4.0,<7.0
+pywin32>=306; platform_system == "Windows"
+tomli>=2.0; python_version < "3.11"

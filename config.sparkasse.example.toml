@@ -1,0 +1,57 @@
+[bank]
+provider = "sparkasse"
+login_url = "https://www.sparkasse-gm.de/de/home.html"
+
+[credentials]
+# Die Sparkasse verwendet einen zweistufigen Login:
+# Anmeldename -> Weiter -> Online-Banking-PIN -> Anmelden.
+mode = "env"
+env_file = "D:/.secrets/bsv_banking.env"
+username_variable = "SPARKASSE_USERNAME"
+password_variable = "SPARKASSE_PASSWORD"
+
+# Diese Selektoren beruhen auf stabilen Feldmerkmalen statt dynamischen IDs.
+username_selector = "input[autocomplete='username']:visible"
+username_submit_selector = "input[type='submit'][title='Weiter']:visible, input[type='submit'][value='Weiter']:visible"
+password_selector = "input[type='password']:visible"
+submit_selector = "input[type='submit'][title='Anmelden']:visible, input[type='submit'][value='Anmelden']:visible, button[type='submit']:visible"
+
+[export]
+# Fuer die Sparkasse ist ausschliesslich Excel (CSV-MT940) zugelassen.
+format = "Excel (CSV-MT940)"
+# Der in der Umsatzansicht vorhandene Zeitraum bleibt unveraendert.
+period = "CURRENT_VIEW"
+output_dir = ".runtime/exports/sparkasse"
+download_timeout_seconds = 60
+
+[[accounts]]
+name = "Sichteinlagen"
+iban = "DE29 3845 0000 0000 3592 32"
+filename = "veranstaltungen.csv"
+
+[[accounts]]
+name = "Sichteinlagen - Abt. Jugendfussball"
+iban = "DE71 3845 0000 0000 8164 13"
+filename = "jugend.csv"
+
+[[accounts]]
+name = "Sichteinlagen - Vereinsheim"
+iban = "DE85 3845 0000 0001 0135 56"
+filename = "vereinsheim.csv"
+
+[detection]
+# Die Konto-Uebersicht wird erst akzeptiert, wenn die vollstaendige IBAN
+# eines freigegebenen Sparkassenkontos sichtbar ist.
+success_selector = ""
+success_url_pattern = ""
+success_text_pattern = 'DE29\s*3845\s*0000\s*0000\s*3592\s*32'
+timeout_seconds = 300
+poll_interval_seconds = 0.5
+stable_seconds = 2.0
+
+[runtime]
+# Eigenes Browserprofil verwenden, damit Banksitzungen getrennt bleiben.
+profile_dir = ".runtime/session/sparkasse-chromium"
+log_dir = ".runtime/logs/sparkasse"
+screenshot_dir = ".runtime/screenshots/sparkasse"
+navigation_timeout_seconds = 45
