@@ -6,6 +6,7 @@ const state = {
   search: "",
   dateFrom: "",
   dateTo: "",
+  transactionHideCompletedVorgaenge: false,
   linkCandidatesLoaded: false,
   linkCandidates: null,
   transactionRequest: null,
@@ -81,6 +82,9 @@ const elements = {
   search: document.querySelector("#transaction-search"),
   dateFrom: document.querySelector("#date-from"),
   dateTo: document.querySelector("#date-to"),
+  transactionHideCompletedVorgaenge: document.querySelector(
+    "#transaction-hide-completed-vorgaenge",
+  ),
   resetPeriod: document.querySelector("#reset-period"),
   maxPeriod: document.querySelector("#max-period"),
   toggleBalanceHistory: document.querySelector("#toggle-balance-history"),
@@ -346,6 +350,11 @@ elements.vorgangSearch.addEventListener("input", () => {
 elements.vorgangHideCompleted.addEventListener("change", () => {
   state.vorgangHideCompleted = elements.vorgangHideCompleted.checked;
   loadVorgaenge();
+});
+elements.transactionHideCompletedVorgaenge.addEventListener("change", () => {
+  state.transactionHideCompletedVorgaenge =
+    elements.transactionHideCompletedVorgaenge.checked;
+  loadTransactions();
 });
 elements.vorgangCreate.addEventListener("click", () => {
   openVorgangCreateDialog();
@@ -5743,12 +5752,17 @@ async function loadTransactions() {
     direction: state.direction,
     date_from: state.dateFrom,
     date_to: state.dateTo,
+    hide_completed_vorgaenge: String(state.transactionHideCompletedVorgaenge),
   });
   try {
     const response = await fetch(`/api/transactions?${parameters}`, {
       signal: state.transactionRequest.signal,
     });
     const payload = await readResponse(response);
+    state.transactionHideCompletedVorgaenge =
+      Boolean(payload.hide_completed_vorgaenge);
+    elements.transactionHideCompletedVorgaenge.checked =
+      state.transactionHideCompletedVorgaenge;
     renderTransactions(payload.transactions);
     elements.transactionCount.textContent = integerFormatter.format(payload.count);
     elements.transactionCountLabel.textContent =

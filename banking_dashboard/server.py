@@ -245,6 +245,7 @@ class DashboardDataStore:
         direction: str = "desc",
         date_from: str | None = None,
         date_to: str | None = None,
+        hide_completed_vorgaenge: bool = False,
     ) -> list[dict[str, Any]]:
         if sort not in SORT_COLUMNS:
             raise ValueError(f"Unbekannte Sortierspalte: {sort}")
@@ -284,6 +285,26 @@ class DashboardDataStore:
                 """
             )
             parameters.extend((pattern,) * 9)
+        if hide_completed_vorgaenge:
+            conditions.append(
+                """
+                (
+                    NOT EXISTS (
+                        SELECT 1
+                        FROM transaktion_vorgaenge AS linked_tv
+                        WHERE linked_tv.transaktions_id = n.transaktions_id
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM transaktion_vorgaenge AS open_tv
+                        JOIN vorgaenge AS open_v
+                            ON open_v.vorgangs_id = open_tv.vorgangs_id
+                        WHERE open_tv.transaktions_id = n.transaktions_id
+                          AND open_v.status <> 'abgeschlossen'
+                    )
+                )
+                """
+            )
 
         order_expression = SORT_COLUMNS[sort]
         where = "WHERE " + " AND ".join(conditions)
@@ -298,7 +319,7 @@ class DashboardDataStore:
                     verwendungszweck,
                     betrag,
                     kontostand_konto
-                FROM normalized_transactions
+                FROM normalized_transactions AS n
                 {where}
                 ORDER BY
                     {order_expression} {normalized_direction.upper()},
@@ -5374,12 +5395,16 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         default_from, default_to = default_transaction_period()
         date_from = query.get("date_from", [default_from])[0]
         date_to = query.get("date_to", [default_to])[0]
+        hide_completed_vorgaenge = _truthy_query_value(
+            query.get("hide_completed_vorgaenge", ["false"])[0]
+        )
         transactions = self.server.data_store.list_transactions(
             search=search,
             sort=sort,
             direction=direction,
             date_from=date_from,
             date_to=date_to,
+            hide_completed_vorgaenge=hide_completed_vorgaenge,
         )
         self._json_response(
             {
@@ -5390,6 +5415,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 "search": search,
                 "date_from": date_from,
                 "date_to": date_to,
+                "hide_completed_vorgaenge": hide_completed_vorgaenge,
                 "balances": self.server.data_store.balance_summary(),
             }
         )

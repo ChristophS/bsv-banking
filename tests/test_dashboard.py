@@ -4,6 +4,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+from contextlib import closing
 from datetime import date
 from pathlib import Path
 from urllib.error import HTTPError
@@ -440,6 +441,69 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual(
             [row["transaktions_id"] for row in rows],
             ["tx_newer"],
+        )
+
+    def test_transactions_with_only_completed_vorgaenge_can_be_hidden(self):
+        self.store.update_vorgang_status("vorgang_tx_newer", True)
+
+        unfiltered = self.store.list_transactions(
+            date_from="2026-05-01",
+            date_to="2026-06-30",
+        )
+        filtered = self.store.list_transactions(
+            date_from="2026-05-01",
+            date_to="2026-06-30",
+            hide_completed_vorgaenge=True,
+        )
+
+        self.assertEqual(
+            [row["transaktions_id"] for row in unfiltered],
+            ["tx_newer", "tx_older"],
+        )
+        self.assertEqual(
+            [row["transaktions_id"] for row in filtered],
+            ["tx_older"],
+        )
+
+    def test_transaction_completed_vorgang_filter_keeps_open_and_unlinked(self):
+        with closing(connect_database(self.database_path)) as connection:
+            connection.execute(
+                """
+                DELETE FROM transaktion_vorgaenge
+                WHERE transaktions_id = 'tx_older'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO vorgaenge (
+                    vorgangs_id, titel, beschreibung, vorgangstyp,
+                    status, erstellt_am, aktualisiert_am
+                ) VALUES (
+                    'vorgang_tx_newer_done', '', '', 'Ausgabe',
+                    'abgeschlossen',
+                    '2026-06-11T08:00:00+00:00',
+                    '2026-06-11T08:00:00+00:00'
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO transaktion_vorgaenge (
+                    transaktions_id, vorgangs_id
+                ) VALUES ('tx_newer', 'vorgang_tx_newer_done')
+                """
+            )
+            connection.commit()
+
+        rows = self.store.list_transactions(
+            date_from="2026-05-01",
+            date_to="2026-06-30",
+            hide_completed_vorgaenge=True,
+        )
+
+        self.assertEqual(
+            [row["transaktions_id"] for row in rows],
+            ["tx_newer", "tx_older"],
         )
 
     def test_transaction_period_bounds_cover_database(self):
@@ -1680,6 +1744,7 @@ class DashboardHTTPTests(unittest.TestCase):
             timeout=5,
         ) as response:
             payload = json.load(response)
+            self.assertFalse(payload["hide_completed_vorgaenge"])
             self.assertEqual(payload["count"], 1)
             self.assertEqual(
                 payload["transactions"][0]["transaktions_id"],
@@ -1708,6 +1773,18 @@ class DashboardHTTPTests(unittest.TestCase):
             "tx_newer",
             {"transaktionstyp": "Vergütung"},
         )
+        with urlopen(
+            self.base_url + "/api/transactions?hide_completed_vorgaenge=true",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertTrue(payload["hide_completed_vorgaenge"])
+            self.assertEqual(payload["count"], 1)
+            self.assertEqual(
+                payload["transactions"][0]["transaktions_id"],
+                "tx_older",
+            )
+
         with urlopen(
             self.base_url + "/api/vorgaenge?hide_completed=true",
             timeout=5,
