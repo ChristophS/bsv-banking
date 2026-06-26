@@ -2,55 +2,93 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Deckelliste-Zuordnung mit Dateipfad-Auswahl und automatische 100%-Zuordnung nachschärfen
+## 1. DFBnet-Ergebnisliste robuster auslesen und Retry-Verhalten prüfen
 
 **Priorität:** hoch
 
-**Grund:** Benötigt einen eigenen Blick auf den Prämien-/Deckellisten-Workflow und wahrscheinlich zusätzliche Kontextdateien, um die betroffenen UI- und Zuordnungsstellen repo-konkret zu ändern.
+**Grund:** Betroffen sind externe DFBnet-Abfragen und Fehlerbehandlung, nicht die manuelle Gegenpositions-UI.
+
+**Feedback:**
+
+- Wenn bei den Prämien Spieltage fehlen: Kannst du das nicht eifnach retryen oder so? manchmal gehen die, manchmal nicht: BSV - Damen: fehlende Spieltage 12, 18. Bitte DFBnet-Ergebnisliste/Pagination pruefen.
+- Bei Zahlungsdaten abrufen kam auch beim ersten Mal: Die DFBnet-Mitgliedersuche wurde nicht gefunden.    (Beim zweiten mal gings)
+
+## 2. Dateipfad in der Deckellisten-Zuordnung auswählbar machen
+
+**Priorität:** mittel
+
+**Grund:** Betraf die Deckellisten-Zuordnung und Dateiauswahl, nicht die Gegenpositions-Erfassung.
 
 **Feedback:**
 
 - Bei der Zuordnung zur Deckelliste will ich den Dateipfad auswählen können. Der kann aber auch vorausgewählt sein
-- Die 100% Übereisntimmung zwischen Deckelliste und Spielerprämien werden nicht automatisch zugeordnet. Warum?
-- Es gibt Fälle da werden bei den Prämien valide Zahlungsdaten gefunden, bei der Deckelliste aber nicht, warum?
 
-## 2. Manuelle Gegenposition als Overlay mit Dropdown-Vorschlägen für Klassifikationsfelder
+## 3. Automatische Zuordnung bei 100% Übereinstimmung zwischen Deckelliste und Spielerprämien
 
 **Priorität:** hoch
 
-**Grund:** Das betrifft einen separaten UI-Flow für Vorgänge und Transaktionen und sollte mit den konkreten Detail- und Formular-Komponenten des Dashboards sauber geplant werden.
+**Grund:** Das ist ein eigener Zuordnungs- und Matching-Workflow außerhalb der manuellen Gegenposition.
 
 **Feedback:**
 
-- Bei einer manuellen Gegenposition sind Transaktionstyp, Oberkategorie, Unterkategorie und Sphäre Pflicht. Bitte da wie so oft auch ein Dropdown mit bereits eingetragenen Werten in diesen Feldern (aus Transaktionen) aber auch der Möglichkeit etwas manuell anzulegen
-- Bitte die manuelle Gegenposition als Pop-Up bzw Overlay, da man sonst weit runter scrollen muss
+- Die 100% Übereisntimmung zwischen Deckelliste und Spielerprämien werden nicht automatisch zugeordnet. Warum?
 
-## 3. Transaktionen mit bereits abgeschlossenen Vorgängen ausblendbar machen
+## 4. Abweichende Trefferlage zwischen Prämien und Deckelliste analysieren
 
 **Priorität:** mittel
 
-**Grund:** Eigenes UI- und API-Filterthema; sollte getrennt vom Mail-Thema umgesetzt werden.
+**Grund:** Das ist eine Analyse- und Matching-Frage für Prämien/Deckelliste, nicht Teil der UI-Erweiterung für Gegenpositionen.
+
+**Feedback:**
+
+- Es gibt Fälle da werden bei den Prämien valide Zahlungsdaten gefunden, bei der Deckelliste aber nicht, warum?
+
+## 5. Transaktionen nach abgeschlossenen Vorgängen filterbar machen
+
+**Priorität:** mittel
+
+**Grund:** Eigenes Listen-/Filterthema für Transaktionen, unabhängig vom Overlay für Gegenpositionen.
 
 **Feedback:**
 
 - Bitte einen Filter bei Transaktionen, dass Transaktionen, die zu einem bereits abgeschlossenen Vorgang gehören ein- und ausgeblendet werden können
 
-## 4. Umbuchungs-Transaktionstyp als zweitransaktionalen Vorgang modellieren
+## 6. Umbuchungen als zweitransaktionale Vorgänge sinnvoll abbilden
 
-**Priorität:** mittel
+**Priorität:** hoch
 
-**Grund:** Erfordert fachliche Klärung der Vorgangs- und Transaktionslogik und sollte als eigenes, kontrolliertes Arbeitspaket geplant werden.
+**Grund:** Das ist ein fachlicher Sonderfall für automatische Modellierung und Vorgangslogik und braucht mehr Kontext als das kleine Overlay-Paket.
 
 **Feedback:**
 
 - Es gibt den Transaktionstyp "Umbuchung". Die läuft immer als Oberkategorie "Sonstiges" - Unterkategorie "Umbuchung" - Sphäre "Ideeller Bereich". Das wird immer als Vorgang mit 2 Transaktionen angelegt. Position und Gegenposition. Bitte überlege wie man das sinnvoll umsetzen kann
 
-## 5. Dokumente direkt aus Mail ohne Vorgang speichern
+## 7. Dokumente aus E-Mails ohne Vorgangserstellung speichern
 
 **Priorität:** mittel
 
-**Grund:** Berührt Mail-, Beleg- und Vorgangslogik sowie Speicherung und Zuordnung; dafür ist mehr Kontext nötig als für ein kleines Folgepaket.
+**Grund:** Betreffend Mail-/Dokumentenfluss und Speicherung, nicht die manuelle Gegenpositions-UI.
 
 **Feedback:**
 
 - Ich hätte gerne die Möglichkeit Dokumente aus einer Mail direkt zu speichern ohne einen Vorgang zu erstellen
+
+## 8. Spam-Erkennung verbessern
+
+**Priorität:** hoch
+
+**Grund:** Eigenes Klassifikations- und Scoring-Thema, nicht Teil der Gegenpositions-Erfassung.
+
+**Feedback:**
+
+- Jetzt sind alle Spam-Scores bei 0%. Es scheint, dass die Spamerkennung nicht gut funktioniert.
+
+## 9. Gelesen-Status auf den gesamten Mailverlauf übertragen
+
+**Priorität:** mittel
+
+**Grund:** Das betrifft Mail-Statuslogik und Verlaufssynchronisation, nicht die Gegenpositions-UI.
+
+**Feedback:**
+
+- Auch wenn ich eine Mail mit Gelesen markiere, soll der gesamte Verlauf als "Gelesen" markiert werden
