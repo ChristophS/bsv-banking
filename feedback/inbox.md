@@ -1,12 +1,3 @@
-- Wenn bei den Prämien Spieltage fehlen: Kannst du das nicht eifnach retryen oder so? manchmal gehen die, manchmal nicht: BSV - Damen: fehlende Spieltage 12, 18. Bitte DFBnet-Ergebnisliste/Pagination pruefen.
-- Bei Zahlungsdaten abrufen kam auch beim ersten Mal: Die DFBnet-Mitgliedersuche wurde nicht gefunden.    (Beim zweiten mal gings)
-- Bei der Zuordnung zur Deckelliste will ich den Dateipfad auswählen können. Der kann aber auch vorausgewählt sein
-- Die 100% Übereisntimmung zwischen Deckelliste und Spielerprämien werden nicht automatisch zugeordnet. Warum?
-- Es gibt Fälle da werden bei den Prämien valide Zahlungsdaten gefunden, bei der Deckelliste aber nicht, warum?
-- Bei einer manuellen Gegenposition sind Transaktionstyp, Oberkategorie, Unterkategorie und Sphäre Pflicht. Bitte da wie so oft auch ein Dropdown mit bereits eingetragenen Werten in diesen Feldern (aus Transaktionen) aber auch der Möglichkeit etwas manuell anzulegen
-- Bitte die manuelle Gegenposition als Pop-Up bzw Overlay, da man sonst weit runter scrollen muss
-- Bitte einen Filter bei Transaktionen, dass Transaktionen, die zu einem bereits abgeschlossenen Vorgang gehören ein- und ausgeblendet werden können
-- Es gibt den Transaktionstyp "Umbuchung". Die läuft immer als Oberkategorie "Sonstiges" - Unterkategorie "Umbuchung" - Sphäre "Ideeller Bereich". Das wird immer als Vorgang mit 2 Transaktionen angelegt. Position und Gegenposition. Bitte überlege wie man das sinnvoll umsetzen kann
-- Ich hätte gerne die Möglichkeit Dokumente aus einer Mail direkt zu speichern ohne einen Vorgang zu erstellen
-- Jetzt sind alle Spam-Scores bei 0%. Es scheint, dass die Spamerkennung nicht gut funktioniert.
-- Auch wenn ich eine Mail mit Gelesen markiere, soll der gesamte Verlauf als "Gelesen" markiert werden
+# Inbox
+
+Keine offenen Eingaben.
