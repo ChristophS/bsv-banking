@@ -2679,7 +2679,6 @@ function renderMailVorgangReview(
       "todo_ids",
       links.todo_ids,
       linkItems(suggestionsPayload, "todos"),
-      true,
       "todo",
     ),
     createSuggestionSection(
@@ -2693,7 +2692,6 @@ function renderMailVorgangReview(
       "termin_ids",
       links.termin_ids,
       linkItems(suggestionsPayload, "termine"),
-      true,
       "termin",
     ),
   );
@@ -6152,9 +6150,9 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
   const links = sourceLinkPayload(source);
   form.append(createSuggestionSection("Transaktionen", "transaction_ids", links.transaction_ids, linkItems(suggestionsPayload, "transactions")));
   form.append(createSuggestionSection("Mails", "mail_ids", links.mail_ids, linkItems(suggestionsPayload, "mails")));
-  form.append(createSuggestionSection("To-Dos", "todo_ids", links.todo_ids, linkItems(suggestionsPayload, "todos"), true, "todo"));
+  form.append(createSuggestionSection("To-Dos", "todo_ids", links.todo_ids, linkItems(suggestionsPayload, "todos"), "todo"));
   form.append(createSuggestionSection("Dokumente", "beleg_ids", links.beleg_ids, linkItems(suggestionsPayload, "belege")));
-  form.append(createSuggestionSection("Termine", "termin_ids", links.termin_ids, linkItems(suggestionsPayload, "termine"), true, "termin"));
+  form.append(createSuggestionSection("Termine", "termin_ids", links.termin_ids, linkItems(suggestionsPayload, "termine"), "termin"));
 
   const actions = mailElement("div", "vorgang-form-actions");
   const submit = mailElement("button", "primary-action", "Vorgang erstellen");
@@ -6269,7 +6267,6 @@ function createSuggestionSection(
   fieldName,
   selectedIds,
   suggestions,
-  autoSelect = true,
   createTarget = "",
 ) {
   const section = mailElement("section", "detail-section suggestion-section");
@@ -6358,8 +6355,7 @@ function createSuggestionSection(
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.value = item.id;
-    checkbox.checked = Boolean(item.selected)
-      || (autoSelect && Number(item.score || 0) >= 0.45);
+    checkbox.checked = Boolean(item.selected);
     const text = mailElement("span");
     text.append(
       mailElement("strong", "", item.label || item.id),
@@ -6994,21 +6990,18 @@ function createVorgangMetadataEditor(vorgang, suggestionsPayload = null) {
       "transaction_ids",
       (vorgang.transaktionen || []).map((item) => item.transaktions_id),
       linkItems(suggestionsPayload, "transactions"),
-      false,
     ),
     createSuggestionSection(
       "Mails",
       "mail_ids",
       (vorgang.mails || []).map((item) => item.inbox_id),
       linkItems(suggestionsPayload, "mails"),
-      false,
     ),
     createSuggestionSection(
       "To-Dos",
       "todo_ids",
       (vorgang.todos || []).map((item) => item.todo_id),
       linkItems(suggestionsPayload, "todos"),
-      false,
       "todo",
     ),
     createSuggestionSection(
@@ -7016,14 +7009,12 @@ function createVorgangMetadataEditor(vorgang, suggestionsPayload = null) {
       "beleg_ids",
       (vorgang.belege || []).map((item) => item.beleg_id),
       linkItems(suggestionsPayload, "belege"),
-      false,
     ),
     createSuggestionSection(
       "Termine",
       "termin_ids",
       (vorgang.termine || []).map((item) => item.termin_id),
       linkItems(suggestionsPayload, "termine"),
-      false,
       "termin",
     ),
   );

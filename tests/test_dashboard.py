@@ -2459,6 +2459,89 @@ class DashboardHTTPTests(unittest.TestCase):
 
 
 class DashboardTodoBrowserTests(unittest.TestCase):
+    def test_suggestions_are_not_checked_only_because_of_score(self):
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            self.skipTest("Playwright ist nicht installiert.")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            server = create_server(database_path, port=0)
+            thread = threading.Thread(
+                target=server.serve_forever,
+                daemon=True,
+            )
+            thread.start()
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+            try:
+                with sync_playwright() as playwright:
+                    try:
+                        browser = playwright.chromium.launch(headless=True)
+                    except Exception as exc:
+                        self.skipTest(
+                            f"Chromium ist nicht installiert: {exc}"
+                        )
+                    page = browser.new_page(
+                        viewport={"width": 1500, "height": 1000}
+                    )
+                    page.goto(base_url, wait_until="networkidle")
+
+                    result = page.evaluate(
+                        """
+                        () => {
+                          const form = document.createElement("form");
+                          const section = createSuggestionSection(
+                            "Transaktionen",
+                            "transaction_ids",
+                            ["tx-linked"],
+                            [
+                              {
+                                id: "tx-linked",
+                                label: "Bestehende Verknuepfung",
+                                score: 0.1,
+                              },
+                              {
+                                id: "tx-high-score",
+                                label: "Hoher Vorschlag",
+                                score: 0.95,
+                                source: "suggestion",
+                              },
+                              {
+                                id: "tx-selected",
+                                label: "Markierte Verknuepfung",
+                                score: 0.2,
+                                selected: true,
+                              },
+                            ],
+                          );
+                          form.append(section);
+                          document.body.append(form);
+                          return {
+                            checkedById: Object.fromEntries(
+                              [...section.querySelectorAll("input[type='checkbox']")]
+                                .map((checkbox) => [checkbox.value, checkbox.checked]),
+                            ),
+                            payload: readSuggestionFields(form),
+                          };
+                        }
+                        """
+                    )
+                    browser.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+        self.assertTrue(result["checkedById"]["tx-linked"])
+        self.assertTrue(result["checkedById"]["tx-selected"])
+        self.assertFalse(result["checkedById"]["tx-high-score"])
+        self.assertEqual(
+            ["tx-linked", "tx-selected"],
+            sorted(result["payload"]["transaction_ids"]),
+        )
+
     def test_todo_can_be_managed_in_browser(self):
         try:
             from playwright.sync_api import expect, sync_playwright
