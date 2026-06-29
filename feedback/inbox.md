@@ -1,11 +1,3 @@
 # Inbox
 
-- Spam score ist immernoch oft auf 0%
-- Der Vorschlag von weitere Mails verknüpfen ist richtig schlecht. Ich verbringe viel zu viel Zeit damit die Vorschläge wegzuklicken. Vielleicht wäre sogar nur ein priorisiertes Sortieren von Vorschlägen (in allen Feldern) sinnvoll und nicht direkt anklicken
-- Wenn ich einen Vorgang erstelle und es sind schon alle informationen da, dann will ich einen Vorgang direkt anlegen und erledigen können in einem Klick. Dazu gehört auch, dass ich wenn eine Transaktion verknüpft ist bei dieser transaktion direkt die Parameter (Typ, Oberkategorie, unterkategorie, etc ) eintragen kann.
-- Aktuell kann ich auch keine Vorgänge manuell schließen. Sie können nur über Abschlussregeln geschlossen werden. Ach doch das geht, aber der Button ist irgendwie mittendrin. Sehr unintuitiv
-- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas komplizierter, da es über DFBnet Vrein läuft. Ich hätte da gerne ein eigenes Interface mit Vorschlägen aus der Mail (Vorgang etc) falls etwas vorhanden ist und mit einem Dropdown (mit manueller Eingabe) der Spender aus der Datenbank.
-  Das Erstellen einer Spendenbescheinigung läuft so: Auf DFBnet Verein einloggen - Evtl kommt ein Pop-Up "Der Browser unterstütz keine Pop-Ups" das wegklicken - Finanzen - Spenden - hier leigen alle bisherigen Spenden, woraus die datenbank aufgebaut werden kann). Erstellen einer neuen Spende: Neue Geld (oder Sach-)spende, eigentlich haben wir immer Geldspenden. - Verscheidene Felder ausfüllen, das kann über ein Pop-Up (mit Vorschlägen) im Tool passieren. Wichtig: Option einbauen ob die beiden Häkchen (Erstattung von Aufwendungen / Migliedsbeitrag) gesetzt sind oder nicht). Dann auf Speichern, dann ploppt ein Feld auf. Das mit OK bestätigen. Dann erscheint die Spendenbescheinigung in der Liste. Da sind links daneben drei Buttons, da auf "Drucken", dann unten auf "PDF". Das entsprechende PDF speichern
-- Ich möchte erne aus dem Mailreiter heraus eine Mail einem Vorgang zuordnen können.
-- Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege wie man geschickt damit umgehen kann
-- Man merkt deutlich, dass das Tool gewachsen ist. Es ist stellenweise sehr unintuitiv oder unübersichtlich. Vlt kannst du das verbessern ohne, dass Funktionalitäten verloren gehen.
+Keine offenen Eingaben.
