@@ -6,6 +6,7 @@ const state = {
   search: "",
   dateFrom: "",
   dateTo: "",
+  hideCompletedVorgaengeTransactions: false,
   linkCandidatesLoaded: false,
   linkCandidates: null,
   transactionRequest: null,
@@ -81,6 +82,9 @@ const elements = {
   search: document.querySelector("#transaction-search"),
   dateFrom: document.querySelector("#date-from"),
   dateTo: document.querySelector("#date-to"),
+  transactionHideCompletedVorgaenge: document.querySelector(
+    "#transaction-hide-completed-vorgaenge",
+  ),
   resetPeriod: document.querySelector("#reset-period"),
   maxPeriod: document.querySelector("#max-period"),
   toggleBalanceHistory: document.querySelector("#toggle-balance-history"),
@@ -333,6 +337,12 @@ elements.search.addEventListener("input", () => {
     state.search = elements.search.value;
     loadTransactions();
   }, 220);
+});
+
+elements.transactionHideCompletedVorgaenge.addEventListener("change", () => {
+  state.hideCompletedVorgaengeTransactions =
+    elements.transactionHideCompletedVorgaenge.checked;
+  loadTransactions();
 });
 
 elements.vorgangSearch.addEventListener("input", () => {
@@ -5743,12 +5753,20 @@ async function loadTransactions() {
     direction: state.direction,
     date_from: state.dateFrom,
     date_to: state.dateTo,
+    hide_completed_vorgaenge: String(
+      state.hideCompletedVorgaengeTransactions,
+    ),
   });
   try {
     const response = await fetch(`/api/transactions?${parameters}`, {
       signal: state.transactionRequest.signal,
     });
     const payload = await readResponse(response);
+    state.hideCompletedVorgaengeTransactions = Boolean(
+      payload.hide_completed_vorgaenge,
+    );
+    elements.transactionHideCompletedVorgaenge.checked =
+      state.hideCompletedVorgaengeTransactions;
     renderTransactions(payload.transactions);
     elements.transactionCount.textContent = integerFormatter.format(payload.count);
     elements.transactionCountLabel.textContent =
