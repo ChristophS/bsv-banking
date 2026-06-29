@@ -1,2 +1,3 @@
-- Tests in CI oder einer funktionierenden lokalen Python-Umgebung nachholen.
-- Optional später prüfen, ob ein nicht überspringbarer Frontend-Unit-Test für `createSuggestionSection(...)` möglich ist, damit die Kernlogik auch ohne Playwright/Chromium abgesichert wird.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
