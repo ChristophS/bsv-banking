@@ -442,6 +442,57 @@ class DashboardDataStoreTests(unittest.TestCase):
             ["tx_newer"],
         )
 
+    def test_transactions_with_only_completed_vorgaenge_can_be_hidden(self):
+        self.store.update_transaction_classification(
+            "tx_newer",
+            {"transaktionstyp": "VergÃ¼tung"},
+        )
+        with connect_database(self.database_path) as connection:
+            connection.execute(
+                """
+                DELETE FROM transaktion_vorgaenge
+                WHERE transaktions_id = 'tx_older'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO vorgaenge (
+                    vorgangs_id, titel, beschreibung, vorgangstyp,
+                    status, erstellt_am, aktualisiert_am
+                ) VALUES (
+                    'vorgang_tx_newer_offen', '', '', 'Ausgabe',
+                    'in_bearbeitung',
+                    '2026-06-11T08:00:00+00:00',
+                    '2026-06-11T08:00:00+00:00'
+                )
+                """
+            )
+            connection.commit()
+
+        rows = self.store.list_transactions(hide_completed_vorgaenge=True)
+
+        self.assertEqual(
+            [row["transaktions_id"] for row in rows],
+            ["tx_older"],
+        )
+
+        with connect_database(self.database_path) as connection:
+            connection.execute(
+                """
+                INSERT INTO transaktion_vorgaenge (
+                    transaktions_id, vorgangs_id
+                ) VALUES ('tx_newer', 'vorgang_tx_newer_offen')
+                """
+            )
+            connection.commit()
+
+        rows = self.store.list_transactions(hide_completed_vorgaenge=True)
+
+        self.assertEqual(
+            [row["transaktions_id"] for row in rows],
+            ["tx_newer", "tx_older"],
+        )
+
     def test_transaction_period_bounds_cover_database(self):
         bounds = self.store.transaction_period_bounds()
 
@@ -1681,6 +1732,7 @@ class DashboardHTTPTests(unittest.TestCase):
         ) as response:
             payload = json.load(response)
             self.assertEqual(payload["count"], 1)
+            self.assertFalse(payload["hide_completed_vorgaenge"])
             self.assertEqual(
                 payload["transactions"][0]["transaktions_id"],
                 "tx_older",
@@ -1720,6 +1772,18 @@ class DashboardHTTPTests(unittest.TestCase):
                     row["status"] != "abgeschlossen"
                     for row in payload["vorgaenge"]
                 )
+            )
+
+        with urlopen(
+            self.base_url + "/api/transactions?hide_completed_vorgaenge=true",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertTrue(payload["hide_completed_vorgaenge"])
+            self.assertEqual(payload["count"], 1)
+            self.assertEqual(
+                payload["transactions"][0]["transaktions_id"],
+                "tx_older",
             )
 
         with urlopen(
