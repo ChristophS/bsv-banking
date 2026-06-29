@@ -23,6 +23,16 @@ from transaction_store.rules import (
 )
 
 
+class DashboardStaticTests(unittest.TestCase):
+    def test_vorgang_detail_exposes_manual_completion_action(self):
+        app_js = Path("banking_dashboard/static/app.js").read_text(encoding="utf-8")
+
+        self.assertIn("Vorgang manuell abschließen", app_js)
+        self.assertIn("Manueller Abschluss", app_js)
+        self.assertIn("/api/vorgaenge/${encodeURIComponent(vorgang.vorgangs_id)}/status", app_js)
+        self.assertIn("JSON.stringify({ completed })", app_js)
+
+
 class FakeDashboardMailBackend:
     def __init__(self):
         self.message = {

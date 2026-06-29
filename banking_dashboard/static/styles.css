@@ -2764,38 +2764,40 @@ th[aria-sort="descending"] .sort-indicator {
   margin-bottom: 0;
 }
 
-.vorgang-completed-control {
+.vorgang-completion-panel {
   display: flex;
   align-items: flex-start;
-  gap: 11px;
-  cursor: pointer;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.vorgang-completed-control input {
-  width: 19px;
-  height: 19px;
-  margin: 1px 0 0;
-  accent-color: var(--green-700);
+.vorgang-completion-copy {
+  min-width: 0;
 }
 
-.vorgang-completed-control span,
-.vorgang-completed-control strong,
-.vorgang-completed-control small {
+.vorgang-completion-copy,
+.vorgang-completion-copy strong,
+.vorgang-completion-copy small {
   display: block;
 }
 
-.vorgang-completed-control strong {
+.vorgang-completion-copy strong {
   color: var(--green-950);
   font-size: 14px;
 }
 
-.vorgang-completed-control small {
+.vorgang-completion-copy small {
   margin-top: 3px;
   color: var(--ink-muted);
   font-size: 11px;
 }
 
-.vorgang-completed-control:has(input:disabled) {
+.vorgang-completion-action {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.vorgang-completion-action:disabled {
   cursor: wait;
   opacity: 0.7;
 }
