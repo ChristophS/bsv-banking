@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260629-105309
+agent2/codex-20260629-124643
 
 ## Geaenderte Dateien
 
@@ -23,6 +23,7 @@ agent2/codex-20260629-105309
 - Frontend-Request fuer `/api/transactions` sendet den neuen Filterzustand zusammen mit Suche, Zeitraum und Sortierung.
 - Beim Umschalten der Checkbox wird die Transaktionsliste neu geladen, ohne bestehenden Such-, Zeitraum- oder Sortierzustand zu veraendern.
 - Store- und HTTP-Tests fuer den neuen Filter wurden ergaenzt.
+- Im aktuellen Checkout waren die Code-Aenderungen bereits vorhanden; aktualisiert wurde nur dieser Report auf den aktuellen Branch- und Teststand.
 
 ## Nicht umgesetzte Punkte
 
