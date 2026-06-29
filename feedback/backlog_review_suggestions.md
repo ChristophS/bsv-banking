@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Bei Gelegenheit einen UI-näheren Test für `createVorgangStatusEditor()` ergänzen, der Buttontext, Klickverhalten und PATCH-Payload über einen Fetch-Mock prüft.
+- Den Nutzertext optional weniger technisch formulieren, z. B. statt Verweis auf die Status-API eine rein fachliche Erklärung anzeigen.
