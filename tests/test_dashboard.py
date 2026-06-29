@@ -442,6 +442,79 @@ class DashboardDataStoreTests(unittest.TestCase):
             ["tx_newer"],
         )
 
+    def test_transactions_can_hide_completed_vorgang_links(self):
+        with connect_database(self.database_path) as connection:
+            connection.execute(
+                """
+                INSERT INTO transactions (
+                    transaction_id, fingerprint, occurrence, provider,
+                    account_id, account_name, account_number, booking_date,
+                    value_date, counterparty, amount, currency, booking_text,
+                    purpose, amount_minor, counterparty_account, creditor_id,
+                    mandate_reference, source_info, raw_fields_json,
+                    first_seen_at, transaction_type, top_category,
+                    sub_category, sphere, professional_description,
+                    account_balance_minor
+                ) VALUES (
+                    'tx_unlinked', 'fp_unlinked', 1, 'testbank',
+                    'acct_test', 'Hauptkonto', 'DE001', '2026-06-09',
+                    '2026-06-09', 'Ohne Vorgang', '7.00', 'EUR',
+                    'Ueberweisung', 'Nicht verknuepft', 700, 'DE002',
+                    'creditor_1', 'mandate_1', 'Testquelle',
+                    '{"Originalfeld": "Ohne Vorgang"}',
+                    '2026-06-11T08:00:00+00:00', 'Ausgabe',
+                    'Spielbetrieb', 'Eintritt', 'Zweckbetrieb',
+                    'Testbeschreibung', 3200
+                )
+                """
+            )
+            connection.execute(
+                """
+                UPDATE vorgaenge
+                SET status = 'abgeschlossen'
+                WHERE vorgangs_id = 'vorgang_tx_older'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO vorgaenge (
+                    vorgangs_id, titel, beschreibung, vorgangstyp, status,
+                    erstellt_am, aktualisiert_am
+                ) VALUES (
+                    'vorgang_tx_newer_abgeschlossen', '', '', 'Ausgabe',
+                    'abgeschlossen', '2026-06-11T08:00:00+00:00',
+                    '2026-06-11T08:00:00+00:00'
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO transaktion_vorgaenge (
+                    transaktions_id, vorgangs_id
+                ) VALUES ('tx_newer', 'vorgang_tx_newer_abgeschlossen')
+                """
+            )
+            connection.commit()
+
+        unfiltered = self.store.list_transactions(
+            date_from="2026-05-01",
+            date_to="2026-06-30",
+        )
+        filtered = self.store.list_transactions(
+            date_from="2026-05-01",
+            date_to="2026-06-30",
+            hide_completed_vorgaenge=True,
+        )
+
+        self.assertEqual(
+            [row["transaktions_id"] for row in unfiltered],
+            ["tx_newer", "tx_unlinked", "tx_older"],
+        )
+        self.assertEqual(
+            [row["transaktions_id"] for row in filtered],
+            ["tx_newer", "tx_unlinked"],
+        )
+
     def test_transaction_period_bounds_cover_database(self):
         bounds = self.store.transaction_period_bounds()
 
@@ -1680,6 +1753,7 @@ class DashboardHTTPTests(unittest.TestCase):
             timeout=5,
         ) as response:
             payload = json.load(response)
+            self.assertFalse(payload["hide_completed_vorgaenge"])
             self.assertEqual(payload["count"], 1)
             self.assertEqual(
                 payload["transactions"][0]["transaktions_id"],
@@ -1692,6 +1766,29 @@ class DashboardHTTPTests(unittest.TestCase):
         ) as response:
             payload = json.load(response)
             self.assertNotIn("beleg_ids", payload["transaction"])
+
+        with connect_database(self.database_path) as connection:
+            connection.execute(
+                """
+                UPDATE vorgaenge
+                SET status = 'abgeschlossen'
+                WHERE vorgangs_id = 'vorgang_tx_newer'
+                """
+            )
+            connection.commit()
+        with urlopen(
+            self.base_url
+            + "/api/transactions?hide_completed_vorgaenge=true"
+            + "&date_from=2026-05-01&date_to=2026-06-30",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertTrue(payload["hide_completed_vorgaenge"])
+            self.assertEqual(payload["count"], 1)
+            self.assertEqual(
+                payload["transactions"][0]["transaktions_id"],
+                "tx_older",
+            )
 
         with urlopen(
             self.base_url + "/api/vorgaenge",
