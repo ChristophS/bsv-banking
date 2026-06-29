@@ -442,6 +442,83 @@ class DashboardDataStoreTests(unittest.TestCase):
             ["tx_newer"],
         )
 
+    def test_transactions_with_only_completed_vorgaenge_can_be_hidden(self):
+        connection = connect_database(self.database_path)
+        try:
+            connection.execute(
+                """
+                UPDATE vorgaenge
+                SET status = 'abgeschlossen'
+                WHERE vorgangs_id = 'vorgang_tx_older'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO transactions (
+                    transaction_id, fingerprint, occurrence, provider,
+                    account_id, account_name, account_number, booking_date,
+                    value_date, counterparty, amount, currency, booking_text,
+                    purpose, amount_minor, counterparty_account, creditor_id,
+                    mandate_reference, source_info, raw_fields_json,
+                    first_seen_at, transaction_type, top_category,
+                    sub_category, sphere, professional_description,
+                    account_balance_minor
+                )
+                SELECT
+                    'tx_unassigned', 'fp_unassigned', occurrence, provider,
+                    account_id, account_name, account_number, booking_date,
+                    value_date, 'Ohne Vorgang', '7.00', currency,
+                    booking_text, 'Nicht zugeordnet', 700,
+                    counterparty_account, creditor_id, mandate_reference,
+                    source_info, raw_fields_json, first_seen_at,
+                    transaction_type, top_category, sub_category, sphere,
+                    professional_description, account_balance_minor
+                FROM transactions
+                WHERE transaction_id = 'tx_newer'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO vorgaenge (
+                    vorgangs_id, titel, beschreibung, vorgangstyp,
+                    status, erstellt_am, aktualisiert_am
+                ) VALUES (
+                    'vorgang_tx_newer_done', '', '', 'Ausgabe',
+                    'abgeschlossen',
+                    '2026-06-11T08:00:00+00:00',
+                    '2026-06-11T08:00:00+00:00'
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO transaktion_vorgaenge (
+                    transaktions_id, vorgangs_id
+                ) VALUES ('tx_newer', 'vorgang_tx_newer_done')
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        default_rows = self.store.list_transactions()
+        explicit_default_rows = self.store.list_transactions(
+            hide_completed_vorgaenge=False,
+        )
+        filtered_rows = self.store.list_transactions(
+            hide_completed_vorgaenge=True,
+        )
+
+        self.assertEqual(default_rows, explicit_default_rows)
+        self.assertIn(
+            "tx_older",
+            [row["transaktions_id"] for row in default_rows],
+        )
+        self.assertEqual(
+            [row["transaktions_id"] for row in filtered_rows],
+            ["tx_newer", "tx_unassigned"],
+        )
+
     def test_transaction_period_bounds_cover_database(self):
         bounds = self.store.transaction_period_bounds()
 
@@ -1680,6 +1757,7 @@ class DashboardHTTPTests(unittest.TestCase):
             timeout=5,
         ) as response:
             payload = json.load(response)
+            self.assertFalse(payload["hide_completed_vorgaenge"])
             self.assertEqual(payload["count"], 1)
             self.assertEqual(
                 payload["transactions"][0]["transaktions_id"],
@@ -1708,6 +1786,18 @@ class DashboardHTTPTests(unittest.TestCase):
             "tx_newer",
             {"transaktionstyp": "Vergütung"},
         )
+        with urlopen(
+            self.base_url + "/api/transactions?hide_completed_vorgaenge=true",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertTrue(payload["hide_completed_vorgaenge"])
+            self.assertEqual(payload["count"], 1)
+            self.assertEqual(
+                payload["transactions"][0]["transaktions_id"],
+                "tx_older",
+            )
+
         with urlopen(
             self.base_url + "/api/vorgaenge?hide_completed=true",
             timeout=5,

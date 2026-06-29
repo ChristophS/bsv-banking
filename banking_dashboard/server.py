@@ -245,6 +245,7 @@ class DashboardDataStore:
         direction: str = "desc",
         date_from: str | None = None,
         date_to: str | None = None,
+        hide_completed_vorgaenge: bool = False,
     ) -> list[dict[str, Any]]:
         if sort not in SORT_COLUMNS:
             raise ValueError(f"Unbekannte Sortierspalte: {sort}")
@@ -261,24 +262,44 @@ class DashboardDataStore:
             )
 
         query = search.strip()
-        conditions = ["datum >= ?", "datum <= ?"]
+        conditions = ["n.datum >= ?", "n.datum <= ?"]
         parameters: list[str] = [normalized_from, normalized_to]
+        if hide_completed_vorgaenge:
+            conditions.append(
+                """
+                (
+                    NOT EXISTS (
+                        SELECT 1
+                        FROM transaktion_vorgaenge AS tv
+                        WHERE tv.transaktions_id = n.transaktions_id
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM transaktion_vorgaenge AS tv
+                        JOIN vorgaenge AS v
+                          ON v.vorgangs_id = tv.vorgangs_id
+                        WHERE tv.transaktions_id = n.transaktions_id
+                          AND v.status <> 'abgeschlossen'
+                    )
+                )
+                """
+            )
         if query:
             pattern = f"%{_escape_like(query.casefold())}%"
             conditions.append(
                 """
                 (
-                    CASEFOLD(datum) LIKE ? ESCAPE '\\'
-                    OR CASEFOLD(STRFTIME('%d.%m.%Y', datum))
+                    CASEFOLD(n.datum) LIKE ? ESCAPE '\\'
+                    OR CASEFOLD(STRFTIME('%d.%m.%Y', n.datum))
                         LIKE ? ESCAPE '\\'
-                    OR CASEFOLD(kontoname) LIKE ? ESCAPE '\\'
-                    OR CASEFOLD(zahlungsbeteiligter) LIKE ? ESCAPE '\\'
-                    OR CASEFOLD(verwendungszweck) LIKE ? ESCAPE '\\'
-                    OR CASEFOLD(betrag) LIKE ? ESCAPE '\\'
-                    OR CASEFOLD(REPLACE(betrag, '.', ','))
+                    OR CASEFOLD(n.kontoname) LIKE ? ESCAPE '\\'
+                    OR CASEFOLD(n.zahlungsbeteiligter) LIKE ? ESCAPE '\\'
+                    OR CASEFOLD(n.verwendungszweck) LIKE ? ESCAPE '\\'
+                    OR CASEFOLD(n.betrag) LIKE ? ESCAPE '\\'
+                    OR CASEFOLD(REPLACE(n.betrag, '.', ','))
                         LIKE ? ESCAPE '\\'
-                    OR CASEFOLD(kontostand_konto) LIKE ? ESCAPE '\\'
-                    OR CASEFOLD(REPLACE(kontostand_konto, '.', ','))
+                    OR CASEFOLD(n.kontostand_konto) LIKE ? ESCAPE '\\'
+                    OR CASEFOLD(REPLACE(n.kontostand_konto, '.', ','))
                         LIKE ? ESCAPE '\\'
                 )
                 """
@@ -291,14 +312,14 @@ class DashboardDataStore:
             rows = connection.execute(
                 f"""
                 SELECT
-                    transaktions_id,
-                    datum,
-                    kontoname,
-                    zahlungsbeteiligter,
-                    verwendungszweck,
-                    betrag,
-                    kontostand_konto
-                FROM normalized_transactions
+                    n.transaktions_id,
+                    n.datum,
+                    n.kontoname,
+                    n.zahlungsbeteiligter,
+                    n.verwendungszweck,
+                    n.betrag,
+                    n.kontostand_konto
+                FROM normalized_transactions AS n
                 {where}
                 ORDER BY
                     {order_expression} {normalized_direction.upper()},
@@ -5371,6 +5392,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         search = query.get("search", [""])[0]
         sort = query.get("sort", ["datum"])[0]
         direction = query.get("direction", ["desc"])[0]
+        hide_completed_vorgaenge = (
+            query.get("hide_completed_vorgaenge", ["false"])[0].casefold()
+            in {"1", "true", "yes", "on"}
+        )
         default_from, default_to = default_transaction_period()
         date_from = query.get("date_from", [default_from])[0]
         date_to = query.get("date_to", [default_to])[0]
@@ -5380,6 +5405,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             direction=direction,
             date_from=date_from,
             date_to=date_to,
+            hide_completed_vorgaenge=hide_completed_vorgaenge,
         )
         self._json_response(
             {
@@ -5390,6 +5416,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 "search": search,
                 "date_from": date_from,
                 "date_to": date_to,
+                "hide_completed_vorgaenge": hide_completed_vorgaenge,
                 "balances": self.server.data_store.balance_summary(),
             }
         )

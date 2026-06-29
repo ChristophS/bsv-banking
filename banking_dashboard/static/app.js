@@ -6,6 +6,7 @@ const state = {
   search: "",
   dateFrom: "",
   dateTo: "",
+  transactionHideCompletedVorgaenge: false,
   linkCandidatesLoaded: false,
   linkCandidates: null,
   transactionRequest: null,
@@ -126,6 +127,9 @@ const elements = {
   ),
   refreshTransactions: document.querySelector("#refresh-transactions"),
   refreshStatus: document.querySelector("#refresh-status"),
+  transactionHideCompletedVorgaenge: document.querySelector(
+    "#transaction-hide-completed-vorgaenge",
+  ),
   transactionRows: document.querySelector("#transaction-rows"),
   transactionTable: document.querySelector("#transaction-table"),
   transactionLoading: document.querySelector("#transaction-loading"),
@@ -333,6 +337,12 @@ elements.search.addEventListener("input", () => {
     state.search = elements.search.value;
     loadTransactions();
   }, 220);
+});
+
+elements.transactionHideCompletedVorgaenge.addEventListener("change", () => {
+  state.transactionHideCompletedVorgaenge =
+    elements.transactionHideCompletedVorgaenge.checked;
+  loadTransactions();
 });
 
 elements.vorgangSearch.addEventListener("input", () => {
@@ -5743,6 +5753,7 @@ async function loadTransactions() {
     direction: state.direction,
     date_from: state.dateFrom,
     date_to: state.dateTo,
+    hide_completed_vorgaenge: String(state.transactionHideCompletedVorgaenge),
   });
   try {
     const response = await fetch(`/api/transactions?${parameters}`, {
