@@ -2,112 +2,72 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. DFBnet-Spielerprämien robuster laden: Retry und Pagination prüfen
+## 1. Spam-Score bleibt häufig bei 0 Prozent analysieren und verbessern
 
 **Priorität:** hoch
 
-**Grund:** Eigenes DFBnet-/Playwright-Thema und unabhängig vom Transaktionsfilter.
+**Grund:** Eigenes Thema im Mail-Scoring und Cache-Verhalten; sollte separat untersucht und getestet werden.
 
 **Feedback:**
 
-- Wenn bei den Prämien Spieltage fehlen: Kannst du das nicht eifnach retryen oder so? manchmal gehen die, manchmal nicht: BSV - Damen: fehlende Spieltage 12, 18. Bitte DFBnet-Ergebnisliste/Pagination pruefen.
+- Spam score ist immernoch oft auf 0%
 
-## 2. DFBnet-Mitgliedersuche beim Zahlungsdatenabruf stabilisieren
+## 2. Vorschläge für weitere Mail-/Entitätsverknüpfungen weniger aufdringlich machen
 
 **Priorität:** hoch
 
-**Grund:** Separates Stabilitätsproblem im Zahlungsdatenabruf.
+**Grund:** Eigenes UX-Thema rund um Vorschlagsdarstellung und Priorisierung; unabhängig vom Vorgang-anlegen-und-abschließen-Flow.
 
 **Feedback:**
 
-- Bei Zahlungsdaten abrufen kam auch beim ersten Mal: Die DFBnet-Mitgliedersuche wurde nicht gefunden.    (Beim zweiten mal gings)
+- Der Vorschlag von weitere Mails verknüpfen ist richtig schlecht. Ich verbringe viel zu viel Zeit damit die Vorschläge wegzuklicken. Vielleicht wäre sogar nur ein priorisiertes Sortieren von Vorschlägen (in allen Feldern) sinnvoll und nicht direkt anklicken
 
-## 3. Deckellisten-Dateipfad in der Zahlungsdatenprüfung auswählbar machen
+## 3. Manuellen Abschluss im Vorgangsdetail intuitiver platzieren
 
 **Priorität:** mittel
 
-**Grund:** Eigenes UI-Thema in der Zahlungsdaten-/Deckellisten-Ansicht.
+**Grund:** UI-Polish für den Statusbereich; kann nach dem nächsten Paket separat und gezielt umgesetzt werden.
 
 **Feedback:**
 
-- Bei der Zuordnung zur Deckelliste will ich den Dateipfad auswählen können. Der kann aber auch vorausgewählt sein
+- Aktuell kann ich auch keine Vorgänge manuell schließen. Sie können nur über Abschlussregeln geschlossen werden. Ach doch das geht, aber der Button ist irgendwie mittendrin. Sehr unintuitiv
 
-## 4. Automatische Zuordnung bei 100%-Übereinstimmung zwischen Deckelliste und Spielerprämien prüfen
+## 4. Mail im Mail-Reiter direkt einem vorhandenen Vorgang zuordnen
 
 **Priorität:** hoch
 
-**Grund:** Eigener Abgleichs-/Matching-Fix außerhalb des Transaktionsfilters.
+**Grund:** Eigenständiger Arbeitsfluss für Mail-zu-Vorgang-Zuordnung; sollte separat auf den bestehenden Verknüpfungs-APIs aufbauen.
 
 **Feedback:**
 
-- Die 100% Übereisntimmung zwischen Deckelliste und Spielerprämien werden nicht automatisch zugeordnet. Warum?
+- Ich möchte erne aus dem Mailreiter heraus eine Mail einem Vorgang zuordnen können.
 
-## 5. Unterschiede bei gefundenen Zahlungsdaten zwischen Prämien und Deckelliste untersuchen
-
-**Priorität:** hoch
-
-**Grund:** Separates Analyse- und Bugfix-Thema im Zahlungsdaten-Matching.
-
-**Feedback:**
-
-- Es gibt Fälle da werden bei den Prämien valide Zahlungsdaten gefunden, bei der Deckelliste aber nicht, warum?
-
-## 6. Manuelle Gegenposition: Pflichtfelder mit bestehenden Klassifikationswerten als Vorschläge
+## 5. Mail mit mehreren Dokumenten und mehreren Transaktionen über einen Vorgang abbilden
 
 **Priorität:** mittel
 
-**Grund:** Eigenes Formular- und Klassifikationspaket; nicht Teil des Listenfilters.
+**Grund:** Größeres Fachkonzept für komplexe Vorgänge mit mehreren Dokumenten/Transaktionen; über das kleine Erstellen-und-Abschließen-Paket hinausgehend.
 
 **Feedback:**
 
-- Bei einer manuellen Gegenposition sind Transaktionstyp, Oberkategorie, Unterkategorie und Sphäre Pflicht. Bitte da wie so oft auch ein Dropdown mit bereits eingetragenen Werten in diesen Feldern (aus Transaktionen) aber auch der Möglichkeit etwas manuell anzulegen
+- Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege wie man geschickt damit umgehen kann
 
-## 7. Manuelle Gegenposition als Overlay/Popup anzeigen
+## 6. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Prozess konzipieren
 
 **Priorität:** mittel
 
-**Grund:** UI-Komfortthema für Gegenpositionen, abhängig vom Formular-Workflow.
+**Grund:** Eigenes großes Modul mit externem Prozess, Datenbankaufbau und Dokumenterzeugung; braucht separate Arbeitspakete.
 
 **Feedback:**
 
-- Bitte die manuelle Gegenposition als Pop-Up bzw Overlay, da man sonst weit runter scrollen muss
+- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung...
 
-## 8. Umbuchungen als Vorgang mit Position und Gegenposition modellieren
-
-**Priorität:** hoch
-
-**Grund:** Fachlich größeres Vorgangs-/Transaktionsthema mit eigener Modellierungsfrage.
-
-**Feedback:**
-
-- Es gibt den Transaktionstyp "Umbuchung". Die läuft immer als Oberkategorie "Sonstiges" - Unterkategorie "Umbuchung" - Sphäre "Ideeller Bereich". Das wird immer als Vorgang mit 2 Transaktionen angelegt. Position und Gegenposition. Bitte überlege wie man das sinnvoll umsetzen kann
-
-## 9. Mail-Anhänge direkt als Dokument speichern, ohne Vorgang zu erstellen
+## 7. Dashboard-Übersichtlichkeit schrittweise verbessern
 
 **Priorität:** mittel
 
-**Grund:** Eigenes Mail-/Dokumententhema mit separaten Anpassungen.
+**Grund:** Querschnittliches UX-Thema; sollte in kleine, gezielte Verbesserungen zerlegt werden.
 
 **Feedback:**
 
-- Ich hätte gerne die Möglichkeit Dokumente aus einer Mail direkt zu speichern ohne einen Vorgang zu erstellen
-
-## 10. Spam-Score-Berechnung prüfen, wenn alle Mails 0% anzeigen
-
-**Priorität:** hoch
-
-**Grund:** Separates Mail-Processing-/Spam-Erkennungsthema.
-
-**Feedback:**
-
-- Jetzt sind alle Spam-Scores bei 0%. Es scheint, dass die Spamerkennung nicht gut funktioniert.
-
-## 11. Gelesen-Markieren auf gesamten Mailverlauf anwenden
-
-**Priorität:** hoch
-
-**Grund:** Mail-Verlaufsaktion und nicht Teil des Transaktionsfilters.
-
-**Feedback:**
-
-- Auch wenn ich eine Mail mit Gelesen markiere, soll der gesamte Verlauf als "Gelesen" markiert werden
+- Man merkt deutlich, dass das Tool gewachsen ist. Es ist stellenweise sehr unintuitiv oder unübersichtlich. Vlt kannst du das verbessern ohne, dass Funktionalitäten verloren gehen.
