@@ -442,6 +442,82 @@ class DashboardDataStoreTests(unittest.TestCase):
             ["tx_newer"],
         )
 
+    def test_transactions_can_hide_only_completed_vorgang_links(self):
+        connection = connect_database(self.database_path)
+        try:
+            connection.execute(
+                """
+                UPDATE vorgaenge
+                SET status = 'abgeschlossen'
+                WHERE vorgangs_id = 'vorgang_tx_older'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO vorgaenge (
+                    vorgangs_id, titel, beschreibung, vorgangstyp,
+                    status, erstellt_am, aktualisiert_am
+                ) VALUES (
+                    'vorgang_tx_newer_completed', '', '', 'Ausgabe',
+                    'abgeschlossen', '2026-06-11T08:00:00+00:00',
+                    '2026-06-11T08:00:00+00:00'
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO transaktion_vorgaenge (
+                    transaktions_id, vorgangs_id
+                ) VALUES ('tx_newer', 'vorgang_tx_newer_completed')
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        unfiltered = self.store.list_transactions()
+        filtered = self.store.list_transactions(
+            hide_completed_vorgaenge=True,
+        )
+
+        self.assertEqual(
+            [row["transaktions_id"] for row in unfiltered],
+            ["tx_newer", "tx_older"],
+        )
+        self.assertEqual(
+            [row["transaktions_id"] for row in filtered],
+            ["tx_newer"],
+        )
+
+    def test_transactions_without_vorgang_stay_visible_when_hiding_completed(
+        self,
+    ):
+        connection = connect_database(self.database_path)
+        try:
+            connection.execute(
+                """
+                DELETE FROM transaktion_vorgaenge
+                WHERE transaktions_id = 'tx_older'
+                """
+            )
+            connection.execute(
+                """
+                UPDATE vorgaenge
+                SET status = 'abgeschlossen'
+                WHERE vorgangs_id = 'vorgang_tx_newer'
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        rows = self.store.list_transactions(hide_completed_vorgaenge=True)
+
+        self.assertEqual(
+            [row["transaktions_id"] for row in rows],
+            ["tx_older"],
+        )
+
     def test_transaction_period_bounds_cover_database(self):
         bounds = self.store.transaction_period_bounds()
 
@@ -1681,6 +1757,7 @@ class DashboardHTTPTests(unittest.TestCase):
         ) as response:
             payload = json.load(response)
             self.assertEqual(payload["count"], 1)
+            self.assertFalse(payload["hide_completed_vorgaenge"])
             self.assertEqual(
                 payload["transactions"][0]["transaktions_id"],
                 "tx_older",
@@ -1708,6 +1785,18 @@ class DashboardHTTPTests(unittest.TestCase):
             "tx_newer",
             {"transaktionstyp": "Vergütung"},
         )
+        with urlopen(
+            self.base_url + "/api/transactions?hide_completed_vorgaenge=true",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertTrue(payload["hide_completed_vorgaenge"])
+            self.assertEqual(payload["count"], 1)
+            self.assertEqual(
+                payload["transactions"][0]["transaktions_id"],
+                "tx_older",
+            )
+
         with urlopen(
             self.base_url + "/api/vorgaenge?hide_completed=true",
             timeout=5,
