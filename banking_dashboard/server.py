@@ -114,13 +114,16 @@ VORGANG_CREATE_FIELDS = {
     "description",
     "vorgangstyp",
     "completed",
+    "transaction_classifications",
     "transaction_ids",
     "mail_ids",
     "todo_ids",
     "beleg_ids",
     "termin_ids",
 }
-VORGANG_UPDATE_FIELDS = set(VORGANG_CREATE_FIELDS)
+VORGANG_UPDATE_FIELDS = set(VORGANG_CREATE_FIELDS) - {
+    "transaction_classifications"
+}
 TERMIN_CREATE_FIELDS = {
     "title",
     "description",
@@ -716,6 +719,10 @@ class DashboardDataStore:
         if set(payload) - VORGANG_CREATE_FIELDS:
             raise ValueError("Unbekannte Felder fuer den Vorgang.")
         values = self._validated_vorgang_values(payload, require_title=False)
+        classifications = self._validated_vorgang_transaction_classifications(
+            payload.get("transaction_classifications", {}),
+            values["transaction_ids"],
+        )
         vorgangs_id = f"vorgang_{uuid4().hex}"
         now = datetime.now().astimezone().isoformat()
         status = (
@@ -724,11 +731,6 @@ class DashboardDataStore:
             else "in_bearbeitung"
         )
         with closing(self._connect(writable=True)) as connection:
-            if values["completed"]:
-                self._validate_vorgang_completion_values(
-                    connection,
-                    values,
-                )
             connection.execute(
                 """
                 INSERT INTO vorgaenge (
@@ -754,6 +756,15 @@ class DashboardDataStore:
                 ),
             )
             self._replace_vorgang_links(connection, vorgangs_id, values)
+            self._update_linked_transaction_classifications(
+                connection,
+                classifications,
+            )
+            if values["completed"]:
+                self._validate_vorgang_completion_values(
+                    connection,
+                    values,
+                )
             connection.commit()
         result = self.vorgang_detail(vorgangs_id)
         if result is None:
@@ -3250,6 +3261,83 @@ class DashboardDataStore:
                 f"{field_name} darf hoechstens {limit} Werte enthalten."
             )
         return values
+
+    def _validated_vorgang_transaction_classifications(
+        self,
+        raw_values: Any,
+        transaction_ids: list[str],
+    ) -> dict[str, dict[str, str]]:
+        if raw_values in (None, {}):
+            return {}
+        if not isinstance(raw_values, dict):
+            raise ValueError(
+                "transaction_classifications muss ein Objekt sein."
+            )
+        linked_ids = set(transaction_ids)
+        normalized: dict[str, dict[str, str]] = {}
+        for raw_transaction_id, raw_classification in raw_values.items():
+            transaction_id = str(raw_transaction_id or "").strip()
+            if not transaction_id:
+                raise ValueError("Transaktions-ID fuer Klassifikation fehlt.")
+            if transaction_id not in linked_ids:
+                raise ValueError(
+                    "Klassifikation ist nur fuer verknuepfte "
+                    f"Transaktionen erlaubt: {transaction_id}"
+                )
+            if not isinstance(raw_classification, dict):
+                raise ValueError(
+                    "Klassifikation fuer Transaktion "
+                    f"{transaction_id} muss ein Objekt sein."
+                )
+            unknown_fields = sorted(
+                set(raw_classification) - set(CLASSIFICATION_FIELDS)
+            )
+            if unknown_fields:
+                raise ValueError(
+                    "Unbekannte Klassifikationsfelder: "
+                    + ", ".join(unknown_fields)
+                )
+            if not raw_classification:
+                raise ValueError(
+                    "Mindestens ein Klassifikationsfeld ist erforderlich."
+                )
+            normalized_fields: dict[str, str] = {}
+            for field, value in raw_classification.items():
+                if not isinstance(value, str):
+                    raise ValueError(f"Das Feld {field} muss Text enthalten.")
+                cleaned = value.strip()
+                if len(cleaned) > MAX_CLASSIFICATION_FIELD_LENGTH:
+                    raise ValueError(
+                        f"Das Feld {field} darf hoechstens "
+                        f"{MAX_CLASSIFICATION_FIELD_LENGTH} Zeichen "
+                        "enthalten."
+                    )
+                normalized_fields[field] = cleaned
+            normalized[transaction_id] = normalized_fields
+        return normalized
+
+    @staticmethod
+    def _update_linked_transaction_classifications(
+        connection: sqlite3.Connection,
+        classifications: dict[str, dict[str, str]],
+    ) -> None:
+        for transaction_id, values in classifications.items():
+            normalized = {
+                CLASSIFICATION_FIELDS[field]: value
+                for field, value in values.items()
+            }
+            assignments = ", ".join(f"{column} = ?" for column in normalized)
+            parameters = [*normalized.values(), transaction_id]
+            cursor = connection.execute(
+                f"""
+                UPDATE transactions
+                SET {assignments}
+                WHERE transaction_id = ?
+                """,
+                tuple(parameters),
+            )
+            if cursor.rowcount != 1:
+                raise LookupError("Transaktion nicht gefunden.")
 
     def _replace_vorgang_links(
         self,

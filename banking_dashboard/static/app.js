@@ -6032,11 +6032,13 @@ async function openVorgangCreateDialog(source = null) {
   elements.detailContent.replaceChildren(createLoadingBlock());
   elements.dialog.showModal();
   try {
-    const [suggestions, , candidates] = await Promise.all([
+    const [suggestions, , candidates, options] = await Promise.all([
       source ? loadVorgangSuggestions(source.type, source.id) : Promise.resolve(null),
       loadVorgangTypes(),
       loadLinkCandidates(),
+      fetch("/api/classification-options").then(readResponse),
     ]);
+    state.classificationOptions = options;
     renderVorgangCreateForm(source, mergeLinkCandidates(suggestions, candidates));
   } catch (error) {
     renderVorgangCreateForm(source, null);
@@ -6140,21 +6142,29 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
       true,
     ),
   );
-  const completed = mailElement("label", "checkbox-field is-wide");
-  const completedInput = document.createElement("input");
-  completedInput.type = "checkbox";
-  completedInput.name = "completed";
-  completed.append(completedInput, mailElement("span", "", "Direkt abschließen"));
-  grid.append(completed);
   fieldset.append(grid);
   form.append(fieldset);
 
   const links = sourceLinkPayload(source);
-  form.append(createSuggestionSection("Transaktionen", "transaction_ids", links.transaction_ids, linkItems(suggestionsPayload, "transactions")));
+  const transactionItems = linkItems(suggestionsPayload, "transactions");
+  const transactionSection = createSuggestionSection(
+    "Transaktionen",
+    "transaction_ids",
+    links.transaction_ids,
+    transactionItems,
+  );
+  const classificationSection = createVorgangCreateClassificationSection(
+    transactionSection,
+    transactionItems,
+  );
+  form.append(transactionSection, classificationSection);
   form.append(createSuggestionSection("Mails", "mail_ids", links.mail_ids, linkItems(suggestionsPayload, "mails")));
   form.append(createSuggestionSection("To-Dos", "todo_ids", links.todo_ids, linkItems(suggestionsPayload, "todos"), true, "todo"));
   form.append(createSuggestionSection("Dokumente", "beleg_ids", links.beleg_ids, linkItems(suggestionsPayload, "belege")));
   form.append(createSuggestionSection("Termine", "termin_ids", links.termin_ids, linkItems(suggestionsPayload, "termine"), true, "termin"));
+
+  const completionSection = createVorgangCreateCompletionSection();
+  form.append(completionSection);
 
   const actions = mailElement("div", "vorgang-form-actions");
   const submit = mailElement("button", "primary-action", "Vorgang erstellen");
@@ -6182,6 +6192,9 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
       elements.dialog.close();
       activateTab("vorgaenge");
       await openVorgang(payload.vorgang.vorgangs_id);
+      if (payload.vorgang.status === "abgeschlossen") {
+        showToast("Vorgang wurde angelegt und abgeschlossen.");
+      }
     } catch (error) {
       submit.disabled = false;
       status.className = "save-state is-error";
@@ -6190,6 +6203,165 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
     }
   });
   elements.detailContent.append(form);
+}
+
+function createVorgangCreateCompletionSection() {
+  const section = mailElement("section", "detail-section vorgang-create-completion");
+  section.append(mailElement("h3", "", "Abschluss beim Anlegen"));
+  const label = mailElement("label", "vorgang-completed-control");
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.name = "completed";
+  label.append(
+    input,
+    mailElement("strong", "", "Anlegen und direkt abschließen"),
+    mailElement(
+      "small",
+      "",
+      "Der Server prüft nach dem Speichern der Klassifikation, ob der Vorgang abschließbar ist.",
+    ),
+  );
+  section.append(label);
+  return section;
+}
+
+function createVorgangCreateClassificationSection(transactionSection, items) {
+  const section = mailElement("section", "detail-section vorgang-create-classifications");
+  section.append(mailElement("h3", "", "Transaktionen klassifizieren"));
+  const body = mailElement("div", "vorgang-create-classification-list");
+  section.append(body);
+  const byId = new Map(
+    items.filter((item) => item?.id).map((item) => [String(item.id), item]),
+  );
+  const render = () => {
+    body.replaceChildren();
+    const selected = [
+      ...transactionSection.querySelectorAll("input[type='checkbox']:checked"),
+    ].map((checkbox) => checkbox.value);
+    if (!selected.length) {
+      body.append(
+        mailElement(
+          "p",
+          "suggestion-empty",
+          "Wähle eine Transaktion aus, um sie beim Anlegen zu klassifizieren.",
+        ),
+      );
+      return;
+    }
+    for (const transactionId of selected) {
+      body.append(createVorgangCreateClassificationCard(
+        transactionId,
+        byId.get(transactionId),
+      ));
+    }
+  };
+  transactionSection.addEventListener("change", (event) => {
+    if (event.target.matches("input[type='checkbox']")) {
+      render();
+    }
+  });
+  render();
+  return section;
+}
+
+function createVorgangCreateClassificationCard(transactionId, item = {}) {
+  const card = mailElement("div", "vorgang-create-classification-card");
+  card.dataset.transactionClassificationId = transactionId;
+  card.append(
+    mailElement("h4", "", item?.label || transactionId),
+    mailElement(
+      "p",
+      "",
+      [
+        item?.date ? formatDateTimeOrDate(item.date) : "",
+        item?.amount ? currencyFormatter.format(Number(item.amount)) : "",
+        item?.reason,
+      ].filter(Boolean).join(" · "),
+    ),
+  );
+  const values = item?.classification || {};
+  const grid = document.createElement("fieldset");
+  grid.className = "classification-form";
+  const names = {
+    transactionType: `classification_${transactionId}_transaktionstyp`,
+    topCategory: `classification_${transactionId}_oberkategorie`,
+    subCategory: `classification_${transactionId}_unterkategorie`,
+    sphere: `classification_${transactionId}_sphaere`,
+  };
+  grid.append(
+    vorgangCreateClassificationField(
+      "Transaktionstyp",
+      names.transactionType,
+      values.transaktionstyp || "",
+      "transaktionstyp",
+    ),
+    vorgangCreateClassificationField(
+      "Oberkategorie",
+      names.topCategory,
+      values.oberkategorie || "",
+      "oberkategorie",
+    ),
+    vorgangCreateClassificationField(
+      "Unterkategorie",
+      names.subCategory,
+      values.unterkategorie || "",
+      "unterkategorie",
+    ),
+    vorgangCreateClassificationField(
+      "Sphäre",
+      names.sphere,
+      values.sphaere || "",
+      "sphaere",
+      false,
+      false,
+      true,
+    ),
+    vorgangCreateClassificationField(
+      "Fachliche Beschreibung",
+      `classification_${transactionId}_fachliche_beschreibung`,
+      values.fachliche_beschreibung || "",
+      "fachliche_beschreibung",
+      true,
+      true,
+    ),
+  );
+  card.append(grid);
+  configureClassificationFields(grid, names);
+  return card;
+}
+
+function vorgangCreateClassificationField(
+  labelText,
+  name,
+  value,
+  fieldKey,
+  wide = false,
+  multiline = false,
+  select = false,
+) {
+  const field = document.createElement("label");
+  field.className = `classification-field${wide ? " is-wide" : ""}`;
+  field.append(mailElement("span", "detail-label", labelText));
+  const input = document.createElement(multiline ? "textarea" : select ? "select" : "input");
+  input.name = name;
+  input.dataset.classificationField = fieldKey;
+  input.maxLength = 2000;
+  input.autocomplete = "off";
+  if (multiline) {
+    input.rows = 3;
+    input.value = value || "";
+  } else if (select) {
+    const current = document.createElement("option");
+    current.value = value || "";
+    current.textContent = value || "Nicht angegeben";
+    input.append(current);
+    input.value = value || "";
+  } else {
+    input.type = "text";
+    input.value = value || "";
+  }
+  field.append(input);
+  return field;
 }
 
 function formTextField(labelText, name, value = "", required = false, multiline = false) {
@@ -6726,7 +6898,43 @@ function readVorgangForm(form) {
     vorgangstyp: form.elements.vorgangstyp.value,
     completed: form.elements.completed.checked,
   };
-  return {...payload, ...readSuggestionFields(form)};
+  const suggestions = readSuggestionFields(form);
+  return {
+    ...payload,
+    ...suggestions,
+    transaction_classifications: readVorgangCreateClassifications(
+      form,
+      suggestions.transaction_ids || [],
+      payload.completed,
+    ),
+  };
+}
+
+function readVorgangCreateClassifications(form, transactionIds, completed) {
+  const selected = new Set(transactionIds);
+  const classifications = {};
+  for (const card of form.querySelectorAll("[data-transaction-classification-id]")) {
+    const transactionId = card.dataset.transactionClassificationId;
+    if (!selected.has(transactionId)) {
+      continue;
+    }
+    const fieldValue = (field) =>
+      card.querySelector(`[data-classification-field="${field}"]`)?.value || "";
+    const values = {
+      transaktionstyp: fieldValue("transaktionstyp"),
+      oberkategorie: fieldValue("oberkategorie"),
+      unterkategorie: fieldValue("unterkategorie"),
+      sphaere: fieldValue("sphaere"),
+    };
+    const description = fieldValue("fachliche_beschreibung");
+    if (description) {
+      values.fachliche_beschreibung = description;
+    }
+    if (completed || Object.values(values).some((value) => value.trim())) {
+      classifications[transactionId] = values;
+    }
+  }
+  return classifications;
 }
 
 function readSuggestionFields(form) {
@@ -8395,11 +8603,23 @@ async function readResponse(response) {
 
 function showError(message) {
   clearTimeout(toastTimer);
+  elements.errorToast.classList.remove("is-success");
   elements.errorToast.textContent = message;
   elements.errorToast.hidden = false;
   toastTimer = setTimeout(() => {
     elements.errorToast.hidden = true;
   }, 5000);
+}
+
+function showToast(message) {
+  clearTimeout(toastTimer);
+  elements.errorToast.classList.add("is-success");
+  elements.errorToast.textContent = message;
+  elements.errorToast.hidden = false;
+  toastTimer = setTimeout(() => {
+    elements.errorToast.hidden = true;
+    elements.errorToast.classList.remove("is-success");
+  }, 4000);
 }
 
 updateSortIndicators();

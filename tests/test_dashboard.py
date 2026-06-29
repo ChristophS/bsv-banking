@@ -1585,6 +1585,93 @@ class DashboardDataStoreTests(unittest.TestCase):
                 }
             )
 
+    def test_completed_vorgang_creation_can_classify_linked_transaction(self):
+        self.store.update_transaction_classification(
+            "tx_older",
+            {
+                "transaktionstyp": "",
+                "oberkategorie": "",
+                "unterkategorie": "",
+                "sphaere": "",
+                "fachliche_beschreibung": "",
+            },
+        )
+
+        created = self.store.create_vorgang(
+            {
+                "title": "Direkt klassifiziert",
+                "completed": True,
+                "transaction_ids": ["tx_older"],
+                "transaction_classifications": {
+                    "tx_older": {
+                        "transaktionstyp": "Ausgabe",
+                        "oberkategorie": "Spielbetrieb",
+                        "unterkategorie": "Eintritt",
+                        "sphaere": "Zweckbetrieb",
+                        "fachliche_beschreibung": "Direkt beim Anlegen",
+                    },
+                },
+            }
+        )
+
+        transaction = self.store.transaction_detail("tx_older")
+        self.assertEqual("abgeschlossen", created["status"])
+        self.assertEqual("vollstaendig_klassifiziert", transaction["klassifikationsstatus"])
+        self.assertEqual("Direkt beim Anlegen", transaction["fachliche_beschreibung"])
+
+    def test_vorgang_creation_rejects_classification_for_unlinked_transaction(self):
+        with self.assertRaisesRegex(ValueError, "verknuepfte Transaktionen"):
+            self.store.create_vorgang(
+                {
+                    "title": "Fremde Klassifikation",
+                    "transaction_ids": ["tx_older"],
+                    "transaction_classifications": {
+                        "tx_newer": {"transaktionstyp": "Ausgabe"},
+                    },
+                }
+            )
+
+    def test_vorgang_creation_rejects_unknown_classification_fields(self):
+        with self.assertRaisesRegex(ValueError, "Unbekannte Klassifikationsfelder"):
+            self.store.create_vorgang(
+                {
+                    "title": "Falsches Feld",
+                    "transaction_ids": ["tx_older"],
+                    "transaction_classifications": {
+                        "tx_older": {"unknown": "Wert"},
+                    },
+                }
+            )
+
+    def test_completed_vorgang_creation_rejects_incomplete_inline_classification(self):
+        self.store.update_transaction_classification(
+            "tx_older",
+            {
+                "transaktionstyp": "",
+                "oberkategorie": "",
+                "unterkategorie": "",
+                "sphaere": "",
+            },
+        )
+
+        with self.assertRaisesRegex(ValueError, "Unterkategorie"):
+            self.store.create_vorgang(
+                {
+                    "title": "Unvollstaendig klassifiziert",
+                    "completed": True,
+                    "transaction_ids": ["tx_older"],
+                    "transaction_classifications": {
+                        "tx_older": {
+                            "transaktionstyp": "Ausgabe",
+                            "oberkategorie": "Spielbetrieb",
+                            "unterkategorie": "",
+                            "sphaere": "Zweckbetrieb",
+                        },
+                    },
+                }
+            )
+        self.assertEqual("", self.store.transaction_detail("tx_older")["sphaere"])
+
     def test_termine_can_be_created_linked_updated_and_deleted(self):
         termin = self.store.create_termin(
             {
