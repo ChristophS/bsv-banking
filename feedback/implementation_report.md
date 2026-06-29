@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260629-105309
+agent2/codex-20260629-124140
 
 ## Geaenderte Dateien
 
@@ -32,17 +32,14 @@ agent2/codex-20260629-105309
 ## Ausgefuehrte Tests
 
 - `python -m pytest tests/test_dashboard.py`
-- `py -3 -m pytest tests/test_dashboard.py`
 
 ## Testergebnis
 
-- Beide Testbefehle konnten in dieser lokalen Umgebung nicht gestartet werden.
 - `python -m pytest tests/test_dashboard.py` scheiterte mit: `Fehler beim Ausfuehren des Programms "python.exe": Eine angegebene Anmeldesitzung ist nicht vorhanden. Sie wurde gegebenenfalls bereits beendet`.
-- `py -3 -m pytest tests/test_dashboard.py` scheiterte mit: `Unable to create process using ... python3.9.exe ... Eine angegebene Anmeldesitzung ist nicht vorhanden. Sie wurde gegebenenfalls bereits beendet`.
 
 ## Bekannte Einschraenkungen
 
-- Die Tests wurden wegen der lokalen Python-Launcher-/Anmeldesitzungs-Problematik nicht ausgefuehrt.
+- Die Tests wurden wegen der lokalen Python-/Anmeldesitzungs-Problematik nicht ausgefuehrt.
 - Es wurden keine externen Dienste, Logins, Browser-Automationen oder echten Banking-Aktionen verwendet.
 
 ## Hinweise fuer den Review-Agenten
