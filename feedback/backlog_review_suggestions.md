@@ -1,2 +1,3 @@
-- Optional einen kleinen Frontend-Integrationstest für das Umschalten des neuen Filters ergänzen.
-- Bei Gelegenheit die SQL-Bedingung in server.py in eine gut benannte Hilfsfunktion auslagern, um Lesbarkeit und Wartbarkeit zu verbessern.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
