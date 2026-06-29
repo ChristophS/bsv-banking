@@ -8,31 +8,36 @@
 
 ## Begründung
 
-Der GitHub-Diff ist für diese Review-Entscheidung ausreichend aussagekräftig: Die relevanten Änderungen an UI-Erzeugung, Styling und Testabsicherung sind sichtbar, die Status-API-Nutzung bleibt im Diff erkennbar unverändert, und es gibt keine Abweichungen zwischen Runner- und GitHub-Changed-Files.
+Der GitHub-Diff ist für die Review-Entscheidung ausreichend: Die zentrale Checkbox-Logik in createSuggestionSection(...) wurde sichtbar geändert, die relevanten Aufrufer wurden angepasst, und ein passender Browser-Test wurde ergänzt. Es gibt keine Hinweise auf verbotene Dateiänderungen, Scope Creep oder einen unsauberen Branch-Zustand.
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt das Arbeitspaket: Der manuelle Abschluss ist im Vorgangsdetail nun als eigene Sektion mit explizitem Button sichtbar, nutzt weiterhin den bestehenden Status-Endpunkt und verändert keine automatische Abschlusslogik.
+Die Umsetzung erfüllt das Arbeitspaket. Die automatische Vorselektion anhand des Scores wurde entfernt; Checkboxen werden nur noch über item.selected bzw. über selectedIds markiert. Bestehende bzw. aus der Quelle stammende Verknüpfungen bleiben damit vorausgewählt, während reine Vorschläge nicht mehr automatisch angehakt werden. Die Sortierung wurde nicht verändert und das Absenden nutzt weiterhin die angehakten Checkboxen.
 
 ## Review-Ergebnis
 
-Akzeptiert.
+✅ **Akzeptiert**
 
-## Prüfung
+Die Änderung adressiert den Kern des Arbeitspakets korrekt.
 
-- Der bisherige Checkbox-Mechanismus im Vorgangsdetail wurde durch eine deutlichere Sektion `Manueller Abschluss` ersetzt.
-- Offene Vorgänge erhalten einen expliziten Button `Vorgang manuell abschließen`.
-- Abgeschlossene Vorgänge erhalten eine klare Rücksetz-Aktion `Vorgang wieder öffnen`.
-- Die bestehende Status-API wird weiterhin per `PATCH /api/vorgaenge/${encodeURIComponent(vorgang.vorgangs_id)}/status` und Payload `{ completed }` verwendet.
-- Es wurden keine Änderungen an `server.py` oder an fachlicher Abschlusslogik vorgenommen.
-- Abschluss-Hinweise und Blocker werden weiterhin angezeigt und sind nun in der Aktionssektion sichtbarer platziert.
-- Der Branch-Zustand ist sauber: `ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner- und GitHub-Dateiliste.
+### Geprüfte Punkte
 
-## Tests
+- `createSuggestionSection(...)` setzt `checkbox.checked` nun ausschließlich über `Boolean(item.selected)`.
+- Die bisherige automatische Auswahl über `autoSelect && score >= 0.45` wurde entfernt.
+- Der irreführende Parameter `autoSelect` wurde aus der Signatur und aus den im Diff sichtbaren Aufrufern entfernt.
+- Bestehende bzw. explizit gesetzte Verknüpfungen bleiben über `selectedIds`/`item.selected` vorausgewählt.
+- Die Vorschlags-Sortierung über die bestehende Logik wurde nicht verändert.
+- Das Absenden läuft weiterhin über `readSuggestionFields(...)` und übernimmt damit nur tatsächlich angehakte Checkboxen.
+- Der ergänzte Browser-Test prüft den relevanten Fall: hoher Score allein aktiviert keine Checkbox, explizit ausgewählte Verknüpfungen bleiben ausgewählt, und der Payload enthält nur die angehakten IDs.
 
-- Eine statische Testabsicherung in `tests/test_dashboard.py` wurde ergänzt.
-- Laut Implementierungsbericht konnte Pytest lokal wegen Umgebungsproblemen nicht ausgeführt werden; `node --check banking_dashboard/static/app.js` war erfolgreich.
+### Branch-/Compare-Status
 
-## Bewertung
+- Compare-Status: `ahead`
+- Ahead by: 1
+- Behind by: 0
+- Geänderte Produktiv-/Testdateien passen zum Arbeitspaket.
+- `feedback/Review-report.md` erscheint als Runner-validierter, aber nicht im GitHub-Compare enthaltener Pfad. Da diese Datei nicht zu den staged/GitHub-Änderungen gehört und kein Produktivcode betroffen ist, ist das nicht blockierend.
 
-Keine blockierenden Probleme gefunden. Die Umsetzung bleibt im Scope des Arbeitspakets und erfüllt die Akzeptanzkriterien ausreichend.
+### Tests
+
+Die Tests wurden laut Bericht wegen lokaler Python-/Session-Probleme nicht ausgeführt. Das ist hier nicht blockierend, weil eine passende Testergänzung vorhanden ist und die Nichtausführung plausibel dokumentiert wurde.
