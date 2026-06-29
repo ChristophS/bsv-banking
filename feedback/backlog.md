@@ -2,71 +2,72 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Spam-Score bleibt häufig bei 0 Prozent analysieren und verbessern
+## 1. Spam-Score untersuchen und stabilisieren
 
 **Priorität:** hoch
 
-**Grund:** Eigenes Thema im Mail-Scoring und Cache-Verhalten; sollte separat untersucht und getestet werden.
+**Grund:** Eigenes Thema im Mail-Scoring und Cache-Verhalten; benötigt gezielten Kontext aus dem Mail-Scoring-Teil des Repos.
 
 **Feedback:**
 
 - Spam score ist immernoch oft auf 0%
 
-## 2. Vorschläge für weitere Mail-/Entitätsverknüpfungen weniger aufdringlich machen
+## 2. Vorschläge für Verknüpfungen weniger aufdringlich und besser priorisiert darstellen
 
 **Priorität:** hoch
 
-**Grund:** Eigenes UX-Thema rund um Vorschlagsdarstellung und Priorisierung; unabhängig vom Vorgang-anlegen-und-abschließen-Flow.
+**Grund:** Separates UX-Thema rund um Vorschlagslogik und Frontend-Darstellung; sollte als eigenes Paket umgesetzt werden.
 
 **Feedback:**
 
 - Der Vorschlag von weitere Mails verknüpfen ist richtig schlecht. Ich verbringe viel zu viel Zeit damit die Vorschläge wegzuklicken. Vielleicht wäre sogar nur ein priorisiertes Sortieren von Vorschlägen (in allen Feldern) sinnvoll und nicht direkt anklicken
 
-## 3. Manuellen Abschluss im Vorgangsdetail intuitiver platzieren
-
-**Priorität:** mittel
-
-**Grund:** UI-Polish für den Statusbereich; kann nach dem nächsten Paket separat und gezielt umgesetzt werden.
-
-**Feedback:**
-
-- Aktuell kann ich auch keine Vorgänge manuell schließen. Sie können nur über Abschlussregeln geschlossen werden. Ach doch das geht, aber der Button ist irgendwie mittendrin. Sehr unintuitiv
-
-## 4. Mail im Mail-Reiter direkt einem vorhandenen Vorgang zuordnen
+## 3. Vorgang direkt beim Anlegen inklusive Transaktionsklassifikation und Abschluss speichern
 
 **Priorität:** hoch
 
-**Grund:** Eigenständiger Arbeitsfluss für Mail-zu-Vorgang-Zuordnung; sollte separat auf den bestehenden Verknüpfungs-APIs aufbauen.
+**Grund:** Eigenes kleineres Backend-/Frontend-Paket rund um den kombinierten Create-/Classify-/Complete-Flow; bleibt separat, damit das aktuelle Paket klein bleibt.
+
+**Feedback:**
+
+- Wenn ich einen Vorgang erstelle und es sind schon alle informationen da, dann will ich einen Vorgang direkt anlegen und erledigen können in einem Klick. Dazu gehört auch, dass ich wenn eine Transaktion verknüpft ist bei dieser transaktion direkt die Parameter (Typ, Oberkategorie, unterkategorie, etc ) eintragen kann.
+
+## 4. Mail im Mail-Reiter direkt einem bestehenden Vorgang zuordnen
+
+**Priorität:** hoch
+
+**Grund:** Eigenständige UI-/Workflow-Erweiterung im Mail-Reiter, die nicht Teil der aktuellen UI-Aufräumaufgabe ist.
 
 **Feedback:**
 
 - Ich möchte erne aus dem Mailreiter heraus eine Mail einem Vorgang zuordnen können.
 
-## 5. Mail mit mehreren Dokumenten und mehreren Transaktionen über einen Vorgang abbilden
+## 5. Konzept für eine Mail mit mehreren Dokumenten zu unterschiedlichen Transaktionen innerhalb eines Vorgangs
 
 **Priorität:** mittel
 
-**Grund:** Größeres Fachkonzept für komplexe Vorgänge mit mehreren Dokumenten/Transaktionen; über das kleine Erstellen-und-Abschließen-Paket hinausgehend.
+**Grund:** Fachlich komplexer Zuordnungsflow mit mehreren Entitäten; benötigt separates Konzept und saubere Zerlegung.
 
 **Feedback:**
 
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege wie man geschickt damit umgehen kann
 
-## 6. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Prozess konzipieren
+## 6. Spendenbescheinigungen und Spender-/Adressdatenbank konzipieren
 
 **Priorität:** mittel
 
-**Grund:** Eigenes großes Modul mit externem Prozess, Datenbankaufbau und Dokumenterzeugung; braucht separate Arbeitspakete.
+**Grund:** Großes neues Fachmodul mit externer Automation, Datenmodell und Dokumenterzeugung; deutlich außerhalb des aktuellen Pakets.
 
 **Feedback:**
 
-- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung...
+- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas komplizierter, da es über DFBnet Vrein läuft. Ich hätte da gerne ein eigenes Interface mit Vorschlägen aus der Mail (Vorgang etc) falls etwas vorhanden ist und mit einem Dropdown (mit manueller Eingabe) der Spender aus der Datenbank.
+- Das Erstellen einer Spendenbescheinigung läuft so: Auf DFBnet Verein einloggen ... Das entsprechende PDF speichern
 
-## 7. Dashboard-Übersichtlichkeit schrittweise verbessern
+## 7. Dashboard-Informationsarchitektur schrittweise vereinfachen
 
 **Priorität:** mittel
 
-**Grund:** Querschnittliches UX-Thema; sollte in kleine, gezielte Verbesserungen zerlegt werden.
+**Grund:** Breites UX-Thema; sollte in mehrere kleine, messbare Pakete zerlegt werden.
 
 **Feedback:**
 
