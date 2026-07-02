@@ -2052,7 +2052,6 @@ class DashboardMailManager:
                 if (
                     self._signatures.get(entry_id) == signature
                     and entry_id in self._scores
-                    and _is_reusable_spam_score(self._scores[entry_id])
                 ):
                     result[entry_id] = self._scores[entry_id]
                 else:
@@ -4892,6 +4891,8 @@ def _normalize_spam_result(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def _is_reusable_spam_score(score: dict[str, Any]) -> bool:
+    # Scores below 0.5% are treated as too uncertain for reuse after a
+    # restart, but remain valid within one manager run to keep responses stable.
     return (
         float(score.get("probability", 0))
         >= MIN_REUSABLE_SPAM_PROBABILITY

@@ -1564,8 +1564,10 @@ function updateMailDeleteSelectedButton() {
 }
 
 function mailSpamBadge(mail) {
-  const percent = Math.round(Number(mail.spamProbability || 0) * 100);
-  const badge = mailElement("span", "mail-spam-score", `${percent}%`);
+  const probability = Number(mail.spamProbability || 0);
+  const percent = Math.round(probability * 100);
+  const label = probability > 0 && percent === 0 ? "<1%" : `${percent}%`;
+  const badge = mailElement("span", "mail-spam-score", label);
   badge.classList.add(
     percent > state.mailSpamThreshold * 100
       ? "is-high"

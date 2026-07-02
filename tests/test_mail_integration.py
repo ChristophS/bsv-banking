@@ -385,16 +385,59 @@ class MailIntegrationUnitTests(unittest.TestCase):
         self.assertEqual(2, scorer.calls)
         self.assertEqual(0.42, payload["messages"][0]["spamProbability"])
 
-    def test_score_rounded_to_zero_is_not_reused_in_memory(self):
+    def test_small_score_is_reused_in_memory_for_consistent_loads(self):
         backend = FakeMailBackend()
-        scorer = SequenceSpamScorer([0.004, 0.35])
+        scorer = SequenceSpamScorer([0.0049, 0.35])
         manager = DashboardMailManager(backend, scorer)
 
-        manager.list_messages()
+        first_payload = manager.list_messages()
         payload = manager.list_messages()
 
-        self.assertEqual(2, scorer.calls)
-        self.assertEqual(0.35, payload["messages"][0]["spamProbability"])
+        self.assertEqual(1, scorer.calls)
+        self.assertEqual(0.0049, first_payload["messages"][0]["spamProbability"])
+        self.assertEqual(0.0049, payload["messages"][0]["spamProbability"])
+
+    def test_small_scores_below_reuse_threshold_are_scored_after_restart(self):
+        for probability in (0.0, 0.001, 0.0049):
+            with self.subTest(probability=probability):
+                with tempfile.TemporaryDirectory() as temporary_directory:
+                    cache_path = Path(temporary_directory) / "mail.sqlite3"
+                    backend = FakeMailBackend()
+                    scorer = SequenceSpamScorer([probability, 0.42])
+
+                    DashboardMailManager(
+                        backend,
+                        scorer,
+                        cache_path=cache_path,
+                    ).list_messages()
+                    payload = DashboardMailManager(
+                        backend,
+                        scorer,
+                        cache_path=cache_path,
+                    ).list_messages()
+
+                self.assertEqual(2, scorer.calls)
+                self.assertEqual(0.42, payload["messages"][0]["spamProbability"])
+
+    def test_score_at_reuse_threshold_is_reused_after_restart(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            cache_path = Path(temporary_directory) / "mail.sqlite3"
+            backend = FakeMailBackend()
+            scorer = SequenceSpamScorer([0.005, 0.42])
+
+            DashboardMailManager(
+                backend,
+                scorer,
+                cache_path=cache_path,
+            ).list_messages()
+            payload = DashboardMailManager(
+                backend,
+                scorer,
+                cache_path=cache_path,
+            ).list_messages()
+
+        self.assertEqual(1, scorer.calls)
+        self.assertEqual(0.005, payload["messages"][0]["spamProbability"])
 
     def test_summary_distinguishes_similar_board_member_names(self):
         manager = DashboardMailManager(
@@ -1137,6 +1180,10 @@ class MailIntegrationHTTPTests(unittest.TestCase):
         self.assertEqual(
             "Vollstaendiger Mailtext",
             detail["message"]["body"],
+        )
+        self.assertEqual(
+            listed["messages"][0]["spamProbability"],
+            detail["spam"]["probability"],
         )
 
         quick_summary_request = Request(
