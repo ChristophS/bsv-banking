@@ -8,30 +8,29 @@
 
 ## Begründung
 
-Der GitHub-Diff ist für die Review-Entscheidung ausreichend aussagekräftig: Die Mail-Vorgangs-Auswahl wurde im Frontend auf Suchfeld, hide_completed-Filter und Trefferliste umgestellt, die Suche nutzt /api/vorgaenge mit Query-Parametern, und der bestehende POST-Flow zur Mail-Verknüpfung bleibt erhalten. Ergänzende Tests decken die /api/vorgaenge-Suche, hide_completed und leere Treffer ab. Der Branch ist laut Compare sauber ahead_by=1, behind_by=0. Die Abweichung feedback/Review-report.md ist nicht im GitHub-Compare enthalten und betrifft offenbar keinen committed Code-Change dieses Arbeitspakets.
+Der vorhandene Diff ist für die Review-Entscheidung ausreichend: Die relevanten neuen HTTP-Tests decken den geforderten Erfolgs- und Blockerfall für completed=true beim Mail-Import ab, und die UI-Änderung ist klein und nachvollziehbar. Der Backend-Pfad wurde laut Report bewusst nicht geändert, weil die bestehende Abschlusslogik bereits genutzt wird; die neuen Tests validieren genau dieses Verhalten.
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die wesentlichen Akzeptanzkriterien: Im Mail-Bereich gibt es eine entprellte Suche gegen /api/vorgaenge, einen Filter zum Ausblenden abgeschlossener Vorgänge, eine unterscheidbare Trefferliste mit Status/Typ/Bezug/Transaktionsanzahl, einen Leerzustand ohne Treffer und weiterhin den bestehenden Verknüpfungsendpunkt. Die ergänzten Tests validieren die API-/Datastore-Filterlogik.
+Die Umsetzung erfüllt das Arbeitspaket. Es wurden automatisierte Tests für erfolgreichen Sofort-Abschluss und Abschlussblocker beim Mail-Import ergänzt. Die API liefert im Blockerfall einen 400-Fehler mit nachvollziehbarer Meldung, statt einen abgeschlossen dargestellten Vorgang zurückzugeben. Die UI zeigt nach erfolgreichem Import nun differenziert an, ob der Vorgang direkt abgeschlossen wurde.
 
 ## Review-Ergebnis
 
-Akzeptiert.
+Die Umsetzung wird akzeptiert.
 
-## Geprüfte Punkte
+### Geprüfte Punkte
 
-- Die Mail-Vorgangs-Auswahl wurde von einer reinen Select-Liste auf ein Suchfeld mit Trefferliste umgestellt.
-- Die Suche ruft den bestehenden Endpunkt `/api/vorgaenge` mit `search` und `hide_completed` auf; es wurde keine neue Such-API eingeführt.
-- Der Filter „Abgeschlossene ausblenden“ ist vorhanden und an den API-Parameter `hide_completed` angebunden.
-- Die Trefferliste zeigt unterscheidende Informationen wie Status, Vorgangstyp, Bezug und Transaktionsanzahl.
-- Der bestehende Verknüpfungsflow über `POST /api/mail/{id}/vorgaenge` bleibt erhalten; nur die Auswahlquelle wurde geändert.
-- Für leere Suchergebnisse wird ein verständlicher Leerzustand angezeigt.
-- Tests für Suche, hide_completed und leere Treffer wurden in `tests/test_dashboard.py` ergänzt.
+- `completed=true` beim Mail-Import wird über neue HTTP-Tests abgedeckt.
+- Erfolgsfall: Der neu angelegte Vorgang wird als `status='abgeschlossen'` zurückgegeben.
+- Blockerfall: Die API antwortet mit `400` und einer nachvollziehbaren Fehlermeldung aus der bestehenden Abschlussprüfung.
+- Es wurden keine neuen fachlichen Abschlussregeln, keine neuen Verknüpfungstabellen und keine Architekturumbauten eingeführt.
+- Die UI unterscheidet nach erfolgreichem Import nun zwischen normalem Import und Import mit direktem Abschluss.
 
-## Keine blockierenden Probleme
+### Bewertung
 
-Es wurden keine fachlich oder technisch blockierenden Probleme im vorliegenden Diff festgestellt.
+Die Anforderungen des Arbeitspakets sind erfüllt. Besonders wichtig ist, dass die Tests den bestehenden Backend-Pfad gegen Regressionen absichern, ohne eine neue Abschlusslogik einzuführen.
 
-## Hinweise
+### Nicht blockierende Hinweise
 
-Die neue Frontend-Interaktion ist hauptsächlich per Syntaxcheck und API-/Datastore-Tests abgesichert. Ein zusätzlicher DOM-/Browser-Test wäre wünschenswert, ist aber für dieses Arbeitspaket nicht zwingend blockierend.
+- Der Blocker-Test könnte noch stärker werden, wenn er zusätzlich den persistierten Vorgangszustand nach dem Fehlerfall prüft.
+- `feedback/Review-report.md` taucht in `runner_validated_changed_paths`, aber nicht im GitHub Compare auf. Da die Datei nicht Teil des GitHub-Diffs ist und laut Report vorbestehend war, ist das nicht blockierend.
