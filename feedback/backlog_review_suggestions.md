@@ -1,3 +1,3 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional einen Frontend-Test oder Playwright-/DOM-Test für den Mail-Zuordnungsflow ergänzen: Mail öffnen, Vorgang auswählen, verknüpfen, entfernen.
+- Optional Backend-Serialisierung für nullable Vorgangsfelder vereinheitlichen, damit `None` nicht als Text ausgegeben wird.
+- Optional Auswahl vorhandener Vorgänge bei größerem Datenbestand durch Suche, Filter oder `/api/vorgaenge/link-candidates` verbessern.
