@@ -2,47 +2,56 @@
 
 ## Branchname
 
-agent2/codex-20260702-105754
+agent2/codex-20260702-111527
 
 ## Geaenderte Dateien
 
+- banking_dashboard/mail_integration.py
 - banking_dashboard/static/app.js
 - banking_dashboard/static/styles.css
 - tests/test_dashboard.py
+- tests/test_mail_integration.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Der manuelle Vorgangsabschluss steht im Vorgangsdetail jetzt als eigener Status- und Aktionsbereich direkt vor dem Bearbeitungsformular.
-- Der aktuelle Vorgangsstatus wird im selben Bereich sichtbar als Status-Badge angezeigt.
-- Die Hauptaktion wechselt je nach Zustand zwischen `Vorgang abschliessen` und `Vorgang wieder oeffnen`.
-- Nicht abschliessbare offene Vorgaenge zeigen keine normale Hauptaktion: Der Button ist deaktiviert und vorhandene `abschluss_blocker` werden direkt im Statusbereich angezeigt.
-- Der Statuswechsel nutzt weiterhin `PATCH /api/vorgaenge/<id>/status` mit dem Feld `completed`.
-- Nach erfolgreichem Statuswechsel werden Vorgangsdetail, Uebersichtsdaten und die sichtbare Vorgangsliste aktualisiert.
-- Der vorhandene HTTP-Test fuer den Status-Endpunkt prueft jetzt auch das Wieder-Oeffnen.
+- Die Mail-Vorgangs-API liefert neben `vorgangs_ids` jetzt auch `vorgaenge` mit Vorgangs-ID, Titel, Beschreibung, Typ, Status und Zeitstempeln.
+- Der Mail-Reiter laedt beim Oeffnen einer Mail die bestehenden Vorgangszuordnungen und die vorhandene Vorgangsliste.
+- In der Mail-Detailansicht werden verknuepfte Vorgaenge mit ID, Titel/Bezug, Typ und Status angezeigt.
+- Ein vorhandener Vorgang kann aus einer Auswahl der bestehenden Vorgaenge der Mail zugeordnet werden.
+- Bereits verknuepfte Vorgaenge werden aus der Auswahl ausgeblendet, damit doppelte Zuordnungen in der UI nicht angeboten werden.
+- Eine bestehende Mail-Vorgangszuordnung kann direkt aus der Mail-Detailansicht entfernt werden.
+- Nach Zuordnung oder Entfernung wird das Mail-Detailmodell sofort mit der API-Antwort aktualisiert und neu gerendert.
+- API-Fehler wie nicht gefundene Mail oder nicht gefundener Vorgang laufen ueber die bestehende Fehleranzeige.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderungen an Backend-Statuslogik, Abschlussvoraussetzungen oder automatischen Abschlussregeln.
-- Keine Aenderungen an `banking_dashboard/server.py`, weil die benoetigten Detailfelder bereits vorhanden sind.
-- Keine strukturellen Aenderungen an `banking_dashboard/static/index.html`, weil der bestehende Dialog-Container ausreicht.
+- Keine automatische Vorgangserstellung aus Mails.
+- Keine neue Vorgangsarchitektur und keine neuen Endpunkte.
+- Keine Aenderung an `banking_dashboard/static/index.html`, weil der bestehende Mail-Detailcontainer ausreicht.
+- Keine externen Dienste, echten Logins oder produktiven Daten verwendet.
 
 ## Ausgefuehrte Tests
 
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py -k "mail_can_be_linked_to_vorgang"`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py`
+- `node --check banking_dashboard/static/app.js`
 
 ## Testergebnis
 
-- 64 passed, 2 skipped
+- `tests/test_dashboard.py`: 65 passed, 2 skipped
+- `tests/test_mail_integration.py -k "mail_can_be_linked_to_vorgang"`: 1 passed, 33 deselected
+- `tests/test_mail_integration.py`: 33 passed, 1 skipped
+- `node --check banking_dashboard/static/app.js`: erfolgreich
 
 ## Bekannte Einschraenkungen
 
-- Die Aenderung wurde mit automatisierten Dashboard-Tests geprueft, nicht manuell im Browser bedient.
-- Die vorhandenen Skips bleiben unveraendert.
-- Es wurden keine externen Dienste, echten Logins, Browser-Automationen gegen externe Dienste oder produktiven Daten verwendet.
+- Die neue UI wurde automatisiert per Syntaxcheck und API-Tests abgesichert, aber nicht manuell im Browser bedient.
+- Die vorhandenen Test-Skips bleiben unveraendert.
 
 ## Hinweise fuer den Review-Agenten
 
-- Zentraler Review-Punkt ist `createVorgangStatusEditor(...)` in `banking_dashboard/static/app.js`.
-- Der Button ist nur fuer offene, nicht abschliessbare Vorgaenge deaktiviert; abgeschlossene Vorgaenge koennen unabhaengig von aktuellen Abschlussblockern wieder geoeffnet werden.
-- Nach dem PATCH wird `loadVorgangWorkspace(...)` erneut aufgerufen, damit Buttontext, Status, Blocker und Detailkopf sofort konsistent sind.
+- Die API bleibt rueckwaertskompatibel: `vorgangs_ids` bleibt erhalten, `vorgaenge` wurde ergaenzt.
+- Die Idempotenz liegt weiterhin in `INSERT OR IGNORE`; der neue Dashboard-Test prueft einen doppelten POST ohne Dublette.
+- Zentraler UI-Review-Punkt ist `renderMailVorgangSection(...)` in `banking_dashboard/static/app.js`.

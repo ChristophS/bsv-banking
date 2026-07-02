@@ -1260,15 +1260,17 @@ class MailIntegrationHTTPTests(unittest.TestCase):
         with urlopen(link_request, timeout=5) as response:
             linked = json.load(response)
         self.assertEqual([vorgangs_id], linked["vorgangs_ids"])
+        self.assertEqual(vorgangs_id, linked["vorgaenge"][0]["vorgangs_id"])
+        self.assertIn("titel", linked["vorgaenge"][0])
+        self.assertIn("status", linked["vorgaenge"][0])
 
         with urlopen(
             self.base_url + f"/api/mail/{inbox_id}/vorgaenge",
             timeout=5,
         ) as response:
-            self.assertEqual(
-                [vorgangs_id],
-                json.load(response)["vorgangs_ids"],
-            )
+            payload = json.load(response)
+        self.assertEqual([vorgangs_id], payload["vorgangs_ids"])
+        self.assertEqual(vorgangs_id, payload["vorgaenge"][0]["vorgangs_id"])
 
         unlink_request = Request(
             self.base_url
@@ -1276,7 +1278,9 @@ class MailIntegrationHTTPTests(unittest.TestCase):
             method="DELETE",
         )
         with urlopen(unlink_request, timeout=5) as response:
-            self.assertEqual([], json.load(response)["vorgangs_ids"])
+            payload = json.load(response)
+        self.assertEqual([], payload["vorgangs_ids"])
+        self.assertEqual([], payload["vorgaenge"])
 
 
 class MailIntegrationBrowserTests(unittest.TestCase):

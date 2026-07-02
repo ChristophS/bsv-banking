@@ -918,18 +918,44 @@ class InboxMailStore:
             raise LookupError("Mail wurde nicht gefunden.")
 
     def linked_vorgaenge(self, inbox_id: str) -> list[str]:
+        return [
+            item["vorgangs_id"]
+            for item in self.linked_vorgang_details(inbox_id)
+        ]
+
+    def linked_vorgang_details(self, inbox_id: str) -> list[dict[str, Any]]:
         with self._lock, closing(self._connect()) as connection:
             self._require_message(connection, inbox_id)
             rows = connection.execute(
                 """
-                SELECT vorgangs_id
-                FROM inbox_vorgaenge
-                WHERE inbox_id = ?
-                ORDER BY vorgangs_id
+                SELECT
+                    v.vorgangs_id,
+                    v.titel,
+                    v.beschreibung,
+                    v.vorgangstyp,
+                    v.status,
+                    v.erstellt_am,
+                    v.aktualisiert_am
+                FROM inbox_vorgaenge AS iv
+                JOIN vorgaenge AS v
+                  ON v.vorgangs_id = iv.vorgangs_id
+                WHERE iv.inbox_id = ?
+                ORDER BY v.aktualisiert_am DESC, v.vorgangs_id
                 """,
                 (inbox_id,),
             ).fetchall()
-        return [str(row["vorgangs_id"]) for row in rows]
+        return [
+            {
+                "vorgangs_id": str(row["vorgangs_id"]),
+                "titel": str(row["titel"]),
+                "beschreibung": str(row["beschreibung"]),
+                "vorgangstyp": str(row["vorgangstyp"]),
+                "status": str(row["status"]),
+                "erstellt_am": str(row["erstellt_am"]),
+                "aktualisiert_am": str(row["aktualisiert_am"]),
+            }
+            for row in rows
+        ]
 
     def link_vorgang(self, inbox_id: str, vorgangs_id: str) -> list[str]:
         cleaned_vorgangs_id = str(vorgangs_id or "").strip()
@@ -1548,9 +1574,11 @@ class DashboardMailManager:
     def linked_vorgaenge(self, entry_id: str) -> dict[str, Any]:
         inbox_id, _ = self._resolve_mail_id(entry_id)
         store = self._required_inbox_store()
+        vorgaenge = store.linked_vorgang_details(inbox_id)
         return {
             "id": inbox_id,
-            "vorgangs_ids": store.linked_vorgaenge(inbox_id),
+            "vorgangs_ids": [item["vorgangs_id"] for item in vorgaenge],
+            "vorgaenge": vorgaenge,
         }
 
     def link_vorgang(
@@ -1561,12 +1589,16 @@ class DashboardMailManager:
         if set(payload) != {"vorgangs_id"}:
             raise ValueError("Das Feld vorgangs_id ist erforderlich.")
         inbox_id, _ = self._resolve_mail_id(entry_id)
+        store = self._required_inbox_store()
+        store.link_vorgang(
+            inbox_id,
+            str(payload["vorgangs_id"]),
+        )
+        vorgaenge = store.linked_vorgang_details(inbox_id)
         return {
             "id": inbox_id,
-            "vorgangs_ids": self._required_inbox_store().link_vorgang(
-                inbox_id,
-                str(payload["vorgangs_id"]),
-            ),
+            "vorgangs_ids": [item["vorgangs_id"] for item in vorgaenge],
+            "vorgaenge": vorgaenge,
         }
 
     def unlink_vorgang(
@@ -1575,12 +1607,16 @@ class DashboardMailManager:
         vorgangs_id: str,
     ) -> dict[str, Any]:
         inbox_id, _ = self._resolve_mail_id(entry_id)
+        store = self._required_inbox_store()
+        store.unlink_vorgang(
+            inbox_id,
+            vorgangs_id,
+        )
+        vorgaenge = store.linked_vorgang_details(inbox_id)
         return {
             "id": inbox_id,
-            "vorgangs_ids": self._required_inbox_store().unlink_vorgang(
-                inbox_id,
-                vorgangs_id,
-            ),
+            "vorgangs_ids": [item["vorgangs_id"] for item in vorgaenge],
+            "vorgaenge": vorgaenge,
         }
 
     def _remove_from_active_state(self, entry_id: str) -> None:
