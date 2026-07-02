@@ -8,35 +8,38 @@
 
 ## Begründung
 
-Der GitHub-Diff ist für die Review-Entscheidung ausreichend aussagekräftig: Die relevanten Änderungen am Vorgangsdetail-Rendering, Status-Event-Handling, Styling und dem bestehenden HTTP-Test sind sichtbar. Es sind keine zusätzlichen Architektur- oder Backend-Dateien nötig, da laut Diff weiterhin der bestehende Status-Endpunkt genutzt wird und keine Backend-Logik geändert wurde.
+Der GitHub-Diff ist für die Review-Entscheidung ausreichend aussagekräftig: Backend-Rückgabeformat, UI-Erweiterung, Styling und API-Tests sind nachvollziehbar geändert. Der Branch ist sauber ahead gegenüber main und nicht behind. Es wurden keine verbotenen Dateien oder externen Integrationen berührt.
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt das Arbeitspaket: Der manuelle Vorgangsabschluss bzw. das Wiederöffnen ist im Vorgangsdetail prominenter als eigener Status-/Aktionsbereich sichtbar, zeigt den aktuellen Status, nutzt weiterhin PATCH /api/vorgaenge/<id>/status und aktualisiert nach erfolgreichem Wechsel Detailansicht sowie Übersichts-/Listendaten. Blockierte Abschlüsse werden nicht als normale Hauptaktion dargestellt und vorhandene Blocker werden direkt angezeigt.
+Die Umsetzung erfüllt das Arbeitspaket: Im Mail-Detail werden verknüpfte Vorgänge angezeigt, vorhandene Vorgänge können über eine Auswahl zugeordnet und bestehende Zuordnungen entfernt werden. Die API liefert weiterhin rückwärtskompatibel vorgangs_ids und zusätzlich Detaildaten. Nach POST/DELETE wird der lokale Mail-Detailzustand aktualisiert und neu gerendert. Idempotenz und Rückgabeformat sind durch ergänzte Tests abgesichert.
 
 ## Review-Ergebnis
 
 ✅ **Akzeptiert**
 
-Die Umsetzung erfüllt die Muss-Kriterien des Arbeitspakets.
+Die Umsetzung passt zum Arbeitspaket „Mail-Reiter: bestehende Vorgänge direkt einer Mail zuordnen“.
 
 ### Geprüfte Punkte
 
-- Der Status-/Abschlussbereich wird im Vorgangsdetail vor den Metadaten gerendert und ist dadurch prominenter sichtbar.
-- Der aktuelle Vorgangsstatus wird über `statusBadge(vorgang.status)` im selben Bereich angezeigt.
-- Die Aktion wechselt zustandsabhängig zwischen `Vorgang abschließen` und `Vorgang wieder öffnen`.
-- Für offene, nicht abschließbare Vorgänge wird der Button deaktiviert und nicht als `primary-action`, sondern als `secondary-action` dargestellt.
-- Vorhandene `abschluss_blocker` werden direkt im Statusbereich als Liste angezeigt; bei fehlenden Blockern gibt es weiterhin einen erklärenden Fallback-Text.
-- Der Statuswechsel läuft weiterhin über den bestehenden spezialisierten Endpunkt `PATCH /api/vorgaenge/<id>/status` mit `{ completed: ... }`.
-- Nach erfolgreichem PATCH werden Vorgangsdaten, Übersicht und bei sichtbarem Vorgangspanel auch die Vorgangsliste aktualisiert; anschließend wird das Vorgangsdetail neu geladen.
-- Die Backend-Statuslogik und automatische Abschlussregeln wurden nicht verändert.
-- Der bestehende HTTP-Test wurde um das Wiederöffnen eines Vorgangs erweitert.
+- Bestehende Mail-Vorgangs-API wird weiterverwendet; es wurden keine neuen fachlichen Architekturen oder unnötigen Endpunkte eingeführt.
+- `vorgangs_ids` bleibt im API-Format erhalten; `vorgaenge` ergänzt die benötigten Detaildaten rückwärtskompatibel.
+- Die Mail-Detailansicht lädt Maildaten, bestehende Zuordnungen und vorhandene Vorgänge gemeinsam.
+- Verknüpfte Vorgänge werden mit ID, Titel/Bezug, Typ und Status angezeigt.
+- Bereits verknüpfte Vorgänge werden aus der Auswahl herausgefiltert, wodurch doppelte UI-Zuordnungen vermieden werden.
+- POST und DELETE aktualisieren den lokalen Mail-Detailzustand über die API-Antwort und rendern die Ansicht neu.
+- Fehler werden über die bestehende Fehleranzeige behandelt.
+- Tests für API-Rückgabe, Idempotenz und Entfernen wurden ergänzt.
 
-### Keine blockierenden Probleme gefunden
+### Branch-/Diff-Status
 
-Der Diff zeigt keine verbotenen Dateiänderungen, keinen Scope Creep und keinen Widerspruch zum Implementation Report. Der Branch ist laut Compare sauber `ahead` mit einem Commit und nicht hinter `main`.
+- Compare-Status: `ahead`
+- Ahead by: 1
+- Behind by: 0
+- Keine blockierenden Abweichungen zwischen Runner und GitHub Compare. `feedback/Review-report.md` fehlt im GitHub Compare, wirkt aber wie ein Runner-/Review-Artefakt und ist nicht Teil der fachlichen Umsetzung.
 
-### Nicht-blockierende Hinweise
+### Nicht blockierende Hinweise
 
-- Ein zusätzlicher UI-/Browser-Test für den neuen Statusbereich wäre wünschenswert, ist aber für diese Änderung nicht zwingend blockierend.
-- Die Runner-Abweichung `feedback/Review-report.md` fehlt im GitHub Compare. Da es sich offenbar um ein Review-/Runner-Artefakt handelt und nicht um Teil der eigentlichen Implementierung, ist das nicht blockierend.
+- Ein Browser-/Frontend-Test wäre wünschenswert, ist aber für dieses Arbeitspaket nicht zwingend blockierend.
+- Nullable Felder im Backend sollten bei späterer UI-Nutzung nicht als String `"None"` erscheinen.
+- Bei wachsendem Vorgangsbestand kann die Auswahl perspektivisch durch Suche oder Link-Kandidaten verbessert werden.
