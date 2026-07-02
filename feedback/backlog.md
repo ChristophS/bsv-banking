@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigenes Mail-Processing-Thema mit Backend-/Caching-Logik; unabhängig von der UI-Erweiterung zur Mail-Vorgangszuordnung.
+**Grund:** Eigenständiges Backend-/Caching-Thema und nicht Teil des aktuellen leeren Arbeitspakets.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Größerer Workflow über Vorgangsanlage, Transaktionsklassifikation und Abschlusslogik; für ein kleines kontrolliertes Paket zu breit.
+**Grund:** Größerer Workflow über Vorgangsanlage, Transaktionsklassifikation und Abschlusslogik; zu breit für ein kleines kontrolliertes Paket.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigenes UI-/Usability-Thema in der Vorgangsansicht; sollte separat angepasst und getestet werden.
+**Grund:** Klar abgrenzbares UI-/Usability-Thema, aber ohne neue Inbox-Prio nicht als aktives Paket ausgewählt.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Komplexerer Modellierungs- und UI-Workflow; berührt die aktuelle Architektur, weil Belege heute an Vorgänge und nicht direkt an Transaktionen hängen.
+**Grund:** Komplexes Modellierungs- und UI-Thema; nicht als kleines nächstes Paket geeignet.
 
 **Feedback:**
 
@@ -46,17 +46,17 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Großes neues Fachmodul mit externer Integration; klar außerhalb eines kleinen Umsetzungspakets.
+**Grund:** Großes neues Fachmodul mit externer Integration; deutlich zu breit für ein kleines Paket.
 
 **Feedback:**
 
-- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas komplizierter, da es über DFBnet Vrein läuft. ...
+- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas komplizierter, da es über DFBnet Verein läuft. ...
 
 ## 6. Dashboard-Usability schrittweise verbessern ohne Funktionsverlust
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema ohne klar begrenzte Einzeländerung; sollte in mehrere kleine UI-Pakete zerlegt werden.
+**Grund:** Querschnittsthema ohne klar abgegrenzten Einzelpunkt; später in konkrete UI-Pakete schneiden.
 
 **Feedback:**
 
