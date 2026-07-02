@@ -1,3 +1,3 @@
-- Optional Frontend-/DOM-Test für die Mail-Vorgangs-Suche ergänzen: Sucheingabe, Filter-Toggle, Radio-Auswahl, aktivierter Submit und Leerzustand.
-- Optional `state.mailVorgangCandidates` beim Mail-Wechsel explizit leeren, um mögliche kurzzeitige Anzeige alter Kandidaten zu vermeiden.
-- Optional Request-State nach Abschluss von `loadMailVorgangCandidates()` aufräumen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
