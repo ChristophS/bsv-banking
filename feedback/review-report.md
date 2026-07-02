@@ -8,29 +8,34 @@
 
 ## Begründung
 
-Der vorhandene Diff ist für die Review-Entscheidung ausreichend: Die relevanten neuen HTTP-Tests decken den geforderten Erfolgs- und Blockerfall für completed=true beim Mail-Import ab, und die UI-Änderung ist klein und nachvollziehbar. Der Backend-Pfad wurde laut Report bewusst nicht geändert, weil die bestehende Abschlusslogik bereits genutzt wird; die neuen Tests validieren genau dieses Verhalten.
+Der GitHub-Diff ist für dieses Arbeitspaket ausreichend aussagekräftig: Es wurde gezielt ein bestehender Mail-Import-HTTP-Test erweitert, ohne Fachlogik oder externe Integrationen zu ändern. Die ergänzten Assertions decken die geforderte Persistenz- und Statusprüfung nach fehlgeschlagenem Sofortabschluss ab.
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt das Arbeitspaket. Es wurden automatisierte Tests für erfolgreichen Sofort-Abschluss und Abschlussblocker beim Mail-Import ergänzt. Die API liefert im Blockerfall einen 400-Fehler mit nachvollziehbarer Meldung, statt einen abgeschlossen dargestellten Vorgang zurückzugeben. Die UI zeigt nach erfolgreichem Import nun differenziert an, ob der Vorgang direkt abgeschlossen wurde.
+Die Umsetzung erfüllt das Arbeitspaket. Der bestehende Test für den Mail-Import mit completed=true und blockiertem Abschluss prüft nun zusätzlich, dass der Vorgang nach dem 400-Fehler über die Mail-Vorgangs-API wiedergefunden, per DataStore erneut geladen und als nicht abgeschlossen bzw. konkret als status='in_bearbeitung' verifiziert wird. Zusätzlich wird geprüft, dass kein manueller Abschlussstatus gesetzt wurde und die Abschlussblockade weiterhin besteht.
 
 ## Review-Ergebnis
 
-Die Umsetzung wird akzeptiert.
+Akzeptiert.
 
-### Geprüfte Punkte
+## Prüfung gegen Arbeitspaket
 
-- `completed=true` beim Mail-Import wird über neue HTTP-Tests abgedeckt.
-- Erfolgsfall: Der neu angelegte Vorgang wird als `status='abgeschlossen'` zurückgegeben.
-- Blockerfall: Die API antwortet mit `400` und einer nachvollziehbaren Fehlermeldung aus der bestehenden Abschlussprüfung.
-- Es wurden keine neuen fachlichen Abschlussregeln, keine neuen Verknüpfungstabellen und keine Architekturumbauten eingeführt.
-- Die UI unterscheidet nach erfolgreichem Import nun zwischen normalem Import und Import mit direktem Abschluss.
+- Ein automatisierter Test für `POST /api/mail/<inbox_id>/vorgang-import` mit `completed=true` und blockiertem Abschluss ist vorhanden bzw. wurde erweitert.
+- Der Fehlerfall wird weiterhin über den erwarteten HTTP-400 ausgelöst.
+- Nach dem Fehler wird explizit geprüft, dass der Vorgang persistiert wurde, indem die verknüpften Vorgangs-IDs über die Mail-Vorgangs-API geladen werden.
+- Der persistierte Vorgang wird anschließend erneut über `vorgang_detail()` geladen.
+- Der Test prüft konkret `status == 'in_bearbeitung'` und damit stärker als nur "nicht abgeschlossen".
+- Zusätzlich wird geprüft, dass `status_manuell` nicht gesetzt ist, `abschluss_moeglich` false ist und der erwartete Abschlussblocker wegen fehlendem Dokument weiter vorhanden ist.
 
-### Bewertung
+## Geänderte Dateien
 
-Die Anforderungen des Arbeitspakets sind erfüllt. Besonders wichtig ist, dass die Tests den bestehenden Backend-Pfad gegen Regressionen absichern, ohne eine neue Abschlusslogik einzuführen.
+- `tests/test_dashboard.py`: zielgerichtete Testerweiterung.
+- `feedback/implementation_report.md`: Dokumentation der Umsetzung.
 
-### Nicht blockierende Hinweise
+## Tests
 
-- Der Blocker-Test könnte noch stärker werden, wenn er zusätzlich den persistierten Vorgangszustand nach dem Fehlerfall prüft.
-- `feedback/Review-report.md` taucht in `runner_validated_changed_paths`, aber nicht im GitHub Compare auf. Da die Datei nicht Teil des GitHub-Diffs ist und laut Report vorbestehend war, ist das nicht blockierend.
+Laut Implementation Report wurde `python -m pytest tests/test_dashboard.py` ausgeführt mit Ergebnis: 68 passed, 2 skipped.
+
+## Bewertung
+
+Keine blockierenden Probleme gefunden. Die Umsetzung bleibt im Scope des Arbeitspakets und verändert keine Fachlogik, Datenmodelle oder externen Integrationen.
