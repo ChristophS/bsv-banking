@@ -8,36 +8,30 @@
 
 ## Begründung
 
-Der GitHub-Diff ist für die Review-Entscheidung ausreichend: Die zentrale Checkbox-Logik in createSuggestionSection(...) wurde sichtbar geändert, die relevanten Aufrufer wurden angepasst, und ein passender Browser-Test wurde ergänzt. Es gibt keine Hinweise auf verbotene Dateiänderungen, Scope Creep oder einen unsauberen Branch-Zustand.
+Der GitHub-Diff ist für die Review-Entscheidung ausreichend aussagekräftig. Die Umsetzung nutzt die bestehenden Mail-Vorgangs-Endpunkte, erweitert die Kandidatenquelle um vorhandene Vorgänge und integriert Anzeige, Zuordnung, Entfernung sowie Fehlerbehandlung in den Mail-Detail-Flow. Es sind keine blockierenden Scope- oder Architekturverstöße erkennbar.
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt das Arbeitspaket. Die automatische Vorselektion anhand des Scores wurde entfernt; Checkboxen werden nur noch über item.selected bzw. über selectedIds markiert. Bestehende bzw. aus der Quelle stammende Verknüpfungen bleiben damit vorausgewählt, während reine Vorschläge nicht mehr automatisch angehakt werden. Die Sortierung wurde nicht verändert und das Absenden nutzt weiterhin die angehakten Checkboxen.
+Die Umsetzung erfüllt das Arbeitspaket: Im Mail-Detail werden verknüpfte Vorgänge angezeigt, vorhandene Vorgänge können über Link-Kandidaten ausgewählt und zugeordnet sowie wieder entfernt werden. Der UI-State wird nach POST/DELETE aktualisiert, und API-Fehler werden sichtbar gemacht. Backend-seitig wurde der bestehende Link-Candidates-Endpunkt passend erweitert; die bestehenden Mail-Link-Endpunkte bleiben unverändert.
 
 ## Review-Ergebnis
 
-✅ **Akzeptiert**
+Angenommen.
 
-Die Änderung adressiert den Kern des Arbeitspakets korrekt.
+## Prüfung gegen das Arbeitspaket
 
-### Geprüfte Punkte
+- Bestehende Verknüpfungen werden beim Öffnen einer Mail über `GET /api/mail/<id>/vorgaenge` geladen und im Mail-Detail angezeigt.
+- Die Auswahl vorhandener Vorgänge nutzt die bestehende Kandidatenquelle `/api/vorgaenge/link-candidates`, die um `vorgaenge` erweitert wurde.
+- Nutzer können eine Mail per `POST /api/mail/<id>/vorgaenge` einem vorhandenen Vorgang zuordnen.
+- Nutzer können bestehende Zuordnungen per `DELETE /api/mail/<id>/vorgaenge/<vorgangs_id>` entfernen.
+- Nach Zuordnung oder Entfernung wird der lokale State aktualisiert und die Mail-Detailansicht neu gerendert.
+- Fehler aus API-Aufrufen werden über Statusanzeige und `showError(...)` sichtbar gemacht.
+- Der Scope bleibt auf die Mail-Vorgangs-Zuordnung beschränkt; keine externen Dienste oder produktiven Daten werden berührt.
 
-- `createSuggestionSection(...)` setzt `checkbox.checked` nun ausschließlich über `Boolean(item.selected)`.
-- Die bisherige automatische Auswahl über `autoSelect && score >= 0.45` wurde entfernt.
-- Der irreführende Parameter `autoSelect` wurde aus der Signatur und aus den im Diff sichtbaren Aufrufern entfernt.
-- Bestehende bzw. explizit gesetzte Verknüpfungen bleiben über `selectedIds`/`item.selected` vorausgewählt.
-- Die Vorschlags-Sortierung über die bestehende Logik wurde nicht verändert.
-- Das Absenden läuft weiterhin über `readSuggestionFields(...)` und übernimmt damit nur tatsächlich angehakte Checkboxen.
-- Der ergänzte Browser-Test prüft den relevanten Fall: hoher Score allein aktiviert keine Checkbox, explizit ausgewählte Verknüpfungen bleiben ausgewählt, und der Payload enthält nur die angehakten IDs.
+## Tests
 
-### Branch-/Compare-Status
+Es wurden passende Backend-Tests ergänzt bzw. bestehende Tests erweitert. Die lokale Python-Testausführung war laut Bericht wegen der lokalen Runtime-/Session-Probleme nicht möglich; `node --check` und `git diff --check` wurden erfolgreich ausgeführt. Das ist hier nicht blockierend, sollte aber in einer funktionierenden Umgebung nachgeholt werden.
 
-- Compare-Status: `ahead`
-- Ahead by: 1
-- Behind by: 0
-- Geänderte Produktiv-/Testdateien passen zum Arbeitspaket.
-- `feedback/Review-report.md` erscheint als Runner-validierter, aber nicht im GitHub-Compare enthaltener Pfad. Da diese Datei nicht zu den staged/GitHub-Änderungen gehört und kein Produktivcode betroffen ist, ist das nicht blockierend.
+## Hinweise
 
-### Tests
-
-Die Tests wurden laut Bericht wegen lokaler Python-/Session-Probleme nicht ausgeführt. Das ist hier nicht blockierend, weil eine passende Testergänzung vorhanden ist und die Nichtausführung plausibel dokumentiert wurde.
+Die Branch-Situation ist sauber (`ahead_by=1`, `behind_by=0`). Die einzige Pfadabweichung betrifft `feedback/Review-report.md` und erscheint nicht fachlich relevant für die Implementierung.
