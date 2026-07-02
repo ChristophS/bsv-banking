@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Wichtiger Punkt mit hoher Priorität, aber ein größerer UI-/Workflow-Eingriff. Nicht Teil des kleinen Test-/Stabilitätspakets.
+**Grund:** Umfasst zusätzlich Inline-Klassifikation und Abschlusslogik; das nächste Paket beschränkt sich bewusst auf den bestehenden Mail-Import mit direkter Transaktionsverknüpfung.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenes fachlich komplexes Zuordnungsthema mit UI- und Datenflussfragen; bewusst nicht mit dem kleinen Fehlerfall-Paket mischen.
+**Grund:** Eigenes komplexes Zuordnungsthema; dafür wäre eine separate fachliche und technische Betrachtung nötig.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größeres eigenständiges Modul mit zusätzlichem Datenmodell- und Integrationsbedarf; derzeit nicht klein genug für ein kontrolliertes Arbeitspaket.
+**Grund:** Eigenständiges größeres Modul mit zusätzlichem Datenmodell- und Integrationsbedarf.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema, das erst in konkrete kleine UX-Pakete zerlegt werden sollte.
+**Grund:** Querschnittsthema, das in kleinere konkrete UX-Pakete zerlegt werden sollte.
 
 **Feedback:**
 
