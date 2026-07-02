@@ -1,3 +1,3 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional einen Browser-/DOM-Test für die neue Mail-Vorgangs-Zuordnung ergänzen.
+- Kandidatenlabels bei leeren oder whitespace-only Titeln robuster formatieren.
+- Optional bei Kandidatenlisten >250 Einträge eine Suche oder Filterung im Select ergänzen, falls dies in der Praxis relevant wird.
