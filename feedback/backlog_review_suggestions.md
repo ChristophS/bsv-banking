@@ -1,2 +1,3 @@
-- Optional Frontend-Test für `mailSpamBadge()` ergänzen, insbesondere für `spamProbability=0.001` bzw. `0.0049` mit erwarteter Anzeige `<1%`.
-- Optional prüfen, ob die CSS-Klassifizierung der Spam-Badge langfristig ebenfalls auf dem Rohwert statt auf dem gerundeten Prozentwert basieren sollte.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
