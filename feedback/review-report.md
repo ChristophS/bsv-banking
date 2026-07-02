@@ -8,27 +8,30 @@
 
 ## Begründung
 
-Der GitHub-Diff ist für die Review-Entscheidung ausreichend aussagekräftig: Er zeigt die zentrale Änderung der In-Memory-Wiederverwendung in mail_integration.py, die Beibehaltung der persistenten Wiederverwendungsgrenze, die Anzeigeanpassung für kleine positive Werte sowie konkrete Testanpassungen für die geforderten Grenzfälle.
+Der GitHub-Diff ist für die Review-Entscheidung ausreichend aussagekräftig: Die Mail-Vorgangs-Auswahl wurde im Frontend auf Suchfeld, hide_completed-Filter und Trefferliste umgestellt, die Suche nutzt /api/vorgaenge mit Query-Parametern, und der bestehende POST-Flow zur Mail-Verknüpfung bleibt erhalten. Ergänzende Tests decken die /api/vorgaenge-Suche, hide_completed und leere Treffer ab. Der Branch ist laut Compare sauber ahead_by=1, behind_by=0. Die Abweichung feedback/Review-report.md ist nicht im GitHub-Compare enthalten und betrifft offenbar keinen committed Code-Change dieses Arbeitspakets.
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt das Arbeitspaket. Kleine Spam-Werte unterhalb von MIN_REUSABLE_SPAM_PROBABILITY werden weiterhin nicht als persistente Cachetreffer nach einem Neustart behandelt, können aber innerhalb eines laufenden DashboardMailManager bei unveränderter Signatur wiederverwendet werden. Dadurch bleiben Listen-/Detail- bzw. Mehrfachlade-Ergebnisse konsistent, ohne dauerhaft unsichere 0%-nahe Werte aus dem persistenten Cache zu übernehmen. Die UI zeigt positive Werte, die auf 0% runden würden, als <1% an. Die Tests decken 0, 0.001, 0.0049, 0.005 sowie Cache- und Konsistenzverhalten ab.
+Die Umsetzung erfüllt die wesentlichen Akzeptanzkriterien: Im Mail-Bereich gibt es eine entprellte Suche gegen /api/vorgaenge, einen Filter zum Ausblenden abgeschlossener Vorgänge, eine unterscheidbare Trefferliste mit Status/Typ/Bezug/Transaktionsanzahl, einen Leerzustand ohne Treffer und weiterhin den bestehenden Verknüpfungsendpunkt. Die ergänzten Tests validieren die API-/Datastore-Filterlogik.
 
 ## Review-Ergebnis
 
 Akzeptiert.
 
-## Prüfung
+## Geprüfte Punkte
 
-- `banking_dashboard/mail_integration.py`: Die In-Memory-Wiederverwendung von Scores bei gleicher Signatur ist nicht mehr an `_is_reusable_spam_score()` gekoppelt. Das entspricht der Anforderung, innerhalb eines Manager-Laufs konsistente Ergebnisse zu behalten, auch wenn der Wert unterhalb der persistenten Wiederverwendungsgrenze liegt.
-- `_is_reusable_spam_score()` bleibt für die persistente Cache-Wiederverwendung erhalten und ist nun kommentiert. Damit werden Werte unter 0,5% nach einem Neustart weiterhin nicht als verlässlicher Cachetreffer behandelt.
-- `banking_dashboard/static/app.js`: Positive Werte, die durch Rundung als `0%` erschienen wären, werden nun als `<1%` angezeigt. Das reduziert den irreführenden Dauer-0%-Eindruck.
-- `tests/test_mail_integration.py`: Die neuen bzw. angepassten Tests decken die geforderten Grenzfälle `0`, `0.001`, `0.0049`, `0.005`, In-Memory-Wiederverwendung, persistente Wiederverwendung und Listen-/Detail-Konsistenz ab.
+- Die Mail-Vorgangs-Auswahl wurde von einer reinen Select-Liste auf ein Suchfeld mit Trefferliste umgestellt.
+- Die Suche ruft den bestehenden Endpunkt `/api/vorgaenge` mit `search` und `hide_completed` auf; es wurde keine neue Such-API eingeführt.
+- Der Filter „Abgeschlossene ausblenden“ ist vorhanden und an den API-Parameter `hide_completed` angebunden.
+- Die Trefferliste zeigt unterscheidende Informationen wie Status, Vorgangstyp, Bezug und Transaktionsanzahl.
+- Der bestehende Verknüpfungsflow über `POST /api/mail/{id}/vorgaenge` bleibt erhalten; nur die Auswahlquelle wurde geändert.
+- Für leere Suchergebnisse wird ein verständlicher Leerzustand angezeigt.
+- Tests für Suche, hide_completed und leere Treffer wurden in `tests/test_dashboard.py` ergänzt.
 
-## Branch-/Compare-Zustand
+## Keine blockierenden Probleme
 
-GitHub Compare ist sauber: `ahead_by=1`, `behind_by=0`, `compare_status=ahead`. Die Abweichung `feedback/Review-report.md` ist nicht Teil des GitHub-Diffs und betrifft keine Produktiv- oder Testlogik.
+Es wurden keine fachlich oder technisch blockierenden Probleme im vorliegenden Diff festgestellt.
 
-## Blockierende Probleme
+## Hinweise
 
-Keine.
+Die neue Frontend-Interaktion ist hauptsächlich per Syntaxcheck und API-/Datastore-Tests abgesichert. Ein zusätzlicher DOM-/Browser-Test wäre wünschenswert, ist aber für dieses Arbeitspaket nicht zwingend blockierend.
