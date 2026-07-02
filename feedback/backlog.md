@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Umfasst zusätzlich Inline-Klassifikation und Abschlusslogik; das nächste Paket beschränkt sich bewusst auf den bestehenden Mail-Import mit direkter Transaktionsverknüpfung.
+**Grund:** Größeres Folgepaket mit zusätzlicher UI für Inline-Klassifikation und Abschlusslogik; bewusst nicht Teil der kleinen Erweiterung des bestehenden Mail-Import-Flows.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenes komplexes Zuordnungsthema; dafür wäre eine separate fachliche und technische Betrachtung nötig.
+**Grund:** Eigenständiges Zuordnungsthema mit zusätzlicher Fachklärung; sollte separat nach der einfachen Transaktionsverknüpfung behandelt werden.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit zusätzlichem Datenmodell- und Integrationsbedarf.
+**Grund:** Eigenständiges größeres Modul mit neuem Datenmodell- und Integrationsbedarf; nicht klein genug für das nächste Arbeitspaket.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema, das in kleinere konkrete UX-Pakete zerlegt werden sollte.
+**Grund:** Querschnittsthema, das zuerst in kleinere konkrete UX-Pakete zerlegt werden sollte; kein klar abgegrenztes Einzelpaket für diese Runde.
 
 **Feedback:**
 
