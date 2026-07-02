@@ -1278,6 +1278,25 @@ class MailIntegrationHTTPTests(unittest.TestCase):
         with urlopen(unlink_request, timeout=5) as response:
             self.assertEqual([], json.load(response)["vorgangs_ids"])
 
+    def test_mail_link_rejects_unknown_vorgang(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+        link_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgaenge",
+            data=json.dumps({"vorgangs_id": "vorgang_unbekannt"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with self.assertRaises(HTTPError) as context:
+            urlopen(link_request, timeout=5)
+
+        self.assertEqual(404, context.exception.code)
+        self.assertIn(
+            "Vorgang wurde nicht gefunden",
+            context.exception.read().decode("utf-8"),
+        )
+
 
 class MailIntegrationBrowserTests(unittest.TestCase):
     def test_mail_workspace_reads_tags_zooms_and_replies(self):

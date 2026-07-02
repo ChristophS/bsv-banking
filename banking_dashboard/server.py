@@ -3740,6 +3740,11 @@ class DashboardDataStore:
         source_id: str,
     ) -> dict[str, list[dict[str, Any]]]:
         return {
+            "vorgaenge": self._vorgang_link_candidates(
+                connection,
+                source_type,
+                source_id,
+            ),
             "transactions": self._transaction_link_candidates(
                 connection,
                 source_type,
@@ -3766,6 +3771,73 @@ class DashboardDataStore:
                 source_id,
             ),
         }
+
+    def _vorgang_link_candidates(
+        self,
+        connection: sqlite3.Connection,
+        source_type: str,
+        source_id: str,
+    ) -> list[dict[str, Any]]:
+        rows = connection.execute(
+            """
+            SELECT
+                v.vorgangs_id,
+                v.titel,
+                v.beschreibung,
+                v.vorgangstyp,
+                v.status,
+                v.aktualisiert_am,
+                COUNT(DISTINCT tv.transaktions_id)
+                    AS anzahl_transaktionen,
+                MAX(n.datum) AS letztes_datum,
+                CASE
+                    WHEN TRIM(v.titel) <> ''
+                    THEN v.titel
+                    WHEN COUNT(DISTINCT tv.transaktions_id) = 1
+                    THEN MAX(n.zahlungsbeteiligter)
+                    ELSE PRINTF(
+                        '%d Transaktionen',
+                        COUNT(DISTINCT tv.transaktions_id)
+                    )
+                END AS bezug
+            FROM vorgaenge AS v
+            LEFT JOIN transaktion_vorgaenge AS tv
+              ON tv.vorgangs_id = v.vorgangs_id
+            LEFT JOIN normalized_transactions AS n
+              ON n.transaktions_id = tv.transaktions_id
+            GROUP BY
+                v.vorgangs_id,
+                v.titel,
+                v.beschreibung,
+                v.vorgangstyp,
+                v.status,
+                v.aktualisiert_am
+            ORDER BY
+                (v.status <> 'abgeschlossen') DESC,
+                COALESCE(MAX(n.datum), '') DESC,
+                v.aktualisiert_am DESC,
+                v.vorgangs_id
+            LIMIT 250
+            """
+        ).fetchall()
+        result = []
+        for row in rows:
+            if source_type == "vorgang" and row["vorgangs_id"] == source_id:
+                continue
+            result.append(
+                {
+                    "id": str(row["vorgangs_id"]),
+                    "label": str(row["titel"] or row["bezug"] or row["vorgangs_id"]),
+                    "date": str(row["letztes_datum"] or row["aktualisiert_am"] or ""),
+                    "status": str(row["status"] or ""),
+                    "category": str(row["vorgangstyp"] or ""),
+                    "reason": "Vorhandener Vorgang",
+                    "score": 0,
+                    "preview": str(row["beschreibung"] or ""),
+                    "relation_count": int(row["anzahl_transaktionen"] or 0),
+                }
+            )
+        return result
 
     def _transaction_link_candidates(
         self,

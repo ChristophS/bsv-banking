@@ -60,6 +60,8 @@ const state = {
   mailSearch: "",
   selectedMailId: null,
   selectedMailDetail: null,
+  selectedMailVorgangsIds: [],
+  mailVorgangCandidates: [],
   selectedMailAttachment: null,
   entityPreviewAttachments: [],
   mailSpamThreshold: 0.7,
@@ -1982,6 +1984,8 @@ async function markMailRead(entryId, button) {
 async function loadMailDetail(entryId) {
   state.selectedMailId = entryId;
   state.selectedMailDetail = null;
+  state.selectedMailVorgangsIds = [];
+  state.mailVorgangCandidates = [];
   state.selectedMailAttachment = null;
   state.mailVorgangReview = null;
   state.mailZoom = 1;
@@ -1990,11 +1994,18 @@ async function loadMailDetail(entryId) {
     mailElement("div", "mail-detail-loading", "Mail wird geladen"),
   );
   try {
-    const response = await fetch(
-      `/api/mail/${encodeURIComponent(entryId)}`,
-    );
-    const payload = await readResponse(response);
+    const [detailResponse, linksResponse, candidates] = await Promise.all([
+      fetch(`/api/mail/${encodeURIComponent(entryId)}`),
+      fetch(`/api/mail/${encodeURIComponent(entryId)}/vorgaenge`),
+      loadLinkCandidates(),
+    ]);
+    const [payload, linksPayload] = await Promise.all([
+      readResponse(detailResponse),
+      readResponse(linksResponse),
+    ]);
     state.selectedMailDetail = payload.message;
+    state.selectedMailVorgangsIds = linksPayload.vorgangs_ids || [];
+    state.mailVorgangCandidates = candidates?.vorgaenge || [];
     const firstAttachment = payload.message.attachments?.[0];
     state.selectedMailAttachment = firstAttachment
       ? firstAttachment.attachmentIndex
@@ -2107,6 +2118,7 @@ function renderMailDetail() {
   const relatedPanel = renderRelatedMailCandidates(
     detail.relatedCandidates || [],
   );
+  const vorgangPanel = renderMailVorgangLinks(summary.id);
 
   const readingLayout = mailElement("div", "mail-reading-layout");
   const bodySection = mailElement("section", "mail-body-pane");
@@ -2153,9 +2165,86 @@ function renderMailDetail() {
   if (relatedPanel) {
     nodes.splice(summaryPanel ? 2 : 1, 0, relatedPanel);
   }
+  if (vorgangPanel) {
+    const insertIndex = 1 + (summaryPanel ? 1 : 0) + (relatedPanel ? 1 : 0);
+    nodes.splice(insertIndex, 0, vorgangPanel);
+  }
   nodes.push(replyForm);
   elements.mailDetail.append(...nodes);
   applyMailZoom();
+}
+
+function renderMailVorgangLinks(entryId) {
+  const section = mailElement("section", "mail-vorgang-links");
+  section.append(
+    mailElement("p", "eyebrow", "Vorgänge"),
+    mailElement("h4", "", "Verknüpfte Vorgänge"),
+  );
+  const linkedIds = state.selectedMailVorgangsIds || [];
+  const candidatesById = new Map(
+    (state.mailVorgangCandidates || [])
+      .filter((item) => item?.id)
+      .map((item) => [String(item.id), item]),
+  );
+  const list = mailElement("div", "mail-vorgang-link-list");
+  if (linkedIds.length) {
+    for (const id of linkedIds) {
+      const candidate = candidatesById.get(String(id)) || {id, label: id};
+      const row = mailElement("div", "mail-vorgang-link-row");
+      const text = mailElement("span");
+      text.append(
+        mailElement("strong", "", `${candidate.label || id} (${id})`),
+        mailElement(
+          "small",
+          "",
+          [
+            candidate.category,
+            candidate.status,
+            candidate.date ? formatDateTimeOrDate(candidate.date) : "",
+          ].filter(Boolean).join(" · "),
+        ),
+      );
+      const unlink = mailElement("button", "danger-action", "Entfernen");
+      unlink.type = "button";
+      unlink.dataset.unlinkMailVorgang = id;
+      row.append(text, unlink);
+      list.append(row);
+    }
+  } else {
+    list.append(
+      mailElement(
+        "p",
+        "mail-vorgang-empty",
+        "Diese Mail ist noch keinem Vorgang zugeordnet.",
+      ),
+    );
+  }
+
+  const form = mailElement("form", "mail-vorgang-link-form");
+  form.dataset.mailVorgangLinkForm = entryId;
+  const select = document.createElement("select");
+  select.name = "vorgangs_id";
+  select.required = true;
+  select.append(new Option("Vorgang auswählen", ""));
+  const linked = new Set(linkedIds.map(String));
+  for (const candidate of state.mailVorgangCandidates || []) {
+    if (!candidate?.id || linked.has(String(candidate.id))) {
+      continue;
+    }
+    const label = [
+      candidate.label || candidate.id,
+      candidate.category,
+      candidate.status,
+    ].filter(Boolean).join(" · ");
+    select.append(new Option(`${label} (${candidate.id})`, candidate.id));
+  }
+  const submit = mailElement("button", "secondary-action", "Zuordnen");
+  submit.type = "submit";
+  submit.disabled = select.options.length <= 1;
+  const status = mailElement("span", "save-state");
+  form.append(select, submit, status);
+  section.append(list, form);
+  return section;
 }
 
 function renderRelatedMailCandidates(candidates) {
@@ -2868,7 +2957,72 @@ function handleMailDetailSubmit(event) {
     submitMailVorgangImport(event);
     return;
   }
+  if (event.target.closest("[data-mail-vorgang-link-form]")) {
+    submitMailVorgangLink(event);
+    return;
+  }
   submitMailReply(event);
+}
+
+async function submitMailVorgangLink(event) {
+  const form = event.target.closest("[data-mail-vorgang-link-form]");
+  if (!form) {
+    return;
+  }
+  event.preventDefault();
+  const vorgangsId = new FormData(form).get("vorgangs_id")?.toString().trim() || "";
+  const button = form.querySelector("button[type='submit']");
+  const status = form.querySelector(".save-state");
+  button.disabled = true;
+  status.className = "save-state is-saving";
+  status.textContent = "Zuordnung wird gespeichert";
+  try {
+    const response = await fetch(
+      `/api/mail/${encodeURIComponent(form.dataset.mailVorgangLinkForm)}/vorgaenge`,
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({vorgangs_id: vorgangsId}),
+      },
+    );
+    const payload = await readResponse(response);
+    state.selectedMailVorgangsIds = payload.vorgangs_ids || [];
+    state.vorgaengeLoaded = false;
+    status.className = "save-state is-saved";
+    status.textContent = "Zuordnung gespeichert";
+    await loadOverview().catch(() => null);
+    renderMailDetail();
+  } catch (error) {
+    button.disabled = false;
+    status.className = "save-state is-error";
+    status.textContent = "Zuordnung fehlgeschlagen";
+    showError(error.message);
+  }
+}
+
+async function unlinkMailVorgang(vorgangsId, button) {
+  const entryId = state.selectedMailId;
+  if (!entryId || !vorgangsId) {
+    showError("Mail oder Vorgang wurde nicht gefunden.");
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Wird entfernt";
+  try {
+    const response = await fetch(
+      `/api/mail/${encodeURIComponent(entryId)}/vorgaenge/${encodeURIComponent(vorgangsId)}`,
+      {method: "DELETE"},
+    );
+    const payload = await readResponse(response);
+    state.selectedMailVorgangsIds = payload.vorgangs_ids || [];
+    state.vorgaengeLoaded = false;
+    await loadOverview().catch(() => null);
+    renderMailDetail();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Entfernen";
+    showError(error.message);
+  }
 }
 
 async function submitMailVorgangImport(event) {
@@ -3006,6 +3160,14 @@ async function handleMailDetailClick(event) {
   const deleteButton = event.target.closest("[data-delete-mail]");
   if (deleteButton) {
     await deleteMail(deleteButton.dataset.deleteMail, deleteButton);
+    return;
+  }
+  const unlinkVorgangButton = event.target.closest("[data-unlink-mail-vorgang]");
+  if (unlinkVorgangButton) {
+    await unlinkMailVorgang(
+      unlinkVorgangButton.dataset.unlinkMailVorgang,
+      unlinkVorgangButton,
+    );
     return;
   }
   const createVorgangButton = event.target.closest("[data-mail-create-vorgang]");

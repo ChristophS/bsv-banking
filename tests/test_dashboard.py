@@ -1980,6 +1980,8 @@ class DashboardHTTPTests(unittest.TestCase):
             timeout=5,
         ) as response:
             candidates = json.load(response)
+        self.assertIn("vorgaenge", candidates["candidates"])
+        self.assertTrue(candidates["candidates"]["vorgaenge"])
         self.assertIn("transactions", candidates["candidates"])
 
         with urlopen(
