@@ -2235,6 +2235,24 @@ class DashboardHTTPTests(unittest.TestCase):
         payload = json.loads(context.exception.read().decode("utf-8"))
         self.assertIn("mindestens ein verknuepftes Dokument", payload["error"])
 
+        with urlopen(
+            self.base_url + f"/api/mail/{inbox_id}/vorgaenge",
+            timeout=5,
+        ) as response:
+            linked_payload = json.load(response)
+
+        self.assertEqual(1, len(linked_payload["vorgangs_ids"]))
+        persisted_id = linked_payload["vorgangs_ids"][0]
+        persisted = self.server.data_store.vorgang_detail(persisted_id)
+        self.assertIsNotNone(persisted)
+        self.assertEqual("in_bearbeitung", persisted["status"])
+        self.assertFalse(persisted["status_manuell"])
+        self.assertFalse(persisted["abschluss_moeglich"])
+        self.assertIn(
+            "mindestens ein verknuepftes Dokument",
+            " ".join(persisted["abschluss_blocker"]),
+        )
+
     def test_todo_crud_and_vorgang_links_are_available_over_http(self):
         create_request = Request(
             self.base_url + "/api/todos",
