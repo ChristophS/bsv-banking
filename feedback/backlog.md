@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigenes Thema im Mail-Processing und unabhängig vom UI-Fix für Vorschlagsauswahl.
+**Grund:** Eigenes Mail-Processing-Thema mit Backend-/Caching-Logik; unabhängig von der UI-Erweiterung zur Mail-Vorgangszuordnung.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Größerer Workflow über mehrere UI- und Statusschritte, nicht klein genug für das aktuelle Paket.
+**Grund:** Größerer Workflow über Vorgangsanlage, Transaktionsklassifikation und Abschlusslogik; für ein kleines kontrolliertes Paket zu breit.
 
 **Feedback:**
 
@@ -26,47 +26,37 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigenes UI-Usability-Thema rund um den vorhandenen Status-Editor.
+**Grund:** Eigenes UI-/Usability-Thema in der Vorgangsansicht; sollte separat angepasst und getestet werden.
 
 **Feedback:**
 
 - Aktuell kann ich auch keine Vorgänge manuell schließen. Sie können nur über Abschlussregeln geschlossen werden. Ach doch das geht, aber der Button ist irgendwie mittendrin. Sehr unintuitiv
 
-## 4. Mail direkt einem bestehenden Vorgang zuordnen
-
-**Priorität:** hoch
-
-**Grund:** Verwandt, aber fachlich und UI-seitig ein eigener Flow neben dem aktuellen Vorschlagsverhalten.
-
-**Feedback:**
-
-- Ich möchte erne aus dem Mailreiter heraus eine Mail einem Vorgang zuordnen können.
-
-## 5. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
+## 4. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
 **Priorität:** mittel
 
-**Grund:** Komplexer Modellierungs- und UI-Workflow, der separat geplant werden sollte.
+**Grund:** Komplexerer Modellierungs- und UI-Workflow; berührt die aktuelle Architektur, weil Belege heute an Vorgänge und nicht direkt an Transaktionen hängen.
 
 **Feedback:**
 
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege wie man geschickt damit umgehen kann
 
-## 6. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
+## 5. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
 
 **Priorität:** mittel
 
-**Grund:** Großes neues Fachmodul mit externer Integration und eigenem UI.
+**Grund:** Großes neues Fachmodul mit externer Integration; klar außerhalb eines kleinen Umsetzungspakets.
 
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas komplizierter, da es über DFBnet Vrein läuft. ...
 
-## 7. Dashboard-Usability schrittweise verbessern ohne Funktionsverlust
+## 6. Dashboard-Usability schrittweise verbessern ohne Funktionsverlust
 
 **Priorität:** mittel
 
-**Grund:** Breites Querschnittsthema, das in mehrere kleinere Arbeitspakete zerlegt werden sollte; der aktuelle Fix ist nur ein Teil davon.
+**Grund:** Querschnittsthema ohne klar begrenzte Einzeländerung; sollte in mehrere kleine UI-Pakete zerlegt werden.
 
 **Feedback:**
 
