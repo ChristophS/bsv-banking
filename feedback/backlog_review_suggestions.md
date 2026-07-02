@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Ergänzende Regression: Nach einem fehlgeschlagenen Sofort-Abschluss beim Mail-Import den persistierten Vorgang erneut laden und explizit prüfen, dass er nicht `abgeschlossen` ist.
+- Optional UX: Im Fehlerfall deutlicher anzeigen, ob der Vorgang trotz fehlgeschlagenem Abschluss bereits angelegt wurde, um Mehrfachimporte zu vermeiden.
