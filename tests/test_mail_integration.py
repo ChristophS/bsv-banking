@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import sqlite3
 import tempfile
@@ -309,6 +310,99 @@ class MailIntegrationUnitTests(unittest.TestCase):
         scorer.score.assert_called_once()
         self.assertEqual(0.73, payload["messages"][0]["spamProbability"])
         self.assertEqual("openai", payload["messages"][0]["spamSource"])
+
+    def test_invalid_remote_spam_score_uses_local_fallback(self):
+        scorer = OpenAISpamScorer("api-key", "gpt-test")
+        scorer.score = Mock(
+            return_value={
+                "confidence": 0.0,
+                "reasons": ["Falsch benanntes Feld"],
+                "source": "openai",
+            }
+        )
+        manager = DashboardMailManager(FakeMailBackend(), scorer)
+
+        payload = manager.list_messages()
+
+        self.assertEqual(0.95, payload["messages"][0]["spamProbability"])
+        self.assertEqual("local_fallback", payload["messages"][0]["spamSource"])
+        self.assertIn(
+            "Spam-Bewertung ungueltig",
+            payload["messages"][0]["spamReasons"][0],
+        )
+
+    def test_explicit_openai_zero_spam_score_is_kept(self):
+        scorer = OpenAISpamScorer("api-key", "gpt-test")
+        scorer.score = Mock(
+            return_value={
+                "probability": 0,
+                "reasons": ["Explizit kein Spam"],
+                "source": "openai",
+            }
+        )
+        manager = DashboardMailManager(FakeMailBackend(), scorer)
+
+        payload = manager.list_messages()
+
+        self.assertEqual(0.0, payload["messages"][0]["spamProbability"])
+        self.assertEqual("openai", payload["messages"][0]["spamSource"])
+        self.assertEqual(
+            ["Explizit kein Spam"],
+            payload["messages"][0]["spamReasons"],
+        )
+
+    def test_openai_spam_scorer_accepts_probability_alias_and_percent(self):
+        scorer = OpenAISpamScorer("api-key", "gpt-test")
+        response_payload = {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "spamProbability": "70%",
+                                "reasons": ["Klarer Prozentwert"],
+                            }
+                        )
+                    }
+                }
+            ]
+        }
+
+        with patch(
+            "banking_dashboard.mail_integration.urlopen",
+            return_value=io.StringIO(json.dumps(response_payload)),
+        ):
+            score = scorer.score(FakeMailBackend().messages[0])
+
+        self.assertEqual(0.7, score["probability"])
+        self.assertEqual("openai", score["source"])
+
+    def test_openai_spam_scorer_missing_probability_uses_fallback(self):
+        scorer = OpenAISpamScorer("api-key", "gpt-test")
+        response_payload = {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "score": 0.7,
+                                "reasons": ["Falsch benanntes Feld"],
+                            }
+                        )
+                    }
+                }
+            ]
+        }
+
+        with patch(
+            "banking_dashboard.mail_integration.urlopen",
+            return_value=io.StringIO(json.dumps(response_payload)),
+        ):
+            score = scorer.score(FakeMailBackend().messages[0])
+
+        self.assertEqual(0.95, score["probability"])
+        self.assertEqual("local_fallback", score["source"])
+        self.assertIn("OpenAI-Antwort ungueltig", score["reasons"][0])
 
     def test_manager_allows_explicit_delete_independent_of_threshold(self):
         backend = FakeMailBackend()

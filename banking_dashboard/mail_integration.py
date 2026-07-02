@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from html import escape as html_escape
 from html.parser import HTMLParser
+from math import isfinite
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
@@ -2052,7 +2053,13 @@ class DashboardMailManager:
                             for item in pending
                             if item[1] == entry_id
                         )
-                        score = fallback_spam_score(message)
+                        score = fallback_spam_score(
+                            message,
+                            reason=(
+                                "Spam-Bewertung ungueltig; lokale "
+                                "Bewertung verwendet."
+                            ),
+                        )
                     result[entry_id] = score
                     with self._lock:
                         self._scores[entry_id] = score
@@ -2151,10 +2158,11 @@ class OpenAISpamScorer:
                     "role": "system",
                     "content": (
                         "Bewerte die E-Mail konservativ als Spam. Gib eine "
-                        "Wahrscheinlichkeit von 0 bis 1 und maximal drei "
-                        "kurze Gruende aus. Newsletter und legitime "
-                        "Transaktionsmails sind nicht automatisch Spam. "
-                        "Antworte ausschliesslich als JSON."
+                        "Antwort ausschliesslich als JSON-Objekt mit "
+                        "probability als Zahl zwischen 0 und 1 und reasons "
+                        "als Liste mit maximal drei kurzen Strings. "
+                        "Newsletter und legitime Transaktionsmails sind "
+                        "nicht automatisch Spam."
                     ),
                 },
                 {
@@ -2181,14 +2189,15 @@ class OpenAISpamScorer:
                 response_payload = json.load(response)
             content = response_payload["choices"][0]["message"]["content"]
             parsed = _parse_json_object(str(content))
-            return _normalize_spam_result(
-                {
-                    "probability": parsed.get("probability", 0),
-                    "reasons": parsed.get("reasons", []),
-                    "source": "openai",
-                }
+            return _normalize_spam_result({**parsed, "source": "openai"})
+        except (KeyError, TypeError, ValueError):
+            return fallback_spam_score(
+                message,
+                reason=(
+                    "OpenAI-Antwort ungueltig; lokale Bewertung verwendet."
+                ),
             )
-        except (HTTPError, URLError, OSError, KeyError, TypeError, ValueError):
+        except (HTTPError, URLError, OSError):
             return fallback_spam_score(message)
 
 
@@ -4840,8 +4849,38 @@ def _parse_json_object(value: str) -> dict[str, Any]:
     return parsed
 
 
+SPAM_PROBABILITY_FIELDS = ("probability", "spam_probability", "spamProbability")
+
+
+def _spam_probability_value(value: dict[str, Any]) -> Any:
+    for field_name in SPAM_PROBABILITY_FIELDS:
+        if field_name in value:
+            return value[field_name]
+    raise ValueError("Spam-Bewertung enthaelt keine probability.")
+
+
+def _normalize_spam_probability(value: Any) -> float:
+    if isinstance(value, bool) or value is None:
+        raise ValueError("Spam-probability ist keine Zahl.")
+    if isinstance(value, (int, float)):
+        probability = float(value)
+    elif isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Spam-probability ist leer.")
+        if cleaned.endswith("%"):
+            probability = float(cleaned[:-1].strip()) / 100
+        else:
+            probability = float(cleaned)
+    else:
+        raise ValueError("Spam-probability ist keine Zahl.")
+    if not isfinite(probability) or not 0 <= probability <= 1:
+        raise ValueError("Spam-probability liegt nicht zwischen 0 und 1.")
+    return probability
+
+
 def _normalize_spam_result(value: dict[str, Any]) -> dict[str, Any]:
-    probability = max(0.0, min(1.0, float(value.get("probability", 0))))
+    probability = _normalize_spam_probability(_spam_probability_value(value))
     raw_reasons = value.get("reasons", [])
     reasons = (
         [str(reason)[:300] for reason in raw_reasons[:3]]
