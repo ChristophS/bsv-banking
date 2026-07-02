@@ -5483,7 +5483,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         raw_vorgang = payload.get("vorgang")
         if not isinstance(raw_vorgang, dict):
             raise ValueError("Vorgangsdaten fehlen.")
-        links = payload.get("links") if isinstance(payload.get("links"), dict) else {}
+        links = self._validated_mail_vorgang_import_links(
+            payload.get("links", {})
+        )
         requested_completed = (
             bool(raw_vorgang.get("completed"))
             if isinstance(raw_vorgang.get("completed"), bool)
@@ -5499,17 +5501,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     raw_vorgang.get("vorgangstyp") or ""
                 ).strip(),
                 "completed": False,
-                "mail_ids": list(
-                    dict.fromkeys(
-                        [inbox_id, *_list_of_strings(links.get("mail_ids", []))]
-                    )
-                ),
-                "transaction_ids": _list_of_strings(
-                    links.get("transaction_ids", [])
-                ),
-                "todo_ids": _list_of_strings(links.get("todo_ids", [])),
-                "beleg_ids": _list_of_strings(links.get("beleg_ids", [])),
-                "termin_ids": _list_of_strings(links.get("termin_ids", [])),
+                "mail_ids": list(dict.fromkeys([inbox_id, *links["mail_ids"]])),
+                "transaction_ids": links["transaction_ids"],
+                "todo_ids": links["todo_ids"],
+                "beleg_ids": links["beleg_ids"],
+                "termin_ids": links["termin_ids"],
             }
         )
         vorgangs_id = str(vorgang["vorgangs_id"])
@@ -5590,6 +5586,35 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             "documents": imported_documents,
             "todos": imported_todos,
             "termine": imported_termine,
+        }
+
+    @staticmethod
+    def _validated_mail_vorgang_import_links(
+        raw_links: Any,
+    ) -> dict[str, list[str]]:
+        if raw_links is None:
+            raw_links = {}
+        if not isinstance(raw_links, dict):
+            raise ValueError("links muss ein Objekt sein.")
+        allowed = {
+            "transaction_ids",
+            "mail_ids",
+            "todo_ids",
+            "beleg_ids",
+            "termin_ids",
+        }
+        unknown = sorted(set(raw_links) - allowed)
+        if unknown:
+            raise ValueError(
+                "Unbekannte Linkfelder: " + ", ".join(unknown)
+            )
+        return {
+            field: DashboardDataStore._validated_id_list(
+                raw_links.get(field, []),
+                f"links.{field}",
+                MAX_VORGANG_LINKS,
+            )
+            for field in sorted(allowed)
         }
 
     def _balance_history_response(

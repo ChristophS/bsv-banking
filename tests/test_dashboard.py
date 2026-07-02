@@ -2161,6 +2161,100 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual(1, len(imported["termine"]))
         self.assertEqual("Termin Stadtwerke", imported["termine"][0]["title"])
 
+    def test_mail_import_without_transaction_ids_stays_successful_over_http(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {},
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(import_request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            imported = json.load(response)
+
+        self.assertEqual([], imported["vorgang"]["transaktionen"])
+        self.assertEqual(
+            [inbox_id],
+            [item["inbox_id"] for item in imported["vorgang"]["mails"]],
+        )
+
+    def test_mail_import_rejects_unknown_transaction_id_over_http(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": {
+                        "title": "Import mit falscher Transaktion",
+                        "description": "",
+                        "vorgangstyp": "Rechnung",
+                    },
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {"transaction_ids": ["tx_missing"]},
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(import_request, timeout=5)
+
+        self.assertEqual(404, context.exception.code)
+        payload = json.loads(context.exception.read().decode("utf-8"))
+        self.assertIn("Transaktion", payload["error"])
+
+    def test_mail_import_rejects_invalid_transaction_ids_shape_over_http(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": {
+                        "title": "Import mit falschem Payload",
+                        "description": "",
+                        "vorgangstyp": "Rechnung",
+                    },
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {"transaction_ids": "tx_newer"},
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(import_request, timeout=5)
+
+        self.assertEqual(400, context.exception.code)
+        payload = json.loads(context.exception.read().decode("utf-8"))
+        self.assertIn("links.transaction_ids muss eine Liste sein", payload["error"])
+
     def test_mail_import_can_complete_new_vorgang_over_http(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
             inbox_id = json.load(response)["messages"][0]["id"]
