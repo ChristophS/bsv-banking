@@ -51,3 +51,13 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Man merkt deutlich, dass das Tool gewachsen ist. Es ist stellenweise sehr unintuitiv oder unuebersichtlich. Vlt kannst du das verbessern ohne, dass Funktionalitaeten verloren gehen.
+
+## 6. Mail-Vorgangsfluss bei großem Datenbestand durch Suche oder Filter verbessern
+
+**Priorität:** niedrig
+
+**Grund:** Nicht blockierend; betrifft nur die Bedienbarkeit der Auswahl im bereits umgesetzten Mail-Zuordnungsflow.
+
+**Feedback:**
+
+- Optional Auswahl vorhandener Vorgänge bei größerem Datenbestand durch Suche, Filter oder `/api/vorgaenge/link-candidates` verbessern.
