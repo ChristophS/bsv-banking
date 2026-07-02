@@ -70,6 +70,9 @@ const state = {
   mailSummaryLoading: new Set(),
   mailVorgangReview: null,
   mailVorgangCandidates: [],
+  mailVorgangSearch: "",
+  mailVorgangHideCompleted: false,
+  mailVorgangRequest: null,
 };
 
 const elements = {
@@ -278,6 +281,7 @@ let todoSearchTimer;
 let terminSearchTimer;
 let ruleSearchTimer;
 let completionRuleSearchTimer;
+let mailVorgangSearchTimer;
 let toastTimer;
 let refreshTimer;
 let playerPremiumTimer;
@@ -1987,6 +1991,8 @@ async function loadMailDetail(entryId) {
   state.selectedMailDetail = null;
   state.selectedMailAttachment = null;
   state.mailVorgangReview = null;
+  state.mailVorgangSearch = "";
+  state.mailVorgangHideCompleted = false;
   state.mailZoom = 1;
   renderMailList();
   elements.mailDetail.replaceChildren(
@@ -2220,36 +2226,142 @@ function renderMailVorgangSection(detail) {
 
   const form = mailElement("form", "mail-vorgang-form");
   form.dataset.linkMailVorgang = detail.id || detail.inboxId || state.selectedMailId;
-  const label = mailElement("label");
-  label.append(mailElement("span", "", "Vorhandenen Vorgang auswählen"));
-  const select = document.createElement("select");
-  select.name = "vorgangs_id";
-  const linkedIds = new Set(linked.map((item) => item.vorgangs_id));
-  const available = state.mailVorgangCandidates.filter(
-    (vorgang) => !linkedIds.has(vorgang.vorgangs_id),
+  const controls = mailElement("div", "mail-vorgang-search-controls");
+  const searchLabel = mailElement("label", "mail-vorgang-search");
+  searchLabel.append(mailElement("span", "", "Vorhandene Vorgänge suchen"));
+  const search = document.createElement("input");
+  search.type = "search";
+  search.autocomplete = "off";
+  search.placeholder = "Titel, Bezug oder Beschreibung";
+  search.value = state.mailVorgangSearch;
+  search.dataset.mailVorgangSearch = "";
+  searchLabel.append(search);
+  const hideCompleted = mailElement("label", "mail-vorgang-filter");
+  const hideCompletedInput = document.createElement("input");
+  hideCompletedInput.type = "checkbox";
+  hideCompletedInput.checked = state.mailVorgangHideCompleted;
+  hideCompletedInput.dataset.mailVorgangHideCompleted = "";
+  hideCompleted.append(
+    hideCompletedInput,
+    mailElement("span", "", "Abgeschlossene ausblenden"),
   );
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = available.length
-    ? "Vorgang auswählen"
-    : "Keine weiteren Vorgänge verfügbar";
-  select.append(placeholder);
-  for (const vorgang of available) {
-    const option = document.createElement("option");
-    option.value = vorgang.vorgangs_id;
-    option.textContent = vorgangOptionLabel(vorgang);
-    option.title = vorgang.vorgangs_id;
-    select.append(option);
-  }
-  label.append(select);
+  controls.append(searchLabel, hideCompleted);
+  const results = mailElement("div", "mail-vorgang-candidate-list");
+  results.dataset.mailVorgangResults = "";
+  form.append(controls, results);
+  renderMailVorgangCandidateResults(form);
   const formActions = mailElement("div", "mail-vorgang-form-actions");
   const submit = mailElement("button", "primary-action", "Zuordnen");
   submit.type = "submit";
-  submit.disabled = available.length === 0;
+  submit.disabled = true;
   formActions.append(submit, mailElement("span", "save-state"));
-  form.append(label, formActions);
+  form.append(formActions);
   section.append(form);
   return section;
+}
+
+function mailVorgangAvailableCandidates(detail = state.selectedMailDetail) {
+  const linkedIds = new Set(
+    dedupeVorgaenge(detail?.vorgaenge || []).map((item) => item.vorgangs_id),
+  );
+  return state.mailVorgangCandidates.filter(
+    (vorgang) => vorgang?.vorgangs_id && !linkedIds.has(vorgang.vorgangs_id),
+  );
+}
+
+function renderMailVorgangCandidateResults(form) {
+  const results = form.querySelector("[data-mail-vorgang-results]");
+  if (!results) {
+    return;
+  }
+  const available = mailVorgangAvailableCandidates();
+  results.replaceChildren();
+  if (!available.length) {
+    const message = state.mailVorgangSearch
+      ? "Keine Vorgänge zur Suche gefunden."
+      : "Keine weiteren Vorgänge verfügbar.";
+    results.append(mailElement("p", "mail-vorgang-empty", message));
+    setMailVorgangSubmitState(form);
+    return;
+  }
+  for (const vorgang of available) {
+    const row = mailElement("label", "mail-vorgang-candidate");
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "vorgangs_id";
+    radio.value = vorgang.vorgangs_id;
+    const text = mailElement("span");
+    text.append(
+      mailElement("strong", "", vorgang.titel || vorgang.bezug || vorgang.vorgangs_id),
+      mailElement(
+        "small",
+        "",
+        [
+          formatStatus(vorgang.status),
+          vorgang.vorgangstyp,
+          vorgang.bezug,
+          Number.isFinite(Number(vorgang.anzahl_transaktionen))
+            ? `${integerFormatter.format(Number(vorgang.anzahl_transaktionen))} Transaktionen`
+            : "",
+        ].filter(Boolean).join(" · "),
+      ),
+    );
+    row.append(radio, text);
+    results.append(row);
+  }
+  setMailVorgangSubmitState(form);
+}
+
+function setMailVorgangSubmitState(form) {
+  const submit = form.querySelector('button[type="submit"]');
+  if (!submit) {
+    return;
+  }
+  submit.disabled = !form.querySelector('input[name="vorgangs_id"]:checked');
+}
+
+async function loadMailVorgangCandidates() {
+  const detail = state.selectedMailDetail;
+  if (!detail) {
+    return;
+  }
+  if (state.mailVorgangRequest) {
+    state.mailVorgangRequest.abort();
+  }
+  state.mailVorgangRequest = new AbortController();
+  const form = elements.mailDetail.querySelector("[data-link-mail-vorgang]");
+  const status = form?.querySelector(".save-state");
+  if (status) {
+    status.className = "save-state is-saving";
+    status.textContent = "Vorgänge werden gesucht";
+  }
+  const parameters = new URLSearchParams({
+    search: state.mailVorgangSearch,
+    hide_completed: String(state.mailVorgangHideCompleted),
+  });
+  try {
+    const response = await fetch(`/api/vorgaenge?${parameters}`, {
+      signal: state.mailVorgangRequest.signal,
+    });
+    const payload = await readResponse(response);
+    state.mailVorgangCandidates = payload.vorgaenge || [];
+    if (form) {
+      renderMailVorgangCandidateResults(form);
+    }
+    if (status) {
+      status.className = "save-state";
+      status.textContent = "";
+    }
+  } catch (error) {
+    if (error.name === "AbortError") {
+      return;
+    }
+    if (status) {
+      status.className = "save-state is-error";
+      status.textContent = "Suche fehlgeschlagen";
+    }
+    showError(error.message);
+  }
 }
 
 function dedupeVorgaenge(vorgaenge) {
@@ -2985,8 +3097,8 @@ async function submitMailVorgangLink(event) {
     return;
   }
   event.preventDefault();
-  const select = form.elements.vorgangs_id;
-  const vorgangsId = select.value;
+  const selected = form.querySelector('input[name="vorgangs_id"]:checked');
+  const vorgangsId = selected?.value || "";
   const submit = form.querySelector("button[type='submit']");
   const status = form.querySelector(".save-state");
   if (!vorgangsId) {
@@ -3288,6 +3400,29 @@ function handleMailPreviewClick(event) {
 }
 
 function handleMailDetailInput(event) {
+  const mailVorgangSearch = event.target.closest("[data-mail-vorgang-search]");
+  if (mailVorgangSearch) {
+    state.mailVorgangSearch = mailVorgangSearch.value.trim();
+    clearTimeout(mailVorgangSearchTimer);
+    mailVorgangSearchTimer = setTimeout(loadMailVorgangCandidates, 250);
+    return;
+  }
+  const mailVorgangHideCompleted = event.target.closest(
+    "[data-mail-vorgang-hide-completed]",
+  );
+  if (mailVorgangHideCompleted) {
+    state.mailVorgangHideCompleted = mailVorgangHideCompleted.checked;
+    clearTimeout(mailVorgangSearchTimer);
+    mailVorgangSearchTimer = setTimeout(loadMailVorgangCandidates, 150);
+    return;
+  }
+  if (event.target.matches('input[name="vorgangs_id"]')) {
+    const form = event.target.closest("[data-link-mail-vorgang]");
+    if (form) {
+      setMailVorgangSubmitState(form);
+    }
+    return;
+  }
   if (event.target.matches("[data-mail-zoom-range]")) {
     setMailZoom(Number(event.target.value) / 100);
   }

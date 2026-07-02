@@ -603,6 +603,35 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertNotEqual(rows[0]["status"], "abgeschlossen")
 
+    def test_vorgaenge_can_be_searched_and_completed_results_hidden(self):
+        connection = connect_database(self.database_path)
+        try:
+            connection.execute(
+                """
+                UPDATE vorgaenge
+                SET status = 'abgeschlossen'
+                WHERE vorgangs_id = 'vorgang_tx_newer'
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        rows = self.store.list_vorgaenge(search="Neuer Verein")
+        hidden = self.store.list_vorgaenge(
+            search="Neuer Verein",
+            hide_completed=True,
+        )
+        empty = self.store.list_vorgaenge(search="Kein Treffer")
+
+        self.assertEqual(
+            [row["vorgangs_id"] for row in rows],
+            ["vorgang_tx_newer"],
+        )
+        self.assertEqual(rows[0]["status"], "abgeschlossen")
+        self.assertEqual(hidden, [])
+        self.assertEqual(empty, [])
+
     def test_classification_update_recalculates_both_statuses(self):
         completed = self.store.update_transaction_classification(
             "tx_newer",
@@ -1810,6 +1839,42 @@ class DashboardHTTPTests(unittest.TestCase):
                     for row in payload["vorgaenge"]
                 )
             )
+
+        with urlopen(
+            self.base_url
+            + "/api/vorgaenge?search=Neuer%20Verein&hide_completed=false",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(payload["search"], "Neuer Verein")
+            self.assertFalse(payload["hide_completed"])
+            self.assertEqual(payload["count"], 1)
+            self.assertEqual(
+                payload["vorgaenge"][0]["vorgangs_id"],
+                "vorgang_tx_newer",
+            )
+            self.assertEqual(
+                payload["vorgaenge"][0]["status"],
+                "abgeschlossen",
+            )
+
+        with urlopen(
+            self.base_url
+            + "/api/vorgaenge?search=Neuer%20Verein&hide_completed=true",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertTrue(payload["hide_completed"])
+            self.assertEqual(payload["count"], 0)
+            self.assertEqual(payload["vorgaenge"], [])
+
+        with urlopen(
+            self.base_url + "/api/vorgaenge?search=Kein%20Treffer",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(payload["count"], 0)
+            self.assertEqual(payload["vorgaenge"], [])
 
         with urlopen(
             self.base_url + "/api/vorgaenge/vorgang_tx_newer",
