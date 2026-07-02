@@ -2,11 +2,11 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Ein-Klick-Workflow für Vorgangserstellung, Klassifikation und Abschluss
+## 1. Generischen Ein-Klick-Workflow für manuelle Vorgangserstellung, Klassifikation und Abschluss ausbauen
 
 **Priorität:** hoch
 
-**Grund:** Deutlich größer als das ausgewählte kleine UX-Paket; betrifft Vorgangserstellung, Transaktionsklassifikation und Abschlusslogik zusammen.
+**Grund:** Umfasst einen breiteren manuellen Workflow mit zusätzlicher Klassifikation im selben Schritt und geht über den kleinen Mail-Import-Zuschnitt hinaus.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenes fachlich komplexes Thema mit bestehender Vorgangs-/Beleg-Architektur als Grenze.
+**Grund:** Eigenes fachlich komplexes Thema mit mehreren Zuordnungsfällen; nicht Teil des kleinen Sofort-Abschluss-Pakets.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenes größeres Modul mit zusätzlichem Datenmodell- und Integrationsbedarf.
+**Grund:** Größeres, eigenständiges Modul mit zusätzlichem Datenmodell- und Integrationsbedarf.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema, das in weitere kleine konkrete Pakete zerlegt werden sollte.
+**Grund:** Querschnittsthema, das in mehrere konkrete UX-Pakete zerlegt werden sollte.
 
 **Feedback:**
 
