@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Größerer Workflow über Vorgänge, Transaktionen und UI; nicht Teil dieses kleinen Fehlerbehebungspakets.
+**Grund:** Deutlich größer als das ausgewählte kleine UX-Paket; betrifft Vorgangserstellung, Transaktionsklassifikation und Abschlusslogik zusammen.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Komplexes Fach- und UX-Thema, da Belege laut bestehender Architektur an Vorgänge und nicht direkt an Transaktionen hängen.
+**Grund:** Eigenes fachlich komplexes Thema mit bestehender Vorgangs-/Beleg-Architektur als Grenze.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenes größeres Modul mit neuem Datenmodell- und Integrationsbedarf, nicht klein genug für das nächste Paket.
+**Grund:** Eigenes größeres Modul mit zusätzlichem Datenmodell- und Integrationsbedarf.
 
 **Feedback:**
 
@@ -36,18 +36,8 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema; sollte später in kleinere konkrete UI-Pakete zerlegt werden.
+**Grund:** Querschnittsthema, das in weitere kleine konkrete Pakete zerlegt werden sollte.
 
 **Feedback:**
 
 - Man merkt deutlich, dass das Tool gewachsen ist. Es ist stellenweise sehr unintuitiv oder unuebersichtlich. Vlt kannst du das verbessern ohne, dass Funktionalitaeten verloren gehen.
-
-## 5. Mail-Vorgangsfluss bei großem Datenbestand durch Suche oder Filter verbessern
-
-**Priorität:** niedrig
-
-**Grund:** Nützliche UX-Verbesserung, aber nicht so dringend wie die Spam-Score-Fehlerkorrektur.
-
-**Feedback:**
-
-- Optional Auswahl vorhandener Vorgänge bei größerem Datenbestand durch Suche, Filter oder `/api/vorgaenge/link-candidates` verbessern.
