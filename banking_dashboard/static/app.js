@@ -6909,8 +6909,8 @@ function renderVorgangWorkspace(
   );
   elements.detailContent.append(layout);
 
-  details.append(createVorgangMetadataEditor(vorgang, suggestionsPayload));
   details.append(createVorgangStatusEditor(vorgang));
+  details.append(createVorgangMetadataEditor(vorgang, suggestionsPayload));
   appendDetailSection("Vorgang", [
     detailField("Vorgangs-ID", vorgang.vorgangs_id, true, true),
     detailField("Titel", vorgang.titel, true),
@@ -7155,29 +7155,49 @@ function createVorgangStatusEditor(vorgang) {
     : "Automatisch ermittelt";
   headingRow.append(heading, saveState);
 
-  const label = document.createElement("label");
-  label.className = "vorgang-completed-control";
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.checked = vorgang.status === "abgeschlossen";
-  checkbox.setAttribute("aria-label", "Vorgang als abgeschlossen markieren");
-  const text = document.createElement("span");
-  const title = document.createElement("strong");
-  title.textContent = "Vorgang abgeschlossen";
-  const description = document.createElement("small");
-  description.textContent = vorgang.abschluss_moeglich
-    ? "Alle Abschlussbedingungen sind erfüllt."
-    : (
-      (vorgang.abschluss_blocker || []).join(" ") ||
-      "Vor dem Abschluss müssen bei allen Transaktionen Transaktionstyp, " +
-      "Oberkategorie, Unterkategorie und Sphäre ausgefüllt sein."
-    );
-  text.append(title, description);
-  label.append(checkbox, text);
+  const currentStatus = mailElement("div", "vorgang-status-current");
+  currentStatus.append(
+    mailElement("span", "detail-label", "Aktueller Status"),
+    statusBadge(vorgang.status),
+  );
 
-  checkbox.addEventListener("change", async () => {
-    const previousValue = !checkbox.checked;
-    checkbox.disabled = true;
+  const isCompleted = vorgang.status === "abgeschlossen";
+  const canComplete = Boolean(vorgang.abschluss_moeglich);
+  const blockers = vorgang.abschluss_blocker || [];
+  const description = document.createElement("p");
+  description.className = "vorgang-status-description";
+  description.textContent = isCompleted
+    ? "Der Vorgang ist abgeschlossen und kann bei Bedarf wieder geöffnet werden."
+    : canComplete
+      ? "Alle Abschlussbedingungen sind erfüllt."
+      : (
+        blockers.join(" ") ||
+        "Vor dem Abschluss müssen bei allen Transaktionen Transaktionstyp, " +
+        "Oberkategorie, Unterkategorie und Sphäre ausgefüllt sein."
+      );
+
+  const actions = mailElement("div", "vorgang-status-actions");
+  const statusButton = mailElement(
+    "button",
+    isCompleted || canComplete ? "primary-action" : "secondary-action",
+    isCompleted ? "Vorgang wieder öffnen" : "Vorgang abschließen",
+  );
+  statusButton.type = "button";
+  statusButton.disabled = !isCompleted && !canComplete;
+  actions.append(statusButton);
+
+  if (!isCompleted && !canComplete && blockers.length) {
+    const blockerList = document.createElement("ul");
+    blockerList.className = "vorgang-status-blockers";
+    for (const blocker of blockers) {
+      blockerList.append(mailElement("li", "", blocker));
+    }
+    actions.append(blockerList);
+  }
+
+  statusButton.addEventListener("click", async () => {
+    const completed = !isCompleted;
+    statusButton.disabled = true;
     saveState.className = "save-state is-saving";
     saveState.textContent = "Wird gespeichert";
     try {
@@ -7186,26 +7206,31 @@ function createVorgangStatusEditor(vorgang) {
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ completed: checkbox.checked }),
+          body: JSON.stringify({ completed }),
         },
       );
       const payload = await readResponse(response);
       Object.assign(vorgang, payload.vorgang);
-      checkbox.checked = vorgang.status === "abgeschlossen";
       updateVorgangDisplays([vorgang]);
       saveState.className = "save-state is-saved";
       saveState.textContent = "Gespeichert";
       state.vorgaengeLoaded = false;
+      state.todosLoaded = false;
+      state.termineLoaded = false;
+      const refreshes = [loadOverview()];
       if (!elements.vorgaengePanel.hidden) {
-        loadVorgaenge();
+        refreshes.push(loadVorgaenge());
       }
+      await Promise.all(refreshes);
+      await loadVorgangWorkspace(
+        vorgang.vorgangs_id,
+        completed ? "Vorgang abgeschlossen" : "Vorgang wieder geöffnet",
+      );
     } catch (error) {
-      checkbox.checked = previousValue;
+      statusButton.disabled = !isCompleted && !canComplete;
       saveState.className = "save-state is-error";
       saveState.textContent = "Speichern fehlgeschlagen";
       showError(error.message);
-    } finally {
-      checkbox.disabled = false;
     }
   });
 
@@ -7219,7 +7244,7 @@ function createVorgangStatusEditor(vorgang) {
   deleteButton.addEventListener("click", () => deleteVorgang(vorgang, deleteButton));
   deleteActions.append(deleteButton);
 
-  section.append(headingRow, label, deleteActions);
+  section.append(headingRow, currentStatus, description, actions, deleteActions);
   return section;
 }
 

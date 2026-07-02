@@ -2746,9 +2746,9 @@ th[aria-sort="descending"] .sort-indicator {
 }
 
 .vorgang-status-editor {
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--green-50);
 }
 
@@ -2764,40 +2764,79 @@ th[aria-sort="descending"] .sort-indicator {
   margin-bottom: 0;
 }
 
-.vorgang-completed-control {
+.vorgang-status-current {
   display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  cursor: pointer;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.vorgang-completed-control input {
-  width: 19px;
-  height: 19px;
-  margin: 1px 0 0;
-  accent-color: var(--green-700);
-}
-
-.vorgang-completed-control span,
-.vorgang-completed-control strong,
-.vorgang-completed-control small {
-  display: block;
-}
-
-.vorgang-completed-control strong {
-  color: var(--green-950);
-  font-size: 14px;
-}
-
-.vorgang-completed-control small {
-  margin-top: 3px;
+.vorgang-status-description {
+  margin: 0 0 12px;
   color: var(--ink-muted);
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.vorgang-completed-control:has(input:disabled) {
+.vorgang-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.vorgang-status-actions button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.vorgang-status-actions .primary-action {
+  color: #fff;
+  border-color: var(--green-800);
+  background: var(--green-800);
+}
+
+.vorgang-status-actions .secondary-action {
+  color: var(--ink-muted);
+  background: #fff;
+}
+
+.vorgang-status-actions button:disabled {
+  border-color: var(--line);
+  color: var(--ink-muted);
+  background: #eef3ef;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.vorgang-status-actions button:not(:disabled):hover {
+  border-color: var(--green-700);
+}
+
+.vorgang-status-actions button:not(:disabled).primary-action:hover {
+  background: var(--green-700);
+}
+
+.vorgang-status-blockers {
+  flex: 1 1 240px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.vorgang-status-editor .vorgang-form-actions {
+  margin-top: 14px;
+}
+
+.vorgang-status-editor .save-state.is-saving {
   cursor: wait;
-  opacity: 0.7;
 }
 
 .vorgang-rule-manager {
