@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Umfasst einen breiteren manuellen Workflow mit zusätzlicher Klassifikation im selben Schritt und geht über den kleinen Mail-Import-Zuschnitt hinaus.
+**Grund:** Wichtiger Punkt mit hoher Priorität, aber ein größerer UI-/Workflow-Eingriff. Nicht Teil des kleinen Test-/Stabilitätspakets.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenes fachlich komplexes Thema mit mehreren Zuordnungsfällen; nicht Teil des kleinen Sofort-Abschluss-Pakets.
+**Grund:** Eigenes fachlich komplexes Zuordnungsthema mit UI- und Datenflussfragen; bewusst nicht mit dem kleinen Fehlerfall-Paket mischen.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größeres, eigenständiges Modul mit zusätzlichem Datenmodell- und Integrationsbedarf.
+**Grund:** Größeres eigenständiges Modul mit zusätzlichem Datenmodell- und Integrationsbedarf; derzeit nicht klein genug für ein kontrolliertes Arbeitspaket.
 
 **Feedback:**
 
@@ -36,18 +36,8 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema, das in mehrere konkrete UX-Pakete zerlegt werden sollte.
+**Grund:** Querschnittsthema, das erst in konkrete kleine UX-Pakete zerlegt werden sollte.
 
 **Feedback:**
 
 - Man merkt deutlich, dass das Tool gewachsen ist. Es ist stellenweise sehr unintuitiv oder unuebersichtlich. Vlt kannst du das verbessern ohne, dass Funktionalitaeten verloren gehen.
-
-## 5. Persistierten Vorgang nach fehlgeschlagenem Mail-Sofortabschluss zusätzlich prüfen
-
-**Priorität:** niedrig
-
-**Grund:** Nicht-blockierende Review-Regression, die den Fehlerfall nach dem fehlgeschlagenen Sofort-Abschluss noch explizit absichert.
-
-**Feedback:**
-
-- Nach einem fehlgeschlagenen Sofort-Abschluss beim Mail-Import den persistierten Vorgang erneut laden und explizit prüfen, dass er nicht `abgeschlossen` ist.
