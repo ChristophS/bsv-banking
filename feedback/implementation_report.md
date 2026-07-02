@@ -2,26 +2,27 @@
 
 ## Branchname
 
-agent2/codex-20260702-114442
+agent2/codex-20260702-122117
 
 ## Geaenderte Dateien
 
+- banking_dashboard/static/app.js
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Den bestehenden HTTP-Blocker-Test fuer `POST /api/mail/<id>/vorgang-import` mit `completed=true` erweitert.
-- Der Test loest weiter den Fehlerfall aus, indem ein Rechnungsvorgang ohne importiertes/verknuepftes Dokument sofort abgeschlossen werden soll.
-- Nach dem `400`-Fehler wird der verknuepfte Vorgang ueber die Mail-Vorgangs-API eindeutig wiedergefunden.
-- Der persistierte Vorgang wird danach explizit erneut per `vorgang_detail()` geladen.
-- Der Test prueft, dass der persistierte Vorgang `status == 'in_bearbeitung'` hat, nicht manuell abgeschlossen wurde und weiter wegen fehlendem Dokument blockiert ist.
+- Der Mail-Import-Dialog laedt beim Start der Vorgangspruefung jetzt zusaetzlich die vorhandenen Link-Kandidaten aus `/api/vorgaenge/link-candidates`.
+- Die vorhandene Transaktionsauswahl im Importformular wird dadurch mit bestehenden Transaktionen befuellt und sendet ausgewaehlte Werte als `links.transaction_ids` an `POST /api/mail/<inbox_id>/vorgang-import`.
+- Der bestehende Import ohne Transaktionsauswahl bleibt unveraendert moeglich.
+- Der bestehende Backend-Fehlerpfad fuer unbekannte Transaktions-IDs wird per HTTP-Test abgesichert.
+- Der erfolgreiche Import mit Transaktionsverknuepfung war bereits getestet; zusaetzlich ist nun der Erfolgsfall ohne Transaktionen abgedeckt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung am Mail-Import-Endpunkt.
-- Keine Aenderung an Abschlusslogik, Datenmodell oder Services.
-- Kein manueller Browser-Test gegen externe Dienste ausgefuehrt.
+- Keine Aenderung an Datenmodell, Datenbank-Migrationen oder Backend-Linklogik, da `_mail_vorgang_import()` `links.transaction_ids` bereits an `create_vorgang()` uebergibt.
+- Keine zusaetzliche Backend-Suche fuer Transaktionen, da die vorhandene Kandidaten-API verwendet wird.
+- Keine groessere UI-Ueberarbeitung und kein manueller Browser-Test gegen externe Dienste.
 
 ## Ausgefuehrte Tests
 
@@ -29,15 +30,16 @@ agent2/codex-20260702-114442
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 68 passed, 2 skipped
+- `tests/test_dashboard.py`: 70 passed, 2 skipped
 
 ## Bekannte Einschraenkungen
 
-- Der Test nutzt den bestehenden Fake-Mail-Backend und lokale Testdaten; externe Mail-, Banking- oder Login-Dienste wurden nicht verwendet.
+- Die UI wurde ueber den bestehenden JavaScript-Flow angepasst; es wurde kein separater Browser-/Playwright-Test ausgefuehrt.
+- Die Tests nutzen lokale Fakes und Fixtures; externe Mail-, Banking- oder Login-Dienste wurden nicht verwendet.
 - Bestehende Browser-Test-Skips bleiben unveraendert.
 
 ## Hinweise fuer den Review-Agenten
 
-- Die fachliche Logik bleibt in `_mail_vorgang_import()` und `DashboardDataStore.update_vorgang_status()` unveraendert.
-- Die neue Absicherung sitzt im bestehenden Test `test_mail_import_completion_returns_blocker_over_http` in `tests/test_dashboard.py`.
-- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits ausserhalb dieses Arbeitspakets im Arbeitsbaum sichtbar und wurden nicht geaendert.
+- Schwerpunkt der Frontend-Aenderung ist `startMailVorgangReview()` in `banking_dashboard/static/app.js`: `loadLinkCandidates()` wird mitgeladen und ueber `mergeLinkCandidates()` in die bestehende `createSuggestionSection()`-UI eingespeist.
+- Der Negativtest `test_mail_import_rejects_unknown_transaction_link_over_http` erwartet die bestehende `LookupError`-zu-`404`-Antwort fuer eine nicht vorhandene Transaktion.
+- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits im Arbeitsbaum sichtbar und wurden nicht geaendert.
