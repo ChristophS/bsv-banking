@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional browsernahen Dashboard-Test ergänzen, der prüft: Status-Badge sichtbar, Buttontext für offene/abgeschlossene Vorgänge korrekt, blockierter Abschluss deaktiviert und Blocker sichtbar.
+- Optional Refresh-/Fehlerbehandlung nach erfolgreichem PATCH robuster differenzieren, falls nur die anschließende Aktualisierung fehlschlägt.
