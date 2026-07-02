@@ -8,36 +8,35 @@
 
 ## Begründung
 
-Der GitHub-Diff ist für die Review-Entscheidung ausreichend: Die zentrale Checkbox-Logik in createSuggestionSection(...) wurde sichtbar geändert, die relevanten Aufrufer wurden angepasst, und ein passender Browser-Test wurde ergänzt. Es gibt keine Hinweise auf verbotene Dateiänderungen, Scope Creep oder einen unsauberen Branch-Zustand.
+Der GitHub-Diff ist für die Review-Entscheidung ausreichend aussagekräftig: Die relevanten Änderungen am Vorgangsdetail-Rendering, Status-Event-Handling, Styling und dem bestehenden HTTP-Test sind sichtbar. Es sind keine zusätzlichen Architektur- oder Backend-Dateien nötig, da laut Diff weiterhin der bestehende Status-Endpunkt genutzt wird und keine Backend-Logik geändert wurde.
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt das Arbeitspaket. Die automatische Vorselektion anhand des Scores wurde entfernt; Checkboxen werden nur noch über item.selected bzw. über selectedIds markiert. Bestehende bzw. aus der Quelle stammende Verknüpfungen bleiben damit vorausgewählt, während reine Vorschläge nicht mehr automatisch angehakt werden. Die Sortierung wurde nicht verändert und das Absenden nutzt weiterhin die angehakten Checkboxen.
+Die Umsetzung erfüllt das Arbeitspaket: Der manuelle Vorgangsabschluss bzw. das Wiederöffnen ist im Vorgangsdetail prominenter als eigener Status-/Aktionsbereich sichtbar, zeigt den aktuellen Status, nutzt weiterhin PATCH /api/vorgaenge/<id>/status und aktualisiert nach erfolgreichem Wechsel Detailansicht sowie Übersichts-/Listendaten. Blockierte Abschlüsse werden nicht als normale Hauptaktion dargestellt und vorhandene Blocker werden direkt angezeigt.
 
 ## Review-Ergebnis
 
 ✅ **Akzeptiert**
 
-Die Änderung adressiert den Kern des Arbeitspakets korrekt.
+Die Umsetzung erfüllt die Muss-Kriterien des Arbeitspakets.
 
 ### Geprüfte Punkte
 
-- `createSuggestionSection(...)` setzt `checkbox.checked` nun ausschließlich über `Boolean(item.selected)`.
-- Die bisherige automatische Auswahl über `autoSelect && score >= 0.45` wurde entfernt.
-- Der irreführende Parameter `autoSelect` wurde aus der Signatur und aus den im Diff sichtbaren Aufrufern entfernt.
-- Bestehende bzw. explizit gesetzte Verknüpfungen bleiben über `selectedIds`/`item.selected` vorausgewählt.
-- Die Vorschlags-Sortierung über die bestehende Logik wurde nicht verändert.
-- Das Absenden läuft weiterhin über `readSuggestionFields(...)` und übernimmt damit nur tatsächlich angehakte Checkboxen.
-- Der ergänzte Browser-Test prüft den relevanten Fall: hoher Score allein aktiviert keine Checkbox, explizit ausgewählte Verknüpfungen bleiben ausgewählt, und der Payload enthält nur die angehakten IDs.
+- Der Status-/Abschlussbereich wird im Vorgangsdetail vor den Metadaten gerendert und ist dadurch prominenter sichtbar.
+- Der aktuelle Vorgangsstatus wird über `statusBadge(vorgang.status)` im selben Bereich angezeigt.
+- Die Aktion wechselt zustandsabhängig zwischen `Vorgang abschließen` und `Vorgang wieder öffnen`.
+- Für offene, nicht abschließbare Vorgänge wird der Button deaktiviert und nicht als `primary-action`, sondern als `secondary-action` dargestellt.
+- Vorhandene `abschluss_blocker` werden direkt im Statusbereich als Liste angezeigt; bei fehlenden Blockern gibt es weiterhin einen erklärenden Fallback-Text.
+- Der Statuswechsel läuft weiterhin über den bestehenden spezialisierten Endpunkt `PATCH /api/vorgaenge/<id>/status` mit `{ completed: ... }`.
+- Nach erfolgreichem PATCH werden Vorgangsdaten, Übersicht und bei sichtbarem Vorgangspanel auch die Vorgangsliste aktualisiert; anschließend wird das Vorgangsdetail neu geladen.
+- Die Backend-Statuslogik und automatische Abschlussregeln wurden nicht verändert.
+- Der bestehende HTTP-Test wurde um das Wiederöffnen eines Vorgangs erweitert.
 
-### Branch-/Compare-Status
+### Keine blockierenden Probleme gefunden
 
-- Compare-Status: `ahead`
-- Ahead by: 1
-- Behind by: 0
-- Geänderte Produktiv-/Testdateien passen zum Arbeitspaket.
-- `feedback/Review-report.md` erscheint als Runner-validierter, aber nicht im GitHub-Compare enthaltener Pfad. Da diese Datei nicht zu den staged/GitHub-Änderungen gehört und kein Produktivcode betroffen ist, ist das nicht blockierend.
+Der Diff zeigt keine verbotenen Dateiänderungen, keinen Scope Creep und keinen Widerspruch zum Implementation Report. Der Branch ist laut Compare sauber `ahead` mit einem Commit und nicht hinter `main`.
 
-### Tests
+### Nicht-blockierende Hinweise
 
-Die Tests wurden laut Bericht wegen lokaler Python-/Session-Probleme nicht ausgeführt. Das ist hier nicht blockierend, weil eine passende Testergänzung vorhanden ist und die Nichtausführung plausibel dokumentiert wurde.
+- Ein zusätzlicher UI-/Browser-Test für den neuen Statusbereich wäre wünschenswert, ist aber für diese Änderung nicht zwingend blockierend.
+- Die Runner-Abweichung `feedback/Review-report.md` fehlt im GitHub Compare. Da es sich offenbar um ein Review-/Runner-Artefakt handelt und nicht um Teil der eigentlichen Implementierung, ist das nicht blockierend.
