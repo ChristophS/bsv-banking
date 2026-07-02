@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional künftig einen dedizierten Test-Helper für das Auffinden des durch Mail-Import erzeugten Vorgangs ergänzen, falls mehrere Tests ähnliche Persistenzprüfungen benötigen.
+- Runner-/Compare-Abweichungen bei Feedback-Dateien könnten in einem separaten Hygiene-Schritt bereinigt werden, damit Review-Signale eindeutig bleiben.
