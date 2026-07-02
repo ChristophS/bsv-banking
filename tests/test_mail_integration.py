@@ -1307,6 +1307,7 @@ class MailIntegrationBrowserTests(unittest.TestCase):
                 mail_spam_scorer=FakeSpamScorer(),
                 mail_summarizer=FakeMailSummarizer(),
             )
+            vorgangs_id = server.data_store.list_vorgaenge()[0]["vorgangs_id"]
             thread = threading.Thread(
                 target=server.serve_forever,
                 daemon=True,
@@ -1375,6 +1376,36 @@ class MailIntegrationBrowserTests(unittest.TestCase):
                     expect(
                         page.locator(".mail-delete-button")
                     ).to_be_enabled()
+                    expect(
+                        page.locator(".mail-vorgang-links")
+                    ).to_contain_text("Vorgang zuordnen")
+                    page.locator(
+                        ".mail-vorgang-link-form select"
+                    ).select_option(vorgangs_id)
+                    page.locator(
+                        ".mail-vorgang-link-form button[type='submit']"
+                    ).click()
+                    expect(
+                        page.locator(".mail-vorgang-link-list")
+                    ).to_contain_text(vorgangs_id)
+                    self.assertEqual(
+                        [vorgangs_id],
+                        server.mail_manager.linked_vorgaenge(
+                            mail_one_id
+                        )["vorgangs_ids"],
+                    )
+                    page.locator(
+                        f"[data-vorgangs-id='{vorgangs_id}']"
+                    ).click()
+                    expect(
+                        page.locator(".mail-vorgang-link-list")
+                    ).to_contain_text("noch keinem Vorgang zugeordnet")
+                    self.assertEqual(
+                        [],
+                        server.mail_manager.linked_vorgaenge(
+                            mail_one_id
+                        )["vorgangs_ids"],
+                    )
                     bulk_delete = page.locator("#mail-delete-spam")
                     expect(bulk_delete).to_be_enabled()
                     expect(bulk_delete).to_have_text("2 Spam-Mails löschen")

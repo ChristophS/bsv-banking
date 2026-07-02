@@ -3769,6 +3769,101 @@ th[aria-sort="descending"] .sort-indicator {
   line-height: 1.45;
 }
 
+.mail-vorgang-links {
+  display: grid;
+  gap: 12px;
+  margin: 18px 24px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.mail-vorgang-links-heading h4 {
+  margin: 0;
+  color: var(--green-950);
+  font-size: 14px;
+}
+
+.mail-vorgang-link-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mail-vorgang-link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.mail-vorgang-link-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mail-vorgang-link-text strong,
+.mail-vorgang-link-text code {
+  overflow-wrap: anywhere;
+}
+
+.mail-vorgang-link-text strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.mail-vorgang-link-text code {
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.mail-vorgang-link-meta,
+.mail-vorgang-link-empty,
+.mail-vorgang-link-error {
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.mail-vorgang-link-error {
+  color: #9f1239;
+  font-weight: 700;
+}
+
+.mail-vorgang-link-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.mail-vorgang-link-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mail-vorgang-link-form select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.mail-vorgang-link-form button {
+  min-height: 40px;
+}
+
 .mail-vorgang-review {
   margin: 20px 24px 0;
   padding: 18px;
