@@ -3164,7 +3164,11 @@ async function submitMailVorgangImport(event) {
       elements.dialog.close();
     }
     activateTab("vorgaenge");
-    await openVorgang(payload.vorgang.vorgangs_id);
+    const completed = payload.vorgang?.status === "abgeschlossen";
+    await loadVorgangWorkspace(
+      payload.vorgang.vorgangs_id,
+      completed ? "Vorgang importiert und abgeschlossen" : "Vorgang importiert",
+    );
   } catch (error) {
     submit.disabled = false;
     status.className = "save-state is-error";

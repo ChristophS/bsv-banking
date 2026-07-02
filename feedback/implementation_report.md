@@ -2,30 +2,27 @@
 
 ## Branchname
 
-agent2/codex-20260702-113117
+agent2/codex-20260702-114006
 
 ## Geaenderte Dateien
 
 - banking_dashboard/static/app.js
-- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Die Mail-Zuordnung vorhandener Vorgaenge nutzt jetzt ein Suchfeld statt einer reinen Select-Liste.
-- Suchanfragen werden im Frontend leicht entprellt und gegen den bestehenden Endpunkt `/api/vorgaenge` mit `search` und `hide_completed` ausgefuehrt.
-- Ein Filter "Abgeschlossene ausblenden" wurde im Mail-Vorgangsbereich ergaenzt.
-- Die Trefferliste zeigt Titel/Bezug, Status, Vorgangstyp, Bezug und Anzahl Transaktionen, damit aehnliche Vorgaenge unterscheidbar bleiben.
-- Die bestehende Verknuepfungslogik bleibt unveraendert: Die ausgewaehlte Vorgangs-ID wird weiterhin per `POST /api/mail/{id}/vorgaenge` zugeordnet.
-- Bei fehlenden Treffern wird ein klarer Leerzustand angezeigt.
-- Tests fuer `/api/vorgaenge` mit `search`, `hide_completed` und leerem Trefferergebnis wurden ergaenzt.
+- HTTP-Tests fuer `POST /api/mail/<id>/vorgang-import` mit `completed=true` ergaenzt.
+- Erfolgsfall abgedeckt: Rechnungsvorgang mit verknuepfter vollstaendig klassifizierter Transaktion und importiertem Dokument wird direkt als `status='abgeschlossen'` zurueckgegeben.
+- Blockerfall abgedeckt: Rechnungsvorgang ohne importiertes/verknuepftes Dokument liefert `400` mit nachvollziehbarer Fehlermeldung aus der bestehenden Abschlusspruefung.
+- Die bestehende Backend-Abschlusslogik bleibt unveraendert und wird weiter ueber `update_vorgang_status(..., True)` genutzt.
+- Die Mail-Import-UI zeigt nach erfolgreichem Import im Vorgangsbereich an, ob der Vorgang importiert oder direkt importiert und abgeschlossen wurde.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neue Such-API eingefuehrt.
-- Keine Aenderung an Vorgangserstellung, Mail-Import, Datenmodell oder Verknuepfungsarchitektur.
-- Keine manuellen Browser-Tests gegen externe Dienste ausgefuehrt.
+- Keine neue Abschlussregel eingefuehrt.
+- Keine Aenderung an Datenmodell, Vorgangsverknuepfungen oder Importarchitektur.
+- Kein manueller Browser-Test gegen externe Dienste ausgefuehrt.
 
 ## Ausgefuehrte Tests
 
@@ -35,16 +32,16 @@ agent2/codex-20260702-113117
 ## Testergebnis
 
 - `node --check banking_dashboard/static/app.js`: erfolgreich
-- `tests/test_dashboard.py`: 66 passed, 2 skipped
+- `tests/test_dashboard.py`: 68 passed, 2 skipped
 
 ## Bekannte Einschraenkungen
 
-- Die UI wurde per Syntaxcheck und API-/Datastore-Tests abgesichert, aber nicht manuell im Browser verifiziert.
-- Der Filter fuer abgeschlossene Vorgaenge ist standardmaessig aus, damit das bisherige Verhalten beim Oeffnen einer Mail erhalten bleibt.
+- Der Blockerfall legt den Vorgang vor dem fehlgeschlagenen Sofort-Abschluss im bestehenden Importpfad an; die API meldet den Abschlussfehler als `400` und gibt keinen faelschlich abgeschlossenen Vorgang zurueck.
+- Die UI wurde per Syntaxcheck und HTTP-/Datastore-Tests abgesichert, aber nicht manuell im Browser verifiziert.
 - Bestehende Browser-Test-Skips bleiben unveraendert.
 
 ## Hinweise fuer den Review-Agenten
 
-- Zentraler Review-Punkt ist `renderMailVorgangSection()` in `banking_dashboard/static/app.js`: Die Auswahl ist jetzt eine Radio-Trefferliste, der Submit nutzt aber weiterhin denselben Mail-Verknuepfungsendpunkt.
-- `loadMailVorgangCandidates()` ruft ausschliesslich `/api/vorgaenge` mit Query-Parametern auf; `/api/vorgaenge/link-candidates` wurde nicht erweitert.
+- Zentraler Backend-Pfad ist weiterhin `_mail_vorgang_import()` in `banking_dashboard/server.py`; dort wird die vorhandene Abschlusslogik bereits nach Dokument-/To-Do-/Termin-Import ueber `update_vorgang_status()` aufgerufen.
+- Die neuen Tests sitzen neben dem bestehenden Mail-Import-HTTP-Test in `tests/test_dashboard.py`.
 - `feedback/Review-report.md` war bereits vor dieser Umsetzung geaendert und wurde nicht angefasst.

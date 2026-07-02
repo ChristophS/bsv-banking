@@ -2161,6 +2161,80 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual(1, len(imported["termine"]))
         self.assertEqual("Termin Stadtwerke", imported["termine"][0]["title"])
 
+    def test_mail_import_can_complete_new_vorgang_over_http(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+        analysis["vorgang"]["completed"] = True
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": analysis["documents"],
+                    "todos": [],
+                    "termine": [],
+                    "links": {"transaction_ids": ["tx_newer"]},
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(import_request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            imported = json.load(response)
+
+        vorgang = imported["vorgang"]
+        self.assertEqual("abgeschlossen", vorgang["status"])
+        self.assertTrue(vorgang["status_manuell"])
+        self.assertTrue(vorgang["abschluss_moeglich"])
+        self.assertEqual(1, len(imported["documents"]))
+        self.assertEqual(["tx_newer"], [
+            item["transaktions_id"] for item in vorgang["transaktionen"]
+        ])
+
+    def test_mail_import_completion_returns_blocker_over_http(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+        analysis["vorgang"]["completed"] = True
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {"transaction_ids": ["tx_newer"]},
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(import_request, timeout=5)
+
+        self.assertEqual(400, context.exception.code)
+        payload = json.loads(context.exception.read().decode("utf-8"))
+        self.assertIn("mindestens ein verknuepftes Dokument", payload["error"])
+
     def test_todo_crud_and_vorgang_links_are_available_over_http(self):
         create_request = Request(
             self.base_url + "/api/todos",
