@@ -1874,6 +1874,18 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual(payload["vorgang"]["status"], "abgeschlossen")
         self.assertTrue(payload["vorgang"]["status_manuell"])
 
+        request = Request(
+            self.base_url + "/api/vorgaenge/vorgang_tx_newer/status",
+            data=json.dumps({"completed": False}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PATCH",
+        )
+        with urlopen(request, timeout=5) as response:
+            payload = json.load(response)
+
+        self.assertEqual(payload["vorgang"]["status"], "in_bearbeitung")
+        self.assertTrue(payload["vorgang"]["status_manuell"])
+
     def test_vorgang_completion_rejects_incomplete_transaction_over_http(self):
         classification_request = Request(
             self.base_url + "/api/transactions/tx_newer/classification",

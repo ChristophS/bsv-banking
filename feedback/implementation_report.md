@@ -2,46 +2,47 @@
 
 ## Branchname
 
-agent2/codex-20260629-145816
+agent2/codex-20260702-105754
 
 ## Geaenderte Dateien
 
 - banking_dashboard/static/app.js
+- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Die automatische Checkbox-Auswahl anhand von Vorschlags-Scores wurde aus `createSuggestionSection(...)` entfernt.
-- Der irrefuehrende Parameter `autoSelect` wurde aus der Helper-Signatur und allen Aufrufern entfernt.
-- Bereits bestehende bzw. explizit gesetzte Verknuepfungen bleiben vorausgewaehlt, weil nur noch `item.selected` die Checkbox aktiviert.
-- Die vorhandene Vorschlags-Sortierung ueber `compareSuggestionItems(...)` bleibt unveraendert.
-- Das Absenden verwendet weiterhin `readSuggestionFields(...)`, das ausschliesslich angehakte Checkboxen in den Payload uebernimmt.
-- Ein Browser-Test prueft, dass ein hoher Score allein keine Checkbox aktiviert, ausgewaehlte Verknuepfungen aber erhalten bleiben und nur angehakte IDs gesendet werden.
+- Der manuelle Vorgangsabschluss steht im Vorgangsdetail jetzt als eigener Status- und Aktionsbereich direkt vor dem Bearbeitungsformular.
+- Der aktuelle Vorgangsstatus wird im selben Bereich sichtbar als Status-Badge angezeigt.
+- Die Hauptaktion wechselt je nach Zustand zwischen `Vorgang abschliessen` und `Vorgang wieder oeffnen`.
+- Nicht abschliessbare offene Vorgaenge zeigen keine normale Hauptaktion: Der Button ist deaktiviert und vorhandene `abschluss_blocker` werden direkt im Statusbereich angezeigt.
+- Der Statuswechsel nutzt weiterhin `PATCH /api/vorgaenge/<id>/status` mit dem Feld `completed`.
+- Nach erfolgreichem Statuswechsel werden Vorgangsdetail, Uebersichtsdaten und die sichtbare Vorgangsliste aktualisiert.
+- Der vorhandene HTTP-Test fuer den Status-Endpunkt prueft jetzt auch das Wieder-Oeffnen.
 
 ## Nicht umgesetzte Punkte
 
-- Kein zusaetzlicher UI-Hinweis wie `Vorschlaege sind nicht automatisch ausgewaehlt`, da dies als offene Frage formuliert war und fuer die Akzeptanzkriterien nicht erforderlich ist.
-- Keine Aenderungen an Matching-/Score-Logik, Backend-API oder Datenmodell.
+- Keine Aenderungen an Backend-Statuslogik, Abschlussvoraussetzungen oder automatischen Abschlussregeln.
+- Keine Aenderungen an `banking_dashboard/server.py`, weil die benoetigten Detailfelder bereits vorhanden sind.
+- Keine strukturellen Aenderungen an `banking_dashboard/static/index.html`, weil der bestehende Dialog-Container ausreicht.
 
 ## Ausgefuehrte Tests
 
-- `py -3.12 -m pytest tests/test_dashboard.py`
-- `python -m pytest tests/test_dashboard.py`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
 
 ## Testergebnis
 
-- `py -3.12 -m pytest tests/test_dashboard.py` konnte nicht gestartet werden: `No suitable Python runtime found`.
-- `python -m pytest tests/test_dashboard.py` konnte nicht gestartet werden: `Fehler beim Ausfuehren des Programms "python.exe": Eine angegebene Anmeldesitzung ist nicht vorhanden. Sie wurde gegebenenfalls bereits beendet`.
+- 64 passed, 2 skipped
 
 ## Bekannte Einschraenkungen
 
-- Die Tests konnten wegen der lokalen Python-/Anmeldesitzungs-Probleme nicht ausgefuehrt werden.
-- Der neue Browser-Test wird bei fehlendem Playwright oder fehlendem Chromium wie die vorhandenen Browser-Tests uebersprungen.
+- Die Aenderung wurde mit automatisierten Dashboard-Tests geprueft, nicht manuell im Browser bedient.
+- Die vorhandenen Skips bleiben unveraendert.
 - Es wurden keine externen Dienste, echten Logins, Browser-Automationen gegen externe Dienste oder produktiven Daten verwendet.
 
 ## Hinweise fuer den Review-Agenten
 
-- Zentraler Review-Punkt ist `createSuggestionSection(...)`: `checkbox.checked` haengt jetzt nur noch an `Boolean(item.selected)`.
-- `sourceLinkPayload(...)` und die bestehenden IDs aus `createVorgangMetadataEditor(...)` laufen weiterhin ueber `selectedIds`; diese IDs werden als `selected: true` in die Zeilen uebernommen.
-- Bitte `py -3.12 -m pytest tests/test_dashboard.py` in einer funktionierenden lokalen Python-Umgebung nachholen.
+- Zentraler Review-Punkt ist `createVorgangStatusEditor(...)` in `banking_dashboard/static/app.js`.
+- Der Button ist nur fuer offene, nicht abschliessbare Vorgaenge deaktiviert; abgeschlossene Vorgaenge koennen unabhaengig von aktuellen Abschlussblockern wieder geoeffnet werden.
+- Nach dem PATCH wird `loadVorgangWorkspace(...)` erneut aufgerufen, damit Buttontext, Status, Blocker und Detailkopf sofort konsistent sind.
