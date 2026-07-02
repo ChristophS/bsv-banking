@@ -3883,13 +3883,19 @@ th[aria-sort="descending"] .sort-indicator {
 }
 
 .mail-vorgang-form {
+  display: grid;
+  gap: 10px;
+}
+
+.mail-vorgang-search-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
   gap: 10px;
 }
 
-.mail-vorgang-form label {
+.mail-vorgang-form label,
+.mail-vorgang-search {
   display: grid;
   flex: 1 1 320px;
   gap: 6px;
@@ -3898,13 +3904,66 @@ th[aria-sort="descending"] .sort-indicator {
   font-weight: 800;
 }
 
-.mail-vorgang-form select {
+.mail-vorgang-form input[type="search"] {
   min-height: 38px;
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
   background: #fff;
+}
+
+.mail-vorgang-filter {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.mail-vorgang-candidate-list {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.mail-vorgang-candidate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.mail-vorgang-candidate:has(input:checked) {
+  border-color: var(--green-700);
+  background: var(--green-50);
+}
+
+.mail-vorgang-candidate strong,
+.mail-vorgang-candidate small {
+  display: block;
+}
+
+.mail-vorgang-candidate strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.mail-vorgang-candidate small {
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .mail-vorgang-review {
