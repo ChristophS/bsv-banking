@@ -2001,6 +2001,50 @@ class DashboardHTTPTests(unittest.TestCase):
             period = json.load(response)
         self.assertTrue(period["available"])
 
+    def test_mail_vorgang_link_api_returns_details_and_is_idempotent(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+        vorgangs_id = self.server.data_store.list_vorgaenge()[0]["vorgangs_id"]
+        link_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgaenge",
+            data=json.dumps({"vorgangs_id": vorgangs_id}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with urlopen(link_request, timeout=5) as response:
+            first_payload = json.load(response)
+
+        duplicate_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgaenge",
+            data=json.dumps({"vorgangs_id": vorgangs_id}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(duplicate_request, timeout=5) as response:
+            duplicate_payload = json.load(response)
+
+        self.assertEqual([vorgangs_id], first_payload["vorgangs_ids"])
+        self.assertEqual([vorgangs_id], duplicate_payload["vorgangs_ids"])
+        self.assertEqual(1, len(duplicate_payload["vorgaenge"]))
+        self.assertEqual(
+            vorgangs_id,
+            duplicate_payload["vorgaenge"][0]["vorgangs_id"],
+        )
+        self.assertIn("titel", duplicate_payload["vorgaenge"][0])
+        self.assertIn("status", duplicate_payload["vorgaenge"][0])
+
+        unlink_request = Request(
+            self.base_url
+            + f"/api/mail/{inbox_id}/vorgaenge/{vorgangs_id}",
+            method="DELETE",
+        )
+        with urlopen(unlink_request, timeout=5) as response:
+            unlinked_payload = json.load(response)
+
+        self.assertEqual([], unlinked_payload["vorgangs_ids"])
+        self.assertEqual([], unlinked_payload["vorgaenge"])
+
     def test_mail_analysis_and_confirmed_import_create_entities_over_http(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
             mail_payload = json.load(response)

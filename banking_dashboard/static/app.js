@@ -69,6 +69,7 @@ const state = {
   mailSummaryOpen: new Set(),
   mailSummaryLoading: new Set(),
   mailVorgangReview: null,
+  mailVorgangCandidates: [],
 };
 
 const elements = {
@@ -1990,11 +1991,20 @@ async function loadMailDetail(entryId) {
     mailElement("div", "mail-detail-loading", "Mail wird geladen"),
   );
   try {
-    const response = await fetch(
-      `/api/mail/${encodeURIComponent(entryId)}`,
-    );
+    const [response, linksResponse, vorgaengeResponse] = await Promise.all([
+      fetch(`/api/mail/${encodeURIComponent(entryId)}`),
+      fetch(`/api/mail/${encodeURIComponent(entryId)}/vorgaenge`),
+      fetch("/api/vorgaenge"),
+    ]);
     const payload = await readResponse(response);
-    state.selectedMailDetail = payload.message;
+    const linksPayload = await readResponse(linksResponse);
+    const vorgaengePayload = await readResponse(vorgaengeResponse);
+    state.selectedMailDetail = {
+      ...payload.message,
+      vorgangs_ids: linksPayload.vorgangs_ids || [],
+      vorgaenge: linksPayload.vorgaenge || [],
+    };
+    state.mailVorgangCandidates = vorgaengePayload.vorgaenge || [];
     const firstAttachment = payload.message.attachments?.[0];
     state.selectedMailAttachment = firstAttachment
       ? firstAttachment.attachmentIndex
@@ -2107,6 +2117,7 @@ function renderMailDetail() {
   const relatedPanel = renderRelatedMailCandidates(
     detail.relatedCandidates || [],
   );
+  const vorgangSection = renderMailVorgangSection(detail);
 
   const readingLayout = mailElement("div", "mail-reading-layout");
   const bodySection = mailElement("section", "mail-body-pane");
@@ -2153,9 +2164,100 @@ function renderMailDetail() {
   if (relatedPanel) {
     nodes.splice(summaryPanel ? 2 : 1, 0, relatedPanel);
   }
+  nodes.push(vorgangSection);
   nodes.push(replyForm);
   elements.mailDetail.append(...nodes);
   applyMailZoom();
+}
+
+function renderMailVorgangSection(detail) {
+  const section = mailElement("section", "mail-vorgang-links");
+  section.append(
+    mailElement("p", "eyebrow", "Zuordnung"),
+    mailElement("h4", "", "Verknüpfte Vorgänge"),
+  );
+  const linked = dedupeVorgaenge(detail.vorgaenge || []);
+  const list = mailElement("div", "mail-vorgang-list");
+  if (linked.length) {
+    for (const vorgang of linked) {
+      const row = mailElement("div", "mail-vorgang-item");
+      const text = mailElement("div");
+      text.append(
+        mailElement(
+          "strong",
+          "",
+          vorgang.titel || vorgang.bezug || vorgang.vorgangs_id,
+        ),
+        mailElement(
+          "span",
+          "",
+          [
+            vorgang.vorgangs_id,
+            vorgang.vorgangstyp,
+            formatStatus(vorgang.status),
+          ].filter(Boolean).join(" · "),
+        ),
+      );
+      const actions = mailElement("div", "mail-vorgang-actions");
+      const openButton = mailElement("button", "", "Öffnen");
+      openButton.type = "button";
+      openButton.dataset.openVorgang = vorgang.vorgangs_id;
+      const unlinkButton = mailElement("button", "secondary-action", "Entfernen");
+      unlinkButton.type = "button";
+      unlinkButton.dataset.unlinkMailVorgang = vorgang.vorgangs_id;
+      actions.append(openButton, unlinkButton);
+      row.append(text, actions);
+      list.append(row);
+    }
+  } else {
+    list.append(
+      mailElement("p", "mail-vorgang-empty", "Noch keinem Vorgang zugeordnet."),
+    );
+  }
+  section.append(list);
+
+  const form = mailElement("form", "mail-vorgang-form");
+  form.dataset.linkMailVorgang = detail.id || detail.inboxId || state.selectedMailId;
+  const label = mailElement("label");
+  label.append(mailElement("span", "", "Vorhandenen Vorgang auswählen"));
+  const select = document.createElement("select");
+  select.name = "vorgangs_id";
+  const linkedIds = new Set(linked.map((item) => item.vorgangs_id));
+  const available = state.mailVorgangCandidates.filter(
+    (vorgang) => !linkedIds.has(vorgang.vorgangs_id),
+  );
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = available.length
+    ? "Vorgang auswählen"
+    : "Keine weiteren Vorgänge verfügbar";
+  select.append(placeholder);
+  for (const vorgang of available) {
+    const option = document.createElement("option");
+    option.value = vorgang.vorgangs_id;
+    option.textContent = vorgangOptionLabel(vorgang);
+    option.title = vorgang.vorgangs_id;
+    select.append(option);
+  }
+  label.append(select);
+  const formActions = mailElement("div", "mail-vorgang-form-actions");
+  const submit = mailElement("button", "primary-action", "Zuordnen");
+  submit.type = "submit";
+  submit.disabled = available.length === 0;
+  formActions.append(submit, mailElement("span", "save-state"));
+  form.append(label, formActions);
+  section.append(form);
+  return section;
+}
+
+function dedupeVorgaenge(vorgaenge) {
+  const byId = new Map();
+  for (const vorgang of vorgaenge) {
+    if (vorgang?.vorgangs_id && !byId.has(vorgang.vorgangs_id)) {
+      byId.set(vorgang.vorgangs_id, vorgang);
+    }
+  }
+  return [...byId.values()];
 }
 
 function renderRelatedMailCandidates(candidates) {
@@ -2868,7 +2970,53 @@ function handleMailDetailSubmit(event) {
     submitMailVorgangImport(event);
     return;
   }
+  if (event.target.closest("[data-link-mail-vorgang]")) {
+    submitMailVorgangLink(event);
+    return;
+  }
   submitMailReply(event);
+}
+
+async function submitMailVorgangLink(event) {
+  const form = event.target.closest("[data-link-mail-vorgang]");
+  if (!form) {
+    return;
+  }
+  event.preventDefault();
+  const select = form.elements.vorgangs_id;
+  const vorgangsId = select.value;
+  const submit = form.querySelector("button[type='submit']");
+  const status = form.querySelector(".save-state");
+  if (!vorgangsId) {
+    status.className = "save-state is-error";
+    status.textContent = "Bitte Vorgang auswählen";
+    return;
+  }
+  submit.disabled = true;
+  status.className = "save-state is-saving";
+  status.textContent = "Zuordnung läuft";
+  try {
+    const response = await fetch(
+      `/api/mail/${encodeURIComponent(form.dataset.linkMailVorgang)}/vorgaenge`,
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({vorgangs_id: vorgangsId}),
+      },
+    );
+    const payload = await readResponse(response);
+    updateSelectedMailVorgaenge(payload);
+    state.vorgaengeLoaded = false;
+    status.className = "save-state is-saved";
+    status.textContent = "Zugeordnet";
+    await loadOverview();
+    renderMailDetail();
+  } catch (error) {
+    submit.disabled = false;
+    status.className = "save-state is-error";
+    status.textContent = "Zuordnung fehlgeschlagen";
+    showError(error.message);
+  }
 }
 
 async function submitMailVorgangImport(event) {
@@ -3008,6 +3156,19 @@ async function handleMailDetailClick(event) {
     await deleteMail(deleteButton.dataset.deleteMail, deleteButton);
     return;
   }
+  const unlinkVorgangButton = event.target.closest("[data-unlink-mail-vorgang]");
+  if (unlinkVorgangButton) {
+    await unlinkMailVorgang(
+      unlinkVorgangButton.dataset.unlinkMailVorgang,
+      unlinkVorgangButton,
+    );
+    return;
+  }
+  const openVorgangButton = event.target.closest("[data-open-vorgang]");
+  if (openVorgangButton) {
+    await openVorgang(openVorgangButton.dataset.openVorgang);
+    return;
+  }
   const createVorgangButton = event.target.closest("[data-mail-create-vorgang]");
   if (createVorgangButton) {
     await startMailVorgangReview(
@@ -3043,6 +3204,40 @@ async function handleMailDetailClick(event) {
   if (event.target.closest("[data-mail-zoom-reset]")) {
     setMailZoom(1);
   }
+}
+
+async function unlinkMailVorgang(vorgangsId, button) {
+  const detail = state.selectedMailDetail;
+  const entryId = detail?.id || detail?.inboxId || state.selectedMailId;
+  if (!entryId || !vorgangsId) {
+    return;
+  }
+  button.disabled = true;
+  try {
+    const response = await fetch(
+      `/api/mail/${encodeURIComponent(entryId)}/vorgaenge/${encodeURIComponent(vorgangsId)}`,
+      {method: "DELETE"},
+    );
+    const payload = await readResponse(response);
+    updateSelectedMailVorgaenge(payload);
+    state.vorgaengeLoaded = false;
+    await loadOverview();
+    renderMailDetail();
+  } catch (error) {
+    button.disabled = false;
+    showError(error.message);
+  }
+}
+
+function updateSelectedMailVorgaenge(payload) {
+  if (!state.selectedMailDetail) {
+    return;
+  }
+  state.selectedMailDetail = {
+    ...state.selectedMailDetail,
+    vorgangs_ids: payload.vorgangs_ids || [],
+    vorgaenge: dedupeVorgaenge(payload.vorgaenge || []),
+  };
 }
 
 function handleMailPreviewClick(event) {
