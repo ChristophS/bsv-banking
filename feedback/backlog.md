@@ -41,3 +41,13 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Man merkt deutlich, dass das Tool gewachsen ist. Es ist stellenweise sehr unintuitiv oder unuebersichtlich. Vlt kannst du das verbessern ohne, dass Funktionalitaeten verloren gehen.
+
+## 5. Persistierten Vorgang nach fehlgeschlagenem Mail-Sofortabschluss zusätzlich prüfen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierende Review-Regression, die den Fehlerfall nach dem fehlgeschlagenen Sofort-Abschluss noch explizit absichert.
+
+**Feedback:**
+
+- Nach einem fehlgeschlagenen Sofort-Abschluss beim Mail-Import den persistierten Vorgang erneut laden und explizit prüfen, dass er nicht `abgeschlossen` ist.
