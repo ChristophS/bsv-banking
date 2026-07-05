@@ -2901,13 +2901,15 @@ function renderMailVorgangReview(
       transactions: candidatesPayload?.transactions || [],
     },
   };
+  const transactionItems = linkItems(transactionCandidates, "transactions");
   fields.append(
     createSuggestionSection(
       "Transaktionen verknüpfen",
       "transaction_ids",
       links.transaction_ids,
-      linkItems(transactionCandidates, "transactions"),
+      transactionItems,
     ),
+    createMailTransactionClassificationSection(transactionItems),
     createSuggestionSection(
       "Weitere Mails verknüpfen",
       "mail_ids",
@@ -2953,6 +2955,69 @@ function renderMailVorgangReview(
   form.append(layout, actions);
   form.addEventListener("submit", submitMailVorgangImport);
   section.append(form);
+  return section;
+}
+
+function createMailTransactionClassificationSection(items) {
+  const section = mailElement("section", "detail-section mail-review-entities");
+  section.append(
+    mailElement("h3", "", "Klassifikation verknüpfter Transaktionen"),
+    mailElement(
+      "p",
+      "suggestion-empty",
+      "Bearbeitet werden nur vorhandene Transaktionen, die oben verknüpft sind.",
+    ),
+  );
+  const list = mailElement("div", "mail-review-list");
+  if (!items.length) {
+    list.append(
+      mailElement(
+        "p",
+        "suggestion-empty",
+        "Keine vorhandenen Transaktionen gefunden.",
+      ),
+    );
+  }
+  for (const item of items) {
+    const row = mailElement("fieldset", "mail-review-row");
+    row.dataset.mailTransactionClassification = item.id;
+    const legend = mailElement("legend");
+    legend.append(
+      mailElement("span", "", item.label || item.id),
+      mailElement(
+        "small",
+        "",
+        transactionClassificationSummary(item) || "Klassifikation bearbeiten",
+      ),
+    );
+    const current = item.classification || {};
+    row.append(
+      legend,
+      compactInputField(
+        "Transaktionstyp",
+        "transaktionstyp",
+        current.transaktionstyp || item.transaktionstyp || "",
+      ),
+      compactInputField(
+        "Oberkategorie",
+        "oberkategorie",
+        current.oberkategorie || item.oberkategorie || "",
+      ),
+      compactInputField(
+        "Unterkategorie",
+        "unterkategorie",
+        current.unterkategorie || item.unterkategorie || "",
+      ),
+      compactInputField("Sphäre", "sphaere", current.sphaere || item.sphaere || ""),
+      compactTextareaField(
+        "Fachliche Beschreibung",
+        "fachliche_beschreibung",
+        item.fachliche_beschreibung || "",
+      ),
+    );
+    list.append(row);
+  }
+  section.append(list);
   return section;
 }
 
@@ -3226,6 +3291,7 @@ function readMailVorgangReviewForm(form) {
       completed: form.elements.vorgang_completed.checked,
     },
     links: readSuggestionFields(form),
+    transaction_classifications: readMailTransactionClassifications(form),
     documents: readReviewRows(form, "document").map((entry) => ({
       enabled: entry.enabled,
       attachment_index: Number(entry.row.dataset.attachmentIndex),
@@ -3253,6 +3319,30 @@ function readMailVorgangReviewForm(form) {
       location: entry.values.location,
     })),
   };
+}
+
+function readMailTransactionClassifications(form) {
+  const linked = new Set(
+    readSuggestionFields(form).transaction_ids || [],
+  );
+  const classifications = {};
+  for (const row of form.querySelectorAll("[data-mail-transaction-classification]")) {
+    const transactionId = row.dataset.mailTransactionClassification;
+    if (!linked.has(transactionId)) {
+      continue;
+    }
+    const values = {};
+    for (const field of row.querySelectorAll("input, textarea, select")) {
+      if (field.name) {
+        if (field.name === "fachliche_beschreibung" && !field.value.trim()) {
+          continue;
+        }
+        values[field.name] = field.value;
+      }
+    }
+    classifications[transactionId] = values;
+  }
+  return classifications;
 }
 
 function readReviewRows(form, type) {

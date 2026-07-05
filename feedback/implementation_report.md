@@ -2,28 +2,30 @@
 
 ## Branchname
 
-agent2/codex-20260705-225002
+agent2/codex-20260705-225452
 
 ## Geaenderte Dateien
 
+- banking_dashboard/server.py
 - banking_dashboard/static/app.js
-- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Das bestehende Vorgangs-Erstellformular nutzt weiterhin den vorhandenen Kandidatenkatalog aus `GET /api/vorgaenge/link-candidates` und sendet ausgewaehlte Transaktionen zusammen mit `completed=true` an `POST /api/vorgaenge`.
-- Backend-Fehler beim direkten Abschluss werden im Erstellformular jetzt dauerhaft sichtbar angezeigt und nicht nur als kurzlebiger Toast.
-- API-Tests fuer `POST /api/vorgaenge` decken den erfolgreichen Direktabschluss mit vorhandener vollstaendig klassifizierter Transaktion ab.
-- API-Tests fuer `POST /api/vorgaenge` decken die Ablehnung bei unvollstaendig klassifizierter Transaktion inklusive Backend-Fehlermeldung und ohne stilles Offen-Anlegen ab.
-- Die bestehende Abschlussvalidierung in `DashboardDataStore.create_vorgang(...)` bleibt unveraendert und wird nicht dupliziert.
+- `POST /api/mail/<id>/vorgang-import` akzeptiert optional `transaction_classifications` als Objekt pro verknuepfter Transaktions-ID.
+- Inline-Klassifikationen sind auf die vorhandenen Felder `transaktionstyp`, `oberkategorie`, `unterkategorie`, `sphaere` und `fachliche_beschreibung` begrenzt, weil die bestehende Methode `update_transaction_classification(...)` wiederverwendet wird.
+- Klassifikationsdaten werden nur fuer im selben Import verknuepfte Transaktionen akzeptiert; unpassende oder ungueltige Payloads fuehren zu klaren 4xx-Fehlern.
+- Die Klassifikation wird nach Vorgangsanlage und vor dem direkten Abschluss angewendet, sodass `completed=true` die aktualisierten Transaktionsdaten beruecksichtigt.
+- Der Mail-Import-Dialog zeigt vorhandene Transaktionen inline mit Klassifikationsfeldern an und sendet Werte nur fuer oben ausgewaehlte/verknuepfte Transaktionen.
+- Der API-Response bleibt die aktualisierte Vorgangsdetailansicht inklusive `direct_completion`.
+- HTTP-Tests decken Direktabschluss nach Inline-Klassifikation, Ablehnung bei weiterhin unvollstaendiger Klassifikation und 4xx-Fehler bei ungueltigen Inline-Feldern ab.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung an `banking_dashboard/server.py`, weil `create_vorgang(...)` `completed=true` bereits vor dem Insert mit `_validate_vorgang_completion_values(...)` prueft und Fehler als HTTP 400 serialisiert werden.
-- Keine Aenderung an `banking_dashboard/static/index.html`, weil das Vorgangs-Erstellformular dynamisch in `banking_dashboard/static/app.js` erzeugt wird.
-- Keine Aenderung an `transaction_store/database.py`, `transaction_store/models.py` oder `tests/test_transactions.py`, weil keine neue Persistenz- oder Transaktionslogik erforderlich war.
+- Keine Aenderung an `banking_dashboard/static/index.html`, weil der Mail-Import-Dialog dynamisch in `banking_dashboard/static/app.js` erzeugt wird.
+- Keine Aenderung an `transaction_store/database.py` oder `transaction_store/models.py`, weil die vorhandene Klassifikationsmethode und Feldlogik ausreichen.
+- Keine Inline-Klassifikation fuer den allgemeinen manuellen Vorgangserstell-Flow ausserhalb des Mail-Imports.
 - Keine externen Dienste, echten Logins oder Browser-Automationen verwendet.
 
 ## Ausgefuehrte Tests
@@ -32,15 +34,15 @@ agent2/codex-20260705-225002
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 72 passed, 2 skipped
+- `tests/test_dashboard.py`: 75 passed, 2 skipped
 
 ## Bekannte Einschraenkungen
 
-- Die Auswahl vorhandener Transaktionen bleibt die bestehende Kandidaten-/Suchliste im dynamischen Erstellformular; es wurde kein neuer Wizard und keine Inline-Klassifikation eingebaut.
-- Die zwei vorhandenen Browser-Tests bleiben uebersprungen, wenn Playwright/Chromium lokal nicht verfuegbar ist.
+- Das optionale Feld `fachliche_beschreibung` wird im Mail-Import-Dialog leer angezeigt, wenn es in den vorhandenen Kandidatendaten nicht enthalten ist; ein leer gelassenes Feld wird nicht als Loeschung gesendet.
+- Die zwei uebersprungenen Tests bleiben unveraendert uebersprungen.
 
 ## Hinweise fuer den Review-Agenten
 
-- Die UI-Aenderung sitzt in `renderVorgangCreateForm(...)`: Backend-Fehler werden in `.form-error` angezeigt und beim erneuten Speichern zurueckgesetzt.
-- Die neuen HTTP-Tests sitzen in `DashboardHTTPTests` direkt nach dem bestehenden Dashboard/API-Smoke-Test.
-- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits ausserhalb dieses Arbeitspakets im Arbeitsbaum sichtbar und wurden nicht geaendert.
+- Die Backend-Aenderung sitzt in `_mail_vorgang_import(...)` und `_apply_mail_transaction_classifications(...)`.
+- Die Frontend-Aenderung sitzt in `renderMailVorgangReview(...)`, `createMailTransactionClassificationSection(...)` und `readMailTransactionClassifications(...)`.
+- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits im Arbeitsbaum vorhanden bzw. untracked und wurden nicht fuer dieses Paket geaendert.

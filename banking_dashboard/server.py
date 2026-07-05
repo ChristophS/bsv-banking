@@ -5471,7 +5471,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
     def _mail_vorgang_import(self, entry_id: str) -> dict[str, Any]:
         payload = self._read_json_body()
-        allowed = {"vorgang", "documents", "todos", "termine", "links"}
+        allowed = {
+            "vorgang",
+            "documents",
+            "todos",
+            "termine",
+            "links",
+            "transaction_classifications",
+        }
         unknown = sorted(set(payload) - allowed)
         if unknown:
             raise ValueError(
@@ -5484,6 +5491,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not isinstance(raw_vorgang, dict):
             raise ValueError("Vorgangsdaten fehlen.")
         links = payload.get("links") if isinstance(payload.get("links"), dict) else {}
+        transaction_ids = _list_of_strings(links.get("transaction_ids", []))
         requested_completed = (
             bool(raw_vorgang.get("completed"))
             if isinstance(raw_vorgang.get("completed"), bool)
@@ -5505,7 +5513,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     )
                 ),
                 "transaction_ids": _list_of_strings(
-                    links.get("transaction_ids", [])
+                    transaction_ids
                 ),
                 "todo_ids": _list_of_strings(links.get("todo_ids", [])),
                 "beleg_ids": _list_of_strings(links.get("beleg_ids", [])),
@@ -5513,6 +5521,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             }
         )
         vorgangs_id = str(vorgang["vorgangs_id"])
+        self._apply_mail_transaction_classifications(
+            payload.get("transaction_classifications", {}),
+            transaction_ids,
+        )
         imported_documents = []
         for document in _list_value(payload.get("documents")):
             if not isinstance(document, dict) or not document.get("enabled", True):
@@ -5613,6 +5625,39 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             "todos": imported_todos,
             "termine": imported_termine,
         }
+
+    def _apply_mail_transaction_classifications(
+        self,
+        raw_classifications: Any,
+        linked_transaction_ids: list[str],
+    ) -> None:
+        if raw_classifications in (None, ""):
+            return
+        if not isinstance(raw_classifications, dict):
+            raise ValueError(
+                "Transaktionsklassifikationen muessen ein Objekt sein."
+            )
+        linked = set(linked_transaction_ids)
+        for raw_transaction_id, values in raw_classifications.items():
+            transaction_id = str(raw_transaction_id or "").strip()
+            if not transaction_id:
+                raise ValueError("Transaktions-ID fuer Klassifikation fehlt.")
+            if transaction_id not in linked:
+                raise ValueError(
+                    "Transaktionsklassifikationen duerfen nur fuer "
+                    "verknuepfte Transaktionen gesendet werden: "
+                    + transaction_id
+                )
+            if not isinstance(values, dict):
+                raise ValueError(
+                    "Klassifikationsdaten fuer "
+                    + transaction_id
+                    + " muessen ein Objekt sein."
+                )
+            self.server.data_store.update_transaction_classification(
+                transaction_id,
+                values,
+            )
 
     def _balance_history_response(
         self,

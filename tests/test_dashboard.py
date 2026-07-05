@@ -2294,6 +2294,43 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn("Transaktion wurde nicht gefunden", payload["error"])
         self.assertIn("tx_missing", payload["error"])
 
+    def test_mail_import_rejects_invalid_inline_classification_field(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {"transaction_ids": ["tx_newer"]},
+                    "transaction_classifications": {
+                        "tx_newer": {"ungueltig": "Wert"}
+                    },
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(import_request, timeout=5)
+
+        self.assertEqual(400, context.exception.code)
+        payload = json.loads(context.exception.read().decode("utf-8"))
+        self.assertIn("Unbekannte Klassifikationsfelder", payload["error"])
+        self.assertIn("ungueltig", payload["error"])
+
     def test_mail_import_can_complete_new_vorgang_over_http(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
             inbox_id = json.load(response)["messages"][0]["id"]
@@ -2342,6 +2379,120 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual(["tx_newer"], [
             item["transaktions_id"] for item in vorgang["transaktionen"]
         ])
+
+    def test_mail_import_can_complete_with_inline_transaction_classification(self):
+        self.server.data_store.update_transaction_classification(
+            "tx_newer",
+            {
+                "transaktionstyp": "",
+                "oberkategorie": "",
+                "unterkategorie": "",
+                "sphaere": "",
+            },
+        )
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+        analysis["vorgang"]["completed"] = True
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": analysis["documents"],
+                    "todos": [],
+                    "termine": [],
+                    "links": {"transaction_ids": ["tx_newer"]},
+                    "transaction_classifications": {
+                        "tx_newer": {
+                            "transaktionstyp": "Ausgabe",
+                            "oberkategorie": "Spielbetrieb",
+                            "unterkategorie": "Energie",
+                            "sphaere": "Zweckbetrieb",
+                            "fachliche_beschreibung": "Stromrechnung",
+                        }
+                    },
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(import_request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            imported = json.load(response)
+
+        self.assertEqual("abgeschlossen", imported["vorgang"]["status"])
+        self.assertTrue(imported["direct_completion"]["completed"])
+        transaction = imported["vorgang"]["transaktionen"][0]
+        self.assertEqual("Energie", transaction["unterkategorie"])
+        self.assertEqual("Stromrechnung", transaction["fachliche_beschreibung"])
+
+    def test_mail_import_keeps_vorgang_open_after_incomplete_inline_classification(self):
+        self.server.data_store.update_transaction_classification(
+            "tx_newer",
+            {
+                "transaktionstyp": "",
+                "oberkategorie": "",
+                "unterkategorie": "",
+                "sphaere": "",
+            },
+        )
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+        analysis["vorgang"]["completed"] = True
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": analysis["documents"],
+                    "todos": [],
+                    "termine": [],
+                    "links": {"transaction_ids": ["tx_newer"]},
+                    "transaction_classifications": {
+                        "tx_newer": {
+                            "transaktionstyp": "Ausgabe",
+                            "oberkategorie": "Spielbetrieb",
+                            "unterkategorie": "",
+                            "sphaere": "Zweckbetrieb",
+                        }
+                    },
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(import_request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            imported = json.load(response)
+
+        self.assertEqual("in_bearbeitung", imported["vorgang"]["status"])
+        self.assertTrue(imported["direct_completion"]["rejected"])
+        self.assertIn(
+            "tx_newer",
+            imported["vorgang"]["unvollstaendige_transaktionen"],
+        )
+        self.assertIn(
+            "Transaktionstyp",
+            imported["direct_completion"]["message"],
+        )
 
     def test_mail_import_completion_returns_blocker_over_http(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
