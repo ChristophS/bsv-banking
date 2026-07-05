@@ -2331,6 +2331,62 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn("Unbekannte Klassifikationsfelder", payload["error"])
         self.assertIn("ungueltig", payload["error"])
 
+    def test_mail_import_invalid_inline_classification_has_no_side_effects(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+
+        before_vorgaenge = self.server.data_store.list_vorgaenge()
+        before_transaction = self.server.data_store.transaction_detail("tx_newer")
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {"transaction_ids": ["tx_newer", "tx_older"]},
+                    "transaction_classifications": {
+                        "tx_newer": {
+                            "transaktionstyp": "Ausgabe",
+                            "oberkategorie": "Spielbetrieb",
+                            "unterkategorie": "Energie",
+                            "sphaere": "Zweckbetrieb",
+                        },
+                        "tx_older": {"ungueltig": "Wert"},
+                    },
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(import_request, timeout=5)
+
+        self.assertEqual(400, context.exception.code)
+        payload = json.loads(context.exception.read().decode("utf-8"))
+        self.assertIn("Unbekannte Klassifikationsfelder", payload["error"])
+
+        after_vorgaenge = self.server.data_store.list_vorgaenge()
+        after_transaction = self.server.data_store.transaction_detail("tx_newer")
+        self.assertEqual(
+            [item["vorgangs_id"] for item in before_vorgaenge],
+            [item["vorgangs_id"] for item in after_vorgaenge],
+        )
+        self.assertEqual(
+            before_transaction["unterkategorie"],
+            after_transaction["unterkategorie"],
+        )
+
     def test_mail_import_can_complete_new_vorgang_over_http(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
             inbox_id = json.load(response)["messages"][0]["id"]

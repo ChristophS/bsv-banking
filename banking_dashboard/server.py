@@ -5497,6 +5497,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if isinstance(raw_vorgang.get("completed"), bool)
             else False
         )
+        self._validate_mail_transaction_classifications(
+            payload.get("transaction_classifications", {}),
+            transaction_ids,
+        )
         vorgang = self.server.data_store.create_vorgang(
             {
                 "title": str(raw_vorgang.get("title") or "").strip(),
@@ -5625,6 +5629,56 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             "todos": imported_todos,
             "termine": imported_termine,
         }
+
+    def _validate_mail_transaction_classifications(
+        self,
+        raw_classifications: Any,
+        linked_transaction_ids: list[str],
+    ) -> None:
+        if raw_classifications in (None, ""):
+            return
+        if not isinstance(raw_classifications, dict):
+            raise ValueError(
+                "Transaktionsklassifikationen muessen ein Objekt sein."
+            )
+        linked = set(linked_transaction_ids)
+        for raw_transaction_id, values in raw_classifications.items():
+            transaction_id = str(raw_transaction_id or "").strip()
+            if not transaction_id:
+                raise ValueError("Transaktions-ID fuer Klassifikation fehlt.")
+            if transaction_id not in linked:
+                raise ValueError(
+                    "Transaktionsklassifikationen duerfen nur fuer "
+                    "verknuepfte Transaktionen gesendet werden: "
+                    + transaction_id
+                )
+            if self.server.data_store.transaction_detail(transaction_id) is None:
+                raise LookupError("Transaktion nicht gefunden.")
+            if not isinstance(values, dict):
+                raise ValueError(
+                    "Klassifikationsdaten fuer "
+                    + transaction_id
+                    + " muessen ein Objekt sein."
+                )
+            if not values:
+                raise ValueError(
+                    "Mindestens ein Klassifikationsfeld ist erforderlich."
+                )
+            unknown_fields = sorted(set(values) - set(CLASSIFICATION_FIELDS))
+            if unknown_fields:
+                raise ValueError(
+                    "Unbekannte Klassifikationsfelder: "
+                    + ", ".join(unknown_fields)
+                )
+            for field, value in values.items():
+                if not isinstance(value, str):
+                    raise ValueError(f"Das Feld {field} muss Text enthalten.")
+                cleaned = value.strip()
+                if len(cleaned) > MAX_CLASSIFICATION_FIELD_LENGTH:
+                    raise ValueError(
+                        f"Das Feld {field} darf hoechstens "
+                        f"{MAX_CLASSIFICATION_FIELD_LENGTH} Zeichen enthalten."
+                    )
 
     def _apply_mail_transaction_classifications(
         self,

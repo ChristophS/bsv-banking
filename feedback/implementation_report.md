@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260705-225452
+agent2/rework-20260705-233956
 
 ## Geaenderte Dateien
 
@@ -21,6 +21,13 @@ agent2/codex-20260705-225452
 - Der API-Response bleibt die aktualisierte Vorgangsdetailansicht inklusive `direct_completion`.
 - HTTP-Tests decken Direktabschluss nach Inline-Klassifikation, Ablehnung bei weiterhin unvollstaendiger Klassifikation und 4xx-Fehler bei ungueltigen Inline-Feldern ab.
 
+## Nachbesserung nach Review
+
+- Die Inline-Transaktionsklassifikationen werden jetzt vor `create_vorgang(...)` vollstaendig vorvalidiert.
+- Die Vorvalidierung prueft Payload-Typ, leere Transaktions-IDs, Beschraenkung auf im Import verknuepfte Transaktionen, Existenz der Transaktion, Objektform der Werte, unbekannte Felder, leere Feldmengen, Texttypen und die bestehende Laengenbegrenzung.
+- Dadurch kann ein 4xx wegen ungueltiger Inline-Klassifikation keinen neuen Vorgang, keine Mail-/Transaktionsverknuepfung und keine teilweise angewendete vorherige Klassifikation aus demselben Request mehr persistieren.
+- Ein Regressionstest deckt den Review-Fall mit zwei Klassifikationen ab: Die erste waere gueltig, die zweite ist ungueltig; nach dem 400-Fehler bleiben Vorgangsliste und erste Transaktion unveraendert.
+
 ## Nicht umgesetzte Punkte
 
 - Keine Aenderung an `banking_dashboard/static/index.html`, weil der Mail-Import-Dialog dynamisch in `banking_dashboard/static/app.js` erzeugt wird.
@@ -34,7 +41,7 @@ agent2/codex-20260705-225452
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 75 passed, 2 skipped
+- `tests/test_dashboard.py`: 76 passed, 2 skipped
 
 ## Bekannte Einschraenkungen
 
