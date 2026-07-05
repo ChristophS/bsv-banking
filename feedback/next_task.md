@@ -6,7 +6,7 @@ Mail-Import um Auswahl vorhandener Transaktionen erweitern
 
 ## Ziel
 
-Im bestehenden Mail-Import soll der Nutzer vorhandene Transaktionen auswählen und direkt mit dem neu angelegten Vorgang verknüpfen können. Der bestehende Import-Flow bleibt erhalten und wird nur gezielt um die Übergabe von transaction_ids ergänzt.
+Im bestehenden Mail-Import soll der Nutzer vorhandene Transaktionen auswählen und direkt mit dem neu angelegten Vorgang verknüpfen können. Der vorhandene Import-Flow bleibt erhalten und wird nur gezielt um die Übergabe von links.transaction_ids ergänzt.
 
 ## Relevante Dateien
 
@@ -14,20 +14,18 @@ Im bestehenden Mail-Import soll der Nutzer vorhandene Transaktionen auswählen u
 - banking_dashboard/static/app.js
 - banking_dashboard/static/index.html
 - tests/test_dashboard.py
-- transaction_store/database.py
-- transaction_store/models.py
 
 ## Wahrscheinliche Änderungsstellen
 
 - banking_dashboard/static/app.js: Mail-Import-Dialog/Flow um Laden, Anzeigen, Auswählen und Mitsenden von links.transaction_ids erweitern.
-- banking_dashboard/static/index.html: Kleine UI-Ergänzung für Transaktionsauswahl im Importbereich, ohne den bestehenden Ablauf neu zu bauen.
-- banking_dashboard/server.py: Absicherung prüfen, dass ungültige transaction_ids weiterhin sauber als Fehler aus create_vorgang/_replace_vorgang_links nach außen sichtbar werden.
-- tests/test_dashboard.py: API-Tests für /api/mail/<inbox_id>/vorgang-import mit und ohne links.transaction_ids ergänzen.
+- banking_dashboard/static/index.html: Kleine UI-Ergänzung im Mail-Import-Bereich für Transaktionsauswahl, ohne den bestehenden Ablauf neu zu bauen.
+- banking_dashboard/server.py: Bestehenden Importpfad nur absichern bzw. unverändert nutzen; insbesondere sicherstellen, dass invalid transaction_ids weiterhin als 4xx sichtbar bleiben.
+- tests/test_dashboard.py: API-Tests für /api/mail/<inbox_id>/vorgang-import mit und ohne links.transaction_ids sowie Negativfall ergänzen.
 
 ## Muss umgesetzt werden
 
 - Im bestehenden Mail-Import-UI eine Möglichkeit anbieten, mindestens eine vorhandene Transaktion auszuwählen.
-- Die Auswahl als links.transaction_ids an den bestehenden POST /api/mail/<inbox_id>/vorgang-import mitsenden.
+- Die Auswahl als links.transaction_ids an POST /api/mail/<inbox_id>/vorgang-import mitsenden.
 - Sicherstellen, dass ein Import ohne Transaktionsauswahl unverändert weiter funktioniert.
 - Ungültige oder nicht vorhandene transaction_ids müssen als sauberer Fehler zurückgegeben werden, statt still ignoriert zu werden.
 - Nach erfolgreichem Import muss der erzeugte Vorgang die verknüpfte Mail und die ausgewählten Transaktionen enthalten.
@@ -55,11 +53,10 @@ Im bestehenden Mail-Import soll der Nutzer vorhandene Transaktionen auswählen u
 
 ## Hinweise für den Umsetzungs-Agenten
 
-- In server.py ist die fachliche Verdrahtung schon vorhanden: _mail_vorgang_import(...) setzt transaction_ids aus links direkt in create_vorgang(...); der Schwerpunkt liegt daher im Frontend und in Tests.
-- Die Kandidaten-API /api/vorgaenge/link-candidates liefert transactions als flache Liste von vorhandenen Transaktionen; für dieses Paket reicht voraussichtlich eine einfache Auswahl daraus.
-- Da _list_of_strings(...) nur Strings bereinigt und create_vorgang(...) die eigentliche Existenzprüfung übernimmt, sollte der Fehlerpfad in Tests explizit auf die bestehende LookupError->404-API-Antwort geprüft werden.
-- Die UI sollte bewusst klein bleiben: keine freie Volltextsuche über alle Transaktionen nötig, wenn die vorhandenen Kandidaten bereits ausreichend sind.
-- Falls der Import nach dem Erstellen des Vorgangs ohnehin die Rückgabe anzeigt oder Details lädt, diese bestehende Antwort wiederverwenden statt eine zusätzliche Nachlade-API einzubauen.
+- In server.py ist die fachliche Verdrahtung bereits vorhanden: _mail_vorgang_import(...) liest links.transaction_ids via _list_of_strings(...) und reicht sie an create_vorgang(...) weiter. Der Schwerpunkt liegt daher im Frontend und in Tests, nicht in neuer Backend-Fachlogik.
+- Die Existenzprüfung der transaction_ids passiert nicht in _list_of_strings(...), sondern in DashboardDataStore._replace_vorgang_links() bzw. _replace_link_rows(); dort erzeugen fehlende IDs ein LookupError mit 404-Antwort. Diesen bestehenden Pfad bewusst testen statt zu umgehen.
+- Die Kandidaten-API /api/vorgaenge/link-candidates liefert candidates.transactions mit id, label, date, amount und Klassifikationsmetadaten; für dieses Paket reicht voraussichtlich eine einfache Mehrfachauswahl aus dieser Liste.
+- Nach dem Import liefert der Endpunkt bereits den vollständigen Vorgang unter response.vorgang zurück. Diese Antwort möglichst direkt für Anzeige/Bestätigung nutzen statt zusätzlichen Nachladeverkehr einzubauen.
 
 ## Manuelle Testhinweise
 
