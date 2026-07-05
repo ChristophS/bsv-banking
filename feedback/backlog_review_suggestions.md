@@ -1,2 +1,3 @@
-- Optional einen Frontend-/Browser-Test ergänzen, der bei `completed=true` und unvollständig klassifizierter Transaktion die dauerhaft sichtbare `.form-error`-Meldung im Erstellformular prüft.
-- Optional die Checkbox „Direkt abschließen“ im manuellen Erstellformular um einen kurzen Hinweis ergänzen, dass Abschluss nur bei vollständig klassifizierten Transaktionen und erfüllten Abschlussregeln möglich ist.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
