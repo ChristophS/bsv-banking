@@ -30,7 +30,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfaengern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas komplizierter, da es ueber DFBnet Vrein laeuft. ...
+- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfaengern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas komplizierter, da es ueber DFBnet Verein laeuft.
 
 ## 4. Dashboard-Usability schrittweise verbessern ohne Funktionsverlust
 
