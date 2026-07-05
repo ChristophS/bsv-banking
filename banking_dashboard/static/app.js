@@ -2975,7 +2975,16 @@ function createMailReviewVorgangFields(vorgang) {
   const completedInput = document.createElement("input");
   completedInput.type = "checkbox";
   completedInput.name = "vorgang_completed";
-  completed.append(completedInput, mailElement("span", "", "Direkt abschließen"));
+  const completedText = mailElement("span");
+  completedText.append(
+    mailElement("strong", "", "Direkt abschließen"),
+    mailElement(
+      "small",
+      "",
+      "Nur möglich, wenn Transaktion, Dokument und Abschlussregeln passen.",
+    ),
+  );
+  completed.append(completedInput, completedText);
   grid.append(completed);
   section.append(grid);
   return section;
@@ -3188,10 +3197,17 @@ async function submitMailVorgangImport(event) {
       elements.dialog.close();
     }
     activateTab("vorgaenge");
-    const completed = payload.vorgang?.status === "abgeschlossen";
+    const completion = payload.direct_completion || {};
+    const completed = completion.completed
+      || payload.vorgang?.status === "abgeschlossen";
+    const message = completion.rejected
+      ? `Vorgang importiert, Abschluss abgewiesen: ${completion.message}`
+      : completed
+        ? "Vorgang importiert und abgeschlossen"
+        : "Vorgang importiert";
     await loadVorgangWorkspace(
       payload.vorgang.vorgangs_id,
-      completed ? "Vorgang importiert und abgeschlossen" : "Vorgang importiert",
+      message,
     );
   } catch (error) {
     submit.disabled = false;

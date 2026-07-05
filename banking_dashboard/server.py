@@ -5579,14 +5579,36 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     source_reference=inbox_id,
                 )
             )
-        detail = (
-            self.server.data_store.update_vorgang_status(vorgangs_id, True)
-            if requested_completed
-            else self.server.data_store.vorgang_detail(vorgangs_id)
-        )
+        completion_error = ""
+        if requested_completed:
+            try:
+                detail = self.server.data_store.update_vorgang_status(
+                    vorgangs_id,
+                    True,
+                )
+            except ValueError as exc:
+                completion_error = str(exc)
+                detail = self.server.data_store.vorgang_detail(vorgangs_id)
+        else:
+            detail = self.server.data_store.vorgang_detail(vorgangs_id)
+        completed = (detail or {}).get("status") == "abgeschlossen"
         return {
             "id": inbox_id,
             "vorgang": detail or vorgang,
+            "direct_completion": {
+                "requested": requested_completed,
+                "completed": completed,
+                "rejected": requested_completed and not completed,
+                "message": (
+                    completion_error
+                    if completion_error
+                    else (
+                        "Vorgang direkt abgeschlossen."
+                        if completed
+                        else "Vorgang offen importiert."
+                    )
+                ),
+            },
             "documents": imported_documents,
             "todos": imported_todos,
             "termine": imported_termine,
