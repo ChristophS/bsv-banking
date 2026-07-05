@@ -2574,20 +2574,25 @@ async function startMailVorgangReview(entryId, button) {
   button.disabled = true;
   button.textContent = "Analyse läuft";
   try {
-    const [response, , suggestions] = await Promise.all([
+    const [response, , suggestions, candidates] = await Promise.all([
       fetch(
         `/api/mail/${encodeURIComponent(entryId)}/vorgang-analysis`,
         {method: "POST"},
       ),
       loadVorgangTypes(),
       loadVorgangSuggestions("mail", entryId).catch(() => null),
+      loadLinkCandidates().catch(() => null),
     ]);
     const payload = await readResponse(response);
     state.mailVorgangReview = {
       entryId,
       analysis: payload.analysis,
     };
-    openMailVorgangReviewDialog(entryId, payload.analysis, suggestions);
+    openMailVorgangReviewDialog(
+      entryId,
+      payload.analysis,
+      mergeLinkCandidates(suggestions, candidates),
+    );
   } catch (error) {
     showError(error.message);
   } finally {
