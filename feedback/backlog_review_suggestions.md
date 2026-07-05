@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional könnte das Frontend im Erfolgsfall ebenfalls die vom Backend gelieferte `direct_completion.message` verwenden, statt eine eigene Erfolgsmeldung zu formulieren. Das wäre rein konsistentheitsfördernd und ist nicht erforderlich für die Akzeptanz.
