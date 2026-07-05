@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional einen Browser-/Frontend-Test ergänzen, der den Mail-Import-Dialog öffnet, eine Transaktion auswählt und den gesendeten `links.transaction_ids`-Payload prüft.
+- Optional den Kandidatenabruf im Mail-Import fehlertolerant machen, z. B. mit Fallback auf eine leere Transaktionsliste und sichtbarem Hinweis.
