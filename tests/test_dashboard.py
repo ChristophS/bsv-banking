@@ -2331,6 +2331,83 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn("Unbekannte Klassifikationsfelder", payload["error"])
         self.assertIn("ungueltig", payload["error"])
 
+    def test_mail_import_invalid_inline_classification_has_no_side_effects(self):
+        self.server.data_store.update_transaction_classification(
+            "tx_newer",
+            {
+                "transaktionstyp": "",
+                "oberkategorie": "",
+                "unterkategorie": "",
+                "sphaere": "",
+            },
+        )
+        before_vorgaenge = self.server.data_store.list_vorgaenge()
+        before_transaction = self.server.data_store.transaction_detail(
+            "tx_newer"
+        )
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {
+                        "transaction_ids": ["tx_newer", "tx_older"]
+                    },
+                    "transaction_classifications": {
+                        "tx_newer": {
+                            "transaktionstyp": "Ausgabe",
+                            "oberkategorie": "Spielbetrieb",
+                            "unterkategorie": "Energie",
+                            "sphaere": "Zweckbetrieb",
+                        },
+                        "tx_older": {"transaktionstyp": 123},
+                    },
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(import_request, timeout=5)
+
+        self.assertEqual(400, context.exception.code)
+        payload = json.loads(context.exception.read().decode("utf-8"))
+        self.assertIn(
+            "Das Feld transaktionstyp muss Text enthalten",
+            payload["error"],
+        )
+        self.assertEqual(
+            len(before_vorgaenge),
+            len(self.server.data_store.list_vorgaenge()),
+        )
+        after_transaction = self.server.data_store.transaction_detail(
+            "tx_newer"
+        )
+        for field in (
+            "transaktionstyp",
+            "oberkategorie",
+            "unterkategorie",
+            "sphaere",
+        ):
+            self.assertEqual(
+                before_transaction[field],
+                after_transaction[field],
+            )
+
     def test_mail_import_can_complete_new_vorgang_over_http(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
             inbox_id = json.load(response)["messages"][0]["id"]
