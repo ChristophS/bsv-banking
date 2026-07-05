@@ -8,63 +8,46 @@
 
 ## Begründung
 
-Der GitHub-Diff ist fachlich plausibel und erfüllt die Muss-Anforderungen; die nachgeladenen Voll-Dateien wirken an den geänderten Hunks zwar nicht synchron zum Diff, verhindern die Entscheidung aber nicht, weil der Diff maßgeblich ist und die relevanten bestehenden Hilfsfunktionen daraus bzw. aus dem Kontext ausreichend nachvollziehbar sind.
+Der Diff ist für die fachliche Prüfung ausreichend: Backend, Frontend und Tests zeigen die geforderte kontrollierte Direktabschluss-Option im Mail-Import und verwenden weiterhin die bestehende Abschlusslogik.
 
 ## Zusammenfassung
 
-Der Mail-Import lädt nun Link-Kandidaten, bietet Transaktionen aus candidates.transactions als Checkbox-Auswahl an und sendet ausgewählte IDs als links.transaction_ids an den bestehenden Import-Endpunkt. Die API-Tests decken Import mit, ohne und mit ungültigen Transaktions-IDs ab. Keine blockierenden Probleme gefunden.
+Die Umsetzung ergänzt den Mail-Import um eine explizite Direktabschluss-Rückmeldung, fängt fachliche Abschlussfehler kontrolliert ab, lässt nicht erfüllbare Vorgänge offen und passt die UI-Statusmeldung sowie API-Tests für Erfolgs- und Ablehnungsfall an. Es wurden keine blockierenden Probleme gefunden.
 
-# Review Report
+## Review-Ergebnis
 
-## Ergebnis
+Accepted: **true**
 
-**Accepted:** true
+## Prüfung gegen das Arbeitspaket
 
-## Geprüfter Umfang
+Die Änderung erfüllt die Muss-Anforderungen des Arbeitspakets:
 
-Geprüft wurden die Anforderungen aus dem Arbeitspaket gegen den GitHub-Compare-Diff für:
+- Der bestehende Mail-Import-Flow unterstützt weiterhin einen expliziten Abschlusswunsch über `vorgang.completed` beziehungsweise die vorhandene Checkbox im Mail-Review-Dialog.
+- Der Abschluss erfolgt im Backend ausschließlich über `self.server.data_store.update_vorgang_status(vorgangs_id, True)` und damit über die bestehende Abschlussprüfung. Es wird keine Abschlusslogik dupliziert.
+- Wenn `update_vorgang_status(...)` einen `ValueError` wegen nicht erfüllter Abschlussvoraussetzungen wirft, wird dieser fachlich abgefangen. Der Vorgang bleibt offen und die Antwort enthält eine verständliche Rückmeldung in `direct_completion`.
+- Die API-Antwort macht über `direct_completion.requested`, `completed`, `rejected` und `message` klar erkennbar, ob ein Direktabschluss gewünscht, erfolgreich oder abgewiesen wurde.
+- Das bestehende Muster, den Vorgang zunächst offen anzulegen und erst nach Dokument-/Link-Anlage optional abzuschließen, bleibt erhalten.
+- Die UI ergänzt zur Option „Direkt abschließen“ einen erklärenden Hinweis und lässt die Checkbox standardmäßig ausgeschaltet, da Checkboxen ohne gesetztes `checked`-Attribut initial nicht aktiviert sind.
+- Die Statusmeldung nach dem Import berücksichtigt die neue Backend-Rückmeldung, insbesondere den abgewiesenen Direktabschluss.
+- Die Tests decken sowohl einen erfolgreichen Direktabschluss als auch einen abgewiesenen Direktabschluss ab.
 
-- `banking_dashboard/static/app.js`
-- `tests/test_dashboard.py`
-- `feedback/implementation_report.md`
+## Technische Bewertung
 
-Zusätzlich wurden die nachgeladenen Kontextdateien zur Einordnung der bestehenden Hilfsfunktionen, API-Flows und Tests herangezogen. Hinweis: Die nachgeladenen Voll-Dateien scheinen an den geänderten Stellen nicht vollständig mit dem GitHub-Diff synchron zu sein. Für die Bewertung bleibt gemäß Vorgabe der GitHub-Diff maßgeblich; die relevanten bestehenden Funktionen (`loadLinkCandidates`, `linkItems`, `createSuggestionSection`, `readSuggestionFields`, `_mail_vorgang_import`, `_replace_vorgang_links`) sind dennoch ausreichend nachvollziehbar.
+Die Backend-Änderung ist klein und zielgerichtet. Kritisch ist, dass der Ablehnungsfall nicht mehr als generischer Fehler oder fälschlich abgeschlossener Vorgang endet. Genau das wird durch den `try`/`except ValueError`-Block erreicht: Bei einer fachlichen Ablehnung wird der aktuelle Vorgangsdetailstand erneut geladen und als offen zurückgegeben.
 
-## Fachliche Bewertung
+Die Entscheidung, den Import bei nicht erfüllbarem Abschlusswunsch mit `201` erfolgreich abzuschließen und nur den Abschluss in `direct_completion` abzulehnen, ist durch das Arbeitspaket gedeckt. Dort war offen gelassen, ob ein nicht erfüllbarer Abschlusswunsch den gesamten Import abbrechen oder den Vorgang offen importieren soll. Die gewählte Variante ist sicher, weil sie keinen falschen Abschluss speichert und eine verständliche Validierungsrückmeldung liefert.
 
-Die Umsetzung erfüllt die Muss-Anforderungen:
-
-- Beim Start der Mail-Vorgangsprüfung wird zusätzlich `/api/vorgaenge/link-candidates` geladen.
-- Für den Mail-Import wird die Transaktionsauswahl explizit aus `candidates.transactions` aufgebaut und nicht mehr aus den Suggestions gemischt.
-- Die vorhandene Checkbox-/Suchlisten-Komponente wird weiterverwendet; sie kann Label, Datum, Betrag und Klassifikationsinformationen anzeigen, sofern diese im Kandidatenkatalog vorhanden sind.
-- Ausgewählte Checkboxen werden über die bestehende `readSuggestionFields()`-Logik in `links.transaction_ids` übernommen und dadurch an `POST /api/mail/<inbox_id>/vorgang-import` gesendet.
-- Der Backend-Importpfad verarbeitet `links.transaction_ids` bereits über `create_vorgang(...)`; die Validierung nicht vorhandener Transaktionen läuft über `_replace_vorgang_links()` / `_replace_link_rows()` und führt zu einem 404-Fehlerpfad.
+Die Frontend-Änderung ist auf den Mail-Import beschränkt und führt keinen generischen Ein-Klick-Abschluss außerhalb dieses Flows ein. Bestehende Verknüpfungen zu Dokumenten, To-Dos, Terminen und Links werden durch den Diff nicht umgebaut.
 
 ## Tests
 
-Der Diff ergänzt API-Tests für:
+Die bestehenden Tests wurden sinnvoll erweitert:
 
-- Import ohne `transaction_ids`, der weiterhin erfolgreich bleibt.
-- Import mit unbekannter Transaktions-ID, der sauber mit HTTP 404 und Fehlermeldung fehlschlägt.
+- `test_mail_import_can_complete_new_vorgang_over_http` prüft nun zusätzlich die erfolgreiche `direct_completion`-Antwort.
+- `test_mail_import_completion_returns_blocker_over_http` prüft nun, dass der Import trotz abgewiesenem Direktabschluss mit `201` einen offenen Vorgang zurückliefert und die fachliche Blocker-Meldung in `direct_completion.message` enthalten ist.
 
-Der positive Import mit `transaction_ids` ist im bestehenden Mail-Import-Test abgedeckt und prüft, dass der zurückgelieferte Vorgang die ausgewählte Transaktion enthält.
+Laut Implementation Report wurden `tests/test_dashboard.py` mit `70 passed, 2 skipped` ausgeführt.
 
-## Branch-/Compare-Zustand
+## Hinweise
 
-GitHub Compare ist sauber:
-
-- `compare_status`: `ahead`
-- `ahead_by`: 1
-- `behind_by`: 0
-- `total_commits`: 1
-
-Die Abweichung `feedback/Review-report.md` in `missing_from_github_compare` betrifft keine fachliche Implementierungsdatei und ist nicht Bestandteil des GitHub-Diffs.
-
-## Blockierende Probleme
-
-Keine.
-
-## Nicht-blockierende Hinweise
-
-- Ein zusätzlicher Browser-/Frontend-Test für den Mail-Import-Dialog wäre sinnvoll, um die tatsächliche Checkbox-Auswahl und den erzeugten Payload im UI abzusichern.
-- Optional könnte der Kandidatenabruf fehlertoleranter gestaltet werden, damit bei einem Fehler in `/api/vorgaenge/link-candidates` zumindest der übrige Import-Dialog weiterhin nutzbar bleibt.
+`feedback/Review-report.md` taucht in `runner_validated_changed_paths`, aber nicht im GitHub-Compare auf. Da die maßgeblichen GitHub-Änderungen sauber auf die relevanten Code-/Testdateien und den Implementierungsbericht beschränkt sind und der Branch `ahead` ohne `behind` ist, ist das für diese fachliche Review kein Blocker.
