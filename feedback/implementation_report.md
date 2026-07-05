@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260705-225452
+agent2/rework-20260705-233547
 
 ## Geaenderte Dateien
 
@@ -34,7 +34,7 @@ agent2/codex-20260705-225452
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 75 passed, 2 skipped
+- `tests/test_dashboard.py`: 76 passed, 2 skipped
 
 ## Bekannte Einschraenkungen
 
@@ -46,3 +46,10 @@ agent2/codex-20260705-225452
 - Die Backend-Aenderung sitzt in `_mail_vorgang_import(...)` und `_apply_mail_transaction_classifications(...)`.
 - Die Frontend-Aenderung sitzt in `renderMailVorgangReview(...)`, `createMailTransactionClassificationSection(...)` und `readMailTransactionClassifications(...)`.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits im Arbeitsbaum vorhanden bzw. untracked und wurden nicht fuer dieses Paket geaendert.
+
+## Nachbesserung nach Review
+
+- Blockierendes Review-Problem behoben: `transaction_classifications` wird jetzt in `_mail_vorgang_import(...)` vollstaendig vor der Vorgangsanlage validiert.
+- Die Vorvalidierung prueft Objektform, nicht leere und im Import verknuepfte Transaktions-IDs, Objektwerte, mindestens ein Feld, erlaubte Klassifikationsfelder, Textwerte und die bestehende Laengenbegrenzung.
+- `_apply_mail_transaction_classifications(...)` validiert weiterhin vor dem Anwenden und nutzt danach unveraendert `update_transaction_classification(...)` fuer die Persistenz.
+- Ein neuer HTTP-Regressionstest prueft, dass ein Request mit erstem gueltigem und spaeterem ungueltigem Inline-Klassifikationseintrag mit 400 abgelehnt wird, ohne einen Vorgang an die Mail zu haengen und ohne die erste Transaktion teilweise zu klassifizieren.

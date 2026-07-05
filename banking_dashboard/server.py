@@ -5492,6 +5492,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             raise ValueError("Vorgangsdaten fehlen.")
         links = payload.get("links") if isinstance(payload.get("links"), dict) else {}
         transaction_ids = _list_of_strings(links.get("transaction_ids", []))
+        transaction_classifications = payload.get(
+            "transaction_classifications",
+            {},
+        )
+        self._validate_mail_transaction_classifications(
+            transaction_classifications,
+            transaction_ids,
+        )
         requested_completed = (
             bool(raw_vorgang.get("completed"))
             if isinstance(raw_vorgang.get("completed"), bool)
@@ -5522,7 +5530,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         )
         vorgangs_id = str(vorgang["vorgangs_id"])
         self._apply_mail_transaction_classifications(
-            payload.get("transaction_classifications", {}),
+            transaction_classifications,
             transaction_ids,
         )
         imported_documents = []
@@ -5631,6 +5639,24 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         raw_classifications: Any,
         linked_transaction_ids: list[str],
     ) -> None:
+        self._validate_mail_transaction_classifications(
+            raw_classifications,
+            linked_transaction_ids,
+        )
+        if raw_classifications in (None, ""):
+            return
+        for raw_transaction_id, values in raw_classifications.items():
+            transaction_id = str(raw_transaction_id or "").strip()
+            self.server.data_store.update_transaction_classification(
+                transaction_id,
+                values,
+            )
+
+    def _validate_mail_transaction_classifications(
+        self,
+        raw_classifications: Any,
+        linked_transaction_ids: list[str],
+    ) -> None:
         if raw_classifications in (None, ""):
             return
         if not isinstance(raw_classifications, dict):
@@ -5654,10 +5680,24 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     + transaction_id
                     + " muessen ein Objekt sein."
                 )
-            self.server.data_store.update_transaction_classification(
-                transaction_id,
-                values,
-            )
+            if not values:
+                raise ValueError(
+                    "Mindestens ein Klassifikationsfeld ist erforderlich."
+                )
+            unknown_fields = sorted(set(values) - set(CLASSIFICATION_FIELDS))
+            if unknown_fields:
+                raise ValueError(
+                    "Unbekannte Klassifikationsfelder: "
+                    + ", ".join(unknown_fields)
+                )
+            for field, value in values.items():
+                if not isinstance(value, str):
+                    raise ValueError(f"Das Feld {field} muss Text enthalten.")
+                if len(value.strip()) > MAX_CLASSIFICATION_FIELD_LENGTH:
+                    raise ValueError(
+                        f"Das Feld {field} darf hoechstens "
+                        f"{MAX_CLASSIFICATION_FIELD_LENGTH} Zeichen enthalten."
+                    )
 
     def _balance_history_response(
         self,
