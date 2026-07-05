@@ -2,11 +2,11 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Generischen Ein-Klick-Workflow für manuelle Vorgangserstellung, Klassifikation und Abschluss ausbauen
+## 1. Generischen Ein-Klick-Workflow fuer manuelle Vorgangserstellung, Klassifikation und Abschluss ausbauen
 
 **Priorität:** hoch
 
-**Grund:** Größeres Folgepaket mit zusätzlicher UI für Inline-Klassifikation und Abschlusslogik; bewusst nicht Teil der kleinen Erweiterung des bestehenden Mail-Import-Flows.
+**Grund:** Groesseres Folgepaket mit zusaetzlicher UI fuer Inline-Klassifikation und Abschlusslogik; bewusst nicht Teil der kleinen Erweiterung des bestehenden Mail-Import-Flows.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges Zuordnungsthema mit zusätzlicher Fachklärung; sollte separat nach der einfachen Transaktionsverknüpfung behandelt werden.
+**Grund:** Eigenstaendiges Zuordnungsthema mit zusaetzlicher Fachklaerung; sollte separat nach der einfachen Transaktionsverknuepfung behandelt werden.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit neuem Datenmodell- und Integrationsbedarf; nicht klein genug für das nächste Arbeitspaket.
+**Grund:** Eigenstaendiges groesseres Modul mit neuem Datenmodell- und Integrationsbedarf; nicht klein genug fuer das naechste Arbeitspaket.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema, das zuerst in kleinere konkrete UX-Pakete zerlegt werden sollte; kein klar abgegrenztes Einzelpaket für diese Runde.
+**Grund:** Querschnittsthema, das zuerst in kleinere konkrete UX-Pakete zerlegt werden sollte; kein klar abgegrenztes Einzelpaket fuer diese Runde.
 
 **Feedback:**
 
