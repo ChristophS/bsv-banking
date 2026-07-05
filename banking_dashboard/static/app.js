@@ -2574,20 +2574,26 @@ async function startMailVorgangReview(entryId, button) {
   button.disabled = true;
   button.textContent = "Analyse läuft";
   try {
-    const [response, , suggestions] = await Promise.all([
+    const [response, , suggestions, candidates] = await Promise.all([
       fetch(
         `/api/mail/${encodeURIComponent(entryId)}/vorgang-analysis`,
         {method: "POST"},
       ),
       loadVorgangTypes(),
       loadVorgangSuggestions("mail", entryId).catch(() => null),
+      loadLinkCandidates(),
     ]);
     const payload = await readResponse(response);
     state.mailVorgangReview = {
       entryId,
       analysis: payload.analysis,
     };
-    openMailVorgangReviewDialog(entryId, payload.analysis, suggestions);
+    openMailVorgangReviewDialog(
+      entryId,
+      payload.analysis,
+      suggestions,
+      candidates,
+    );
   } catch (error) {
     showError(error.message);
   } finally {
@@ -2782,7 +2788,12 @@ async function submitMailTerminForm(event) {
   }
 }
 
-function openMailVorgangReviewDialog(entryId, analysis, suggestionsPayload = null) {
+function openMailVorgangReviewDialog(
+  entryId,
+  analysis,
+  suggestionsPayload = null,
+  candidatesPayload = null,
+) {
   const detail = state.selectedMailDetail;
   if (!detail || (detail.id !== entryId && detail.inboxId !== entryId)) {
     showError("Maildetails konnten fuer die Vorgangspruefung nicht geladen werden.");
@@ -2797,7 +2808,13 @@ function openMailVorgangReviewDialog(entryId, analysis, suggestionsPayload = nul
   elements.detailSubtitle.textContent =
     "Vorschlag prüfen, verknüpfen und importieren";
   elements.detailContent.replaceChildren(
-    renderMailVorgangReview(detail, analysis, suggestionsPayload, entryId),
+    renderMailVorgangReview(
+      detail,
+      analysis,
+      suggestionsPayload,
+      entryId,
+      candidatesPayload,
+    ),
   );
   if (!elements.dialog.open) {
     elements.dialog.showModal();
@@ -2810,6 +2827,7 @@ function renderMailVorgangReview(
   analysis,
   suggestionsPayload = null,
   entryId = detail.id,
+  candidatesPayload = null,
 ) {
   const section = mailElement("section", "mail-vorgang-review");
   section.append(
@@ -2877,12 +2895,18 @@ function renderMailVorgangReview(
     ),
   );
   const links = sourceLinkPayload({type: "mail", id: entryId});
+  const transactionCandidates = {
+    suggestions: {},
+    candidates: {
+      transactions: candidatesPayload?.transactions || [],
+    },
+  };
   fields.append(
     createSuggestionSection(
       "Transaktionen verknüpfen",
       "transaction_ids",
       links.transaction_ids,
-      linkItems(suggestionsPayload, "transactions"),
+      linkItems(transactionCandidates, "transactions"),
     ),
     createSuggestionSection(
       "Weitere Mails verknüpfen",

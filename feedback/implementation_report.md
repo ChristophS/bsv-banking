@@ -2,26 +2,28 @@
 
 ## Branchname
 
-agent2/codex-20260702-114442
+agent2/codex-20260705-223516
 
 ## Geaenderte Dateien
 
+- banking_dashboard/static/app.js
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Den bestehenden HTTP-Blocker-Test fuer `POST /api/mail/<id>/vorgang-import` mit `completed=true` erweitert.
-- Der Test loest weiter den Fehlerfall aus, indem ein Rechnungsvorgang ohne importiertes/verknuepftes Dokument sofort abgeschlossen werden soll.
-- Nach dem `400`-Fehler wird der verknuepfte Vorgang ueber die Mail-Vorgangs-API eindeutig wiedergefunden.
-- Der persistierte Vorgang wird danach explizit erneut per `vorgang_detail()` geladen.
-- Der Test prueft, dass der persistierte Vorgang `status == 'in_bearbeitung'` hat, nicht manuell abgeschlossen wurde und weiter wegen fehlendem Dokument blockiert ist.
+- Der Mail-Import laedt beim Start der Vorgangspruefung zusaetzlich den bestehenden Kandidatenkatalog ueber `/api/vorgaenge/link-candidates`.
+- Die Transaktionsauswahl im Mail-Import verwendet fuer `transaction_ids` ausschliesslich `candidates.transactions` aus diesem Katalog.
+- Die bestehende Checkbox-/Suchliste wird fuer die Auswahl vorhandener Transaktionen wiederverwendet; sie zeigt Label, Datum, Betrag und Klassifikationsstatus an.
+- Der bestehende Import-Payload sendet ausgewaehlte Transaktionen weiterhin als `links.transaction_ids` an `POST /api/mail/<inbox_id>/vorgang-import`.
+- API-Tests sichern Import mit `transaction_ids`, Import ohne `transaction_ids` und den 404-Fehlerpfad fuer unbekannte `transaction_ids` ab.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung am Mail-Import-Endpunkt.
-- Keine Aenderung an Abschlusslogik, Datenmodell oder Services.
-- Kein manueller Browser-Test gegen externe Dienste ausgefuehrt.
+- Keine Aenderung an `banking_dashboard/server.py`, weil `_mail_vorgang_import()` `links.transaction_ids` bereits an `create_vorgang()` uebergibt und die Existenzpruefung ueber `_replace_link_rows()` laeuft.
+- Keine Aenderung an `banking_dashboard/static/index.html`, weil der Mail-Import-Dialog im bestehenden Frontend dynamisch in `app.js` aufgebaut wird und dort bereits der passende Container erzeugt wird.
+- Keine groessere UX- oder Layout-Ueberarbeitung.
+- Keine externen Dienste, echten Logins oder Browser-Automationen verwendet.
 
 ## Ausgefuehrte Tests
 
@@ -29,15 +31,16 @@ agent2/codex-20260702-114442
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 68 passed, 2 skipped
+- `tests/test_dashboard.py`: 70 passed, 2 skipped
 
 ## Bekannte Einschraenkungen
 
-- Der Test nutzt den bestehenden Fake-Mail-Backend und lokale Testdaten; externe Mail-, Banking- oder Login-Dienste wurden nicht verwendet.
-- Bestehende Browser-Test-Skips bleiben unveraendert.
+- Die Tests nutzen den bestehenden Fake-Mail-Backend und lokale Testdaten.
+- Die zwei vorhandenen Browser-Tests bleiben uebersprungen, wenn Playwright/Chromium lokal nicht verfuegbar ist.
 
 ## Hinweise fuer den Review-Agenten
 
-- Die fachliche Logik bleibt in `_mail_vorgang_import()` und `DashboardDataStore.update_vorgang_status()` unveraendert.
-- Die neue Absicherung sitzt im bestehenden Test `test_mail_import_completion_returns_blocker_over_http` in `tests/test_dashboard.py`.
+- Die Frontend-Aenderung sitzt in `startMailVorgangReview()` und `renderMailVorgangReview()`.
+- Fuer den Mail-Import werden Transaktionskandidaten bewusst nicht aus Vorschlaegen gemischt, sondern aus dem geladenen Kandidatenkatalog gelesen.
+- Der negative API-Test erwartet die bestehende Semantik: unbekannte Transaktion fuehrt zu HTTP 404 mit Fehlermeldung aus `LookupError`.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits ausserhalb dieses Arbeitspakets im Arbeitsbaum sichtbar und wurden nicht geaendert.
