@@ -8,46 +8,55 @@
 
 ## Begründung
 
-Der Diff ist für die fachliche Prüfung ausreichend: Backend, Frontend und Tests zeigen die geforderte kontrollierte Direktabschluss-Option im Mail-Import und verwenden weiterhin die bestehende Abschlusslogik.
+Die maßgeblichen GitHub-Diffs erfüllen die Muss-Anforderungen: bestehender POST-/Validierungsfluss wird genutzt, die UI sendet bereits completed und Verknüpfungs-IDs aus dem Kandidatenkatalog, Backend-Fehler werden nun dauerhaft im Formular angezeigt und API-Tests decken Erfolg und Ablehnung ab.
 
 ## Zusammenfassung
 
-Die Umsetzung ergänzt den Mail-Import um eine explizite Direktabschluss-Rückmeldung, fängt fachliche Abschlussfehler kontrolliert ab, lässt nicht erfüllbare Vorgänge offen und passt die UI-Statusmeldung sowie API-Tests für Erfolgs- und Ablehnungsfall an. Es wurden keine blockierenden Probleme gefunden.
+Akzeptiert: Der bestehende manuelle Vorgangs-Erstellflow unterstützt den Direktabschluss mit verknüpften Transaktionen bereits, und diese Umsetzung ergänzt die notwendige sichtbare Formular-Fehleranzeige sowie API-Tests für erfolgreichen und blockierten Direktabschluss.
 
-## Review-Ergebnis
+# Review Report
 
-Accepted: **true**
+## Ergebnis
 
-## Prüfung gegen das Arbeitspaket
+**Accepted:** true
 
-Die Änderung erfüllt die Muss-Anforderungen des Arbeitspakets:
+## Geprüfter Umfang
 
-- Der bestehende Mail-Import-Flow unterstützt weiterhin einen expliziten Abschlusswunsch über `vorgang.completed` beziehungsweise die vorhandene Checkbox im Mail-Review-Dialog.
-- Der Abschluss erfolgt im Backend ausschließlich über `self.server.data_store.update_vorgang_status(vorgangs_id, True)` und damit über die bestehende Abschlussprüfung. Es wird keine Abschlusslogik dupliziert.
-- Wenn `update_vorgang_status(...)` einen `ValueError` wegen nicht erfüllter Abschlussvoraussetzungen wirft, wird dieser fachlich abgefangen. Der Vorgang bleibt offen und die Antwort enthält eine verständliche Rückmeldung in `direct_completion`.
-- Die API-Antwort macht über `direct_completion.requested`, `completed`, `rejected` und `message` klar erkennbar, ob ein Direktabschluss gewünscht, erfolgreich oder abgewiesen wurde.
-- Das bestehende Muster, den Vorgang zunächst offen anzulegen und erst nach Dokument-/Link-Anlage optional abzuschließen, bleibt erhalten.
-- Die UI ergänzt zur Option „Direkt abschließen“ einen erklärenden Hinweis und lässt die Checkbox standardmäßig ausgeschaltet, da Checkboxen ohne gesetztes `checked`-Attribut initial nicht aktiviert sind.
-- Die Statusmeldung nach dem Import berücksichtigt die neue Backend-Rückmeldung, insbesondere den abgewiesenen Direktabschluss.
-- Die Tests decken sowohl einen erfolgreichen Direktabschluss als auch einen abgewiesenen Direktabschluss ab.
+Geprüft wurden das Arbeitspaket, der Implementation Report, der GitHub-Diff und der nachgeladene Kontext zu `banking_dashboard/static/app.js`, `banking_dashboard/server.py` und `transaction_store/database.py`.
 
-## Technische Bewertung
+Hinweis: Der nachgeladene Vollinhalt von `banking_dashboard/static/app.js` zeigt an der geänderten Stelle nicht die im GitHub-Diff enthaltene `.form-error`-Ergänzung. Für die Bewertung ist gemäß Vorgabe der GitHub-Diff maßgeblich; der übrige Kontext war ausreichend, um den bestehenden Flow zu prüfen.
 
-Die Backend-Änderung ist klein und zielgerichtet. Kritisch ist, dass der Ablehnungsfall nicht mehr als generischer Fehler oder fälschlich abgeschlossener Vorgang endet. Genau das wird durch den `try`/`except ValueError`-Block erreicht: Bei einer fachlichen Ablehnung wird der aktuelle Vorgangsdetailstand erneut geladen und als offen zurückgegeben.
+## Bewertung gegen die Anforderungen
 
-Die Entscheidung, den Import bei nicht erfüllbarem Abschlusswunsch mit `201` erfolgreich abzuschließen und nur den Abschluss in `direct_completion` abzulehnen, ist durch das Arbeitspaket gedeckt. Dort war offen gelassen, ob ein nicht erfüllbarer Abschlusswunsch den gesamten Import abbrechen oder den Vorgang offen importieren soll. Die gewählte Variante ist sicher, weil sie keinen falschen Abschluss speichert und eine verständliche Validierungsrückmeldung liefert.
+### Direktabschluss per POST `/api/vorgaenge`
 
-Die Frontend-Änderung ist auf den Mail-Import beschränkt und führt keinen generischen Ein-Klick-Abschluss außerhalb dieses Flows ein. Bestehende Verknüpfungen zu Dokumenten, To-Dos, Terminen und Links werden durch den Diff nicht umgebaut.
+Erfüllt. `DashboardDataStore.create_vorgang(...)` verarbeitet `completed=true`, setzt den Status auf `abgeschlossen` und ruft vor dem Insert `_validate_vorgang_completion_values(...)` auf. Diese Validierung nutzt die bestehenden Abschlussbedingungen für unvollständig klassifizierte Transaktionen sowie Rechnung-Transaktion/Dokument-Anforderungen. Es wurde keine neue Sonderlogik für manuelle Vorgänge eingeführt.
 
-## Tests
+Die neuen Tests in `tests/test_dashboard.py` decken ab:
 
-Die bestehenden Tests wurden sinnvoll erweitert:
+- erfolgreichen Direktabschluss eines neu angelegten Vorgangs mit verknüpfter vollständig klassifizierter Transaktion,
+- HTTP-400-Ablehnung bei unvollständig klassifizierter Transaktion,
+- kein stilles Offen-Anlegen im Fehlerfall.
 
-- `test_mail_import_can_complete_new_vorgang_over_http` prüft nun zusätzlich die erfolgreiche `direct_completion`-Antwort.
-- `test_mail_import_completion_returns_blocker_over_http` prüft nun, dass der Import trotz abgewiesenem Direktabschluss mit `201` einen offenen Vorgang zurückliefert und die fachliche Blocker-Meldung in `direct_completion.message` enthalten ist.
+### UI-Verknüpfungsauswahl und completed-Option
 
-Laut Implementation Report wurden `tests/test_dashboard.py` mit `70 passed, 2 skipped` ausgeführt.
+Erfüllt durch den bestehenden Erstellflow in `renderVorgangCreateForm(...)`: Das Formular lädt über `loadLinkCandidates()` den vorhandenen Kandidatenkatalog aus `GET /api/vorgaenge/link-candidates`, rendert unter anderem die Sektion `Transaktionen` und sendet über `readVorgangForm(...)` sowohl `completed` als auch `transaction_ids`, `mail_ids`, `todo_ids`, `beleg_ids` und `termin_ids` an `POST /api/vorgaenge`.
 
-## Hinweise
+Die vorhandene Kandidatendarstellung enthält bei Transaktionen zudem Klassifikationsinformationen über `transactionClassificationSummary(...)`, sodass Nutzer erkennen können, ob die Transaktion vollständig klassifiziert ist.
 
-`feedback/Review-report.md` taucht in `runner_validated_changed_paths`, aber nicht im GitHub-Compare auf. Da die maßgeblichen GitHub-Änderungen sauber auf die relevanten Code-/Testdateien und den Implementierungsbericht beschränkt sind und der Branch `ahead` ohne `behind` ist, ist das für diese fachliche Review kein Blocker.
+### Sichtbare Backend-Fehlermeldung im Frontend
+
+Erfüllt. Der Diff ergänzt im Erstellformular ein dauerhaft sichtbares Element `.form-error`, setzt es vor jedem Submit zurück und befüllt es im Catch-Zweig mit `error.message`. Damit wird die vom Backend gelieferte konkrete Fehlermeldung nicht nur als kurzlebiger Toast angezeigt, sondern bleibt im Formular sichtbar.
+
+### Keine unerlaubte Architekturänderung / Scope Creep
+
+Erfüllt. Es wurden keine geschützten produktiven Daten, Secrets oder externen Dienste verändert. Die Persistenz- und Abschlusslogik bleibt unverändert und wird wiederverwendet. Die zusätzliche CSS-Regel ist klein und zweckbezogen.
+
+### Tests und Branch-Zustand
+
+Der Branch ist sauber vergleichbar (`ahead_by=1`, `behind_by=0`, `compare_status=ahead`). Laut Implementation Report wurde `tests/test_dashboard.py` erfolgreich ausgeführt (`72 passed, 2 skipped`). Die zwei neuen API-Tests sind fachlich passend für die Kernanforderung.
+
+## Nicht blockierende Hinweise
+
+- Ein UI-/Browser-Test für die neue Formular-Fehleranzeige wäre hilfreich, aber für dieses Paket nicht zwingend.
+- Die Direktabschluss-Checkbox im manuellen Erstellformular könnte noch einen kurzen erläuternden Hilfetext erhalten, analog zum Mail-Flow.
