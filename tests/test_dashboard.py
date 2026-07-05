@@ -2066,6 +2066,71 @@ class DashboardHTTPTests(unittest.TestCase):
             period = json.load(response)
         self.assertTrue(period["available"])
 
+    def test_vorgang_can_be_created_completed_over_http(self):
+        request = Request(
+            self.base_url + "/api/vorgaenge",
+            data=json.dumps(
+                {
+                    "title": "HTTP Direktabschluss",
+                    "description": "Mit vorhandener Transaktion.",
+                    "vorgangstyp": "Ausgabe",
+                    "completed": True,
+                    "transaction_ids": ["tx_newer"],
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with urlopen(request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            vorgang = json.load(response)["vorgang"]
+
+        self.assertEqual("abgeschlossen", vorgang["status"])
+        self.assertTrue(vorgang["status_manuell"])
+        self.assertEqual(
+            ["tx_newer"],
+            [item["transaktions_id"] for item in vorgang["transaktionen"]],
+        )
+
+    def test_completed_vorgang_creation_rejects_incomplete_transaction_over_http(self):
+        self.server.data_store.update_transaction_classification(
+            "tx_newer",
+            {"unterkategorie": ""},
+        )
+        before = len(
+            self.server.data_store.list_vorgaenge(
+                search="HTTP Direktabschluss blockiert"
+            )
+        )
+        request = Request(
+            self.base_url + "/api/vorgaenge",
+            data=json.dumps(
+                {
+                    "title": "HTTP Direktabschluss blockiert",
+                    "completed": True,
+                    "transaction_ids": ["tx_newer"],
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with self.assertRaises(HTTPError) as context:
+            urlopen(request, timeout=5)
+
+        self.assertEqual(400, context.exception.code)
+        payload = json.loads(context.exception.read().decode("utf-8"))
+        self.assertIn("Unterkategorie", payload["error"])
+        self.assertEqual(
+            before,
+            len(
+                self.server.data_store.list_vorgaenge(
+                    search="HTTP Direktabschluss blockiert"
+                )
+            ),
+        )
+
     def test_mail_vorgang_link_api_returns_details_and_is_idempotent(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
             inbox_id = json.load(response)["messages"][0]["id"]

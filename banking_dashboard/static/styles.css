@@ -2409,6 +2409,17 @@ th[aria-sort="descending"] .sort-indicator {
   color: var(--negative);
 }
 
+.form-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e8b8b8;
+  border-radius: 8px;
+  color: var(--negative);
+  background: #fff3f3;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .classification-status {
   display: flex;
   align-items: center;
