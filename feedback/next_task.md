@@ -17,11 +17,11 @@ Im bestehenden Mail-Import soll der Nutzer vorhandene Transaktionen aus dem bere
 
 ## Wahrscheinliche Änderungsstellen
 
-- banking_dashboard/static/app.js: bestehenden Mail-Import-State um transaction_ids erweitern, Kandidaten laden, Auswahl halten, Request-Payload ergänzen und Fehleranzeige im bestehenden Import-Flow nutzen.
-- banking_dashboard/static/app.js: Renderlogik für den Mail-Import um einen kleinen Auswahlbereich für candidates.transactions ergänzen.
-- banking_dashboard/static/index.html: im bestehenden Mail-Import-Bereich Platzhalter/Container für Transaktionsauswahl ergänzen, ohne den Dialog strukturell neu zu bauen.
-- banking_dashboard/server.py: voraussichtlich nur kleine Absicherung oder testrelevante Klarstellung, falls der bestehende Import-Flow für links.transaction_ids noch eine minimale Validierungs- oder Response-Anpassung braucht.
-- tests/test_dashboard.py: API-Tests für Mail-Import mit transaction_ids, ohne transaction_ids und mit ungültiger transaction_id ergänzen.
+- banking_dashboard/static/app.js: Mail-Import-State um links.transaction_ids erweitern, Kandidaten beim Öffnen/Laden holen, Auswahl halten und in den bestehenden Request-Payload integrieren.
+- banking_dashboard/static/app.js: Renderlogik im Mail-Import um einen kleinen Auswahlbereich für candidates.transactions ergänzen; Anzeige knapp mit Label/Datum/Betrag/Klassifikationshinweis.
+- banking_dashboard/static/index.html: im bestehenden Mail-Import-Bereich einen Container/Platzhalter für die Transaktionsauswahl ergänzen, ohne Dialogstruktur neu zu bauen.
+- banking_dashboard/server.py: voraussichtlich keine große Fachlogik nötig; nur falls Tests eine kleine Absicherung oder Fehlersichtbarkeit am Import-Endpunkt verlangen.
+- tests/test_dashboard.py: API-Tests für Import mit transaction_ids, ohne transaction_ids und mit ungültiger transaction_id ergänzen.
 
 ## Muss umgesetzt werden
 
@@ -55,7 +55,7 @@ Im bestehenden Mail-Import soll der Nutzer vorhandene Transaktionen aus dem bere
 
 ## Hinweise für den Umsetzungs-Agenten
 
-- In server.py ist die fachliche Verarbeitung bereits vorhanden: _mail_vorgang_import baut create_vorgang(...) mit transaction_ids aus links.transaction_ids auf.
+- In server.py ist die fachliche Verarbeitung bereits vorhanden: _mail_vorgang_import übergibt transaction_ids aus links.transaction_ids an create_vorgang(...).
 - Die Existenzprüfung sollte bewusst über _replace_vorgang_links bzw. _replace_link_rows laufen; dort wird gegen transactions validiert und bei fehlenden IDs LookupError ausgelöst.
 - GET /api/vorgaenge/link-candidates liefert den kompletten Katalog. Für dieses Paket im Frontend nur candidates.transactions verwenden, ohne Vermischung mit Mails, To-Dos, Belegen oder Terminen.
 - Falls app.js bereits einen Import-State für documents, todos, termine und links hält, transaction_ids dort als weiteres links-Feld analog einhängen statt einen separaten Sonderpfad zu bauen.
