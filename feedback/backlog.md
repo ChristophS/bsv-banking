@@ -2,11 +2,11 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Generischen Ein-Klick-Workflow für manuelle Vorgangserstellung, Klassifikation und Abschluss ausbauen
+## 1. Transaktionsparameter direkt im manuellen Direktabschluss-Flow bearbeitbar machen
 
 **Priorität:** hoch
 
-**Grund:** Eigenständiges, größeres Folgepaket. Das aktuelle Arbeitspaket beschränkt sich bewusst auf den vorhandenen Mail-Import-Flow und baut keinen generischen manuellen Ein-Klick-Workflow.
+**Grund:** Als eigenes Folgepaket besser kontrollierbar. Zuerst den stabilen Direktabschluss mit vorhandenen, bereits klassifizierten Transaktionen sicherstellen; danach Inline-Klassifikation im Erstellflow ergänzen.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Benötigt zusätzliche Fachklärung und greift tiefer in Zuordnungslogik und UI ein; zu groß für das aktuelle kleine Paket.
+**Grund:** Benötigt zusätzliche Fachklärung und greift tiefer in Zuordnungslogik und UI ein; nicht Teil des kleinen nächsten Pakets.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit neuem Datenmodell und externer Integration; nicht Teil dieses Arbeitspakets.
+**Grund:** Eigenständiges größeres Modul mit neuem Datenmodell und externer Integration; nicht Teil dieses Pakets.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema ohne klar abgegrenzten Einzelchange; später in konkrete, kleine UX-Pakete zerlegen.
+**Grund:** Querschnittsthema; später in konkrete kleine UX-Pakete zerlegen.
 
 **Feedback:**
 
