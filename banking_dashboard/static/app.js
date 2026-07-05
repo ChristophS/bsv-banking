@@ -6530,15 +6530,19 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
   form.append(createSuggestionSection("Dokumente", "beleg_ids", links.beleg_ids, linkItems(suggestionsPayload, "belege")));
   form.append(createSuggestionSection("Termine", "termin_ids", links.termin_ids, linkItems(suggestionsPayload, "termine"), "termin"));
 
+  const formError = mailElement("p", "form-error");
+  formError.hidden = true;
   const actions = mailElement("div", "vorgang-form-actions");
   const submit = mailElement("button", "primary-action", "Vorgang erstellen");
   submit.type = "submit";
   const status = mailElement("span", "save-state");
   actions.append(submit, status);
-  form.append(actions);
+  form.append(formError, actions);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     submit.disabled = true;
+    formError.hidden = true;
+    formError.textContent = "";
     status.className = "save-state is-saving";
     status.textContent = "Vorgang wird erstellt";
     try {
@@ -6560,6 +6564,8 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
       submit.disabled = false;
       status.className = "save-state is-error";
       status.textContent = "Erstellen fehlgeschlagen";
+      formError.textContent = error.message;
+      formError.hidden = false;
       showError(error.message);
     }
   });
