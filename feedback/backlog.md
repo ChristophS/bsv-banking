@@ -2,11 +2,11 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Generischen Ein-Klick-Workflow fuer manuelle Vorgangserstellung, Klassifikation und Abschluss ausbauen
+## 1. Generischen Ein-Klick-Workflow für manuelle Vorgangserstellung, Klassifikation und Abschluss ausbauen
 
 **Priorität:** hoch
 
-**Grund:** Groesseres Folgepaket mit zusaetzlicher UI fuer Inline-Klassifikation und Abschlusslogik; bewusst nicht Teil der kleinen Erweiterung des bestehenden Mail-Import-Flows.
+**Grund:** Eigenständiges, größeres Folgepaket. Das aktuelle Arbeitspaket beschränkt sich bewusst auf den vorhandenen Mail-Import-Flow und baut keinen generischen manuellen Ein-Klick-Workflow.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenstaendiges Zuordnungsthema mit zusaetzlicher Fachklaerung; sollte separat nach der einfachen Transaktionsverknuepfung behandelt werden.
+**Grund:** Benötigt zusätzliche Fachklärung und greift tiefer in Zuordnungslogik und UI ein; zu groß für das aktuelle kleine Paket.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenstaendiges groesseres Modul mit neuem Datenmodell- und Integrationsbedarf; nicht klein genug fuer das naechste Arbeitspaket.
+**Grund:** Eigenständiges größeres Modul mit neuem Datenmodell und externer Integration; nicht Teil dieses Arbeitspakets.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema, das zuerst in kleinere konkrete UX-Pakete zerlegt werden sollte; kein klar abgegrenztes Einzelpaket fuer diese Runde.
+**Grund:** Querschnittsthema ohne klar abgegrenzten Einzelchange; später in konkrete, kleine UX-Pakete zerlegen.
 
 **Feedback:**
 
