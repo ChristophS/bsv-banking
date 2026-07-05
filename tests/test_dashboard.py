@@ -2264,6 +2264,15 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual("abgeschlossen", vorgang["status"])
         self.assertTrue(vorgang["status_manuell"])
         self.assertTrue(vorgang["abschluss_moeglich"])
+        self.assertEqual(
+            {
+                "requested": True,
+                "completed": True,
+                "rejected": False,
+                "message": "Vorgang direkt abgeschlossen.",
+            },
+            imported["direct_completion"],
+        )
         self.assertEqual(1, len(imported["documents"]))
         self.assertEqual(["tx_newer"], [
             item["transaktions_id"] for item in vorgang["transaktionen"]
@@ -2296,12 +2305,23 @@ class DashboardHTTPTests(unittest.TestCase):
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with self.assertRaises(HTTPError) as context:
-            urlopen(import_request, timeout=5)
+        with urlopen(import_request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            payload = json.load(response)
 
-        self.assertEqual(400, context.exception.code)
-        payload = json.loads(context.exception.read().decode("utf-8"))
-        self.assertIn("mindestens ein verknuepftes Dokument", payload["error"])
+        self.assertEqual("in_bearbeitung", payload["vorgang"]["status"])
+        self.assertEqual(
+            {
+                "requested": True,
+                "completed": False,
+                "rejected": True,
+                "message": (
+                    "Vorgaenge vom Typ Rechnung brauchen vor dem Abschluss "
+                    "mindestens ein verknuepftes Dokument."
+                ),
+            },
+            payload["direct_completion"],
+        )
 
         with urlopen(
             self.base_url + f"/api/mail/{inbox_id}/vorgaenge",
