@@ -2950,6 +2950,75 @@ class DashboardHTTPTests(unittest.TestCase):
 
 
 class DashboardTodoBrowserTests(unittest.TestCase):
+    def test_unassigned_documents_overview_card_click_opens_document_context(self):
+        try:
+            from playwright.sync_api import expect, sync_playwright
+        except ImportError:
+            self.skipTest("Playwright ist nicht installiert.")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            belege_directory = Path(temporary_directory) / "belege"
+            belege_directory.mkdir()
+            (belege_directory / "nicht-zugewiesen.pdf").write_bytes(
+                b"%PDF-test"
+            )
+            server = create_server(
+                database_path,
+                port=0,
+                mail_backend=FakeDashboardMailBackend(),
+                mail_spam_scorer=FakeDashboardSpamScorer(),
+            )
+            thread = threading.Thread(
+                target=server.serve_forever,
+                daemon=True,
+            )
+            thread.start()
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+            try:
+                with sync_playwright() as playwright:
+                    try:
+                        browser = playwright.chromium.launch(headless=True)
+                    except Exception as exc:
+                        self.skipTest(
+                            f"Chromium ist nicht installiert: {exc}"
+                        )
+                    page = browser.new_page(
+                        viewport={"width": 1500, "height": 1000}
+                    )
+                    page.goto(base_url, wait_until="networkidle")
+
+                    card = page.locator(
+                        "[data-overview-key='unassigned_documents']"
+                    )
+                    expect(card).to_have_attribute(
+                        "data-overview-entity",
+                        "documents",
+                    )
+                    expect(card).to_contain_text(
+                        "Nicht zugewiesene Dokumente"
+                    )
+                    expect(card).to_contain_text("1")
+
+                    card.click()
+
+                    expect(page.locator("#vorgaenge-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    expect(page.locator("#vorgaenge-panel")).to_be_visible()
+                    expect(page.locator("#transactions-panel")).to_be_hidden()
+                    expect(page.locator("#mail-panel")).to_be_hidden()
+                    expect(page.locator("#vorgang-search")).to_have_value("")
+                    expect(
+                        page.locator("#vorgang-hide-completed")
+                    ).not_to_be_checked()
+                    browser.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
     def test_overview_cards_route_to_matching_tabs_and_filters(self):
         try:
             from playwright.sync_api import expect, sync_playwright
