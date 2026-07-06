@@ -2,25 +2,27 @@
 
 ## Branchname
 
-agent2/codex-20260706-094140
+agent2/codex-20260706-094613
 
 ## Geaenderte Dateien
 
-- tests/test_dashboard.py
+- banking_dashboard/static/app.js
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Einen expliziten Browser-Test fuer die Overview-Kachel `unassigned_documents` ergaenzt.
-- Der Test legt einen nicht zugewiesenen Beleg an und prueft die echte gerenderte Kachel mit Key, Label, `data-overview-entity="documents"` und Count.
-- Der Test klickt die echte Kachel aus einem anderen aktiven Tab heraus und prueft, dass der bestehende Vorgangs-/Dokumentenbereich sichtbar wird.
-- Keine Produktivcode-Aenderung vorgenommen, da der vorhandene Klickpfad bereits korrekt auf den bestehenden Vorgangs-/Dokumentenbereich routet.
+- Overview-Kachel-Routing in `banking_dashboard/static/app.js` zentralisiert.
+- Spezifische Kachel-Routen fuer `open_vorgaenge`, `open_todos`, `unassigned_transactions`, `upcoming_termine`, `unassigned_termine` und `unassigned_documents` in `overviewCardRoutes` gebuendelt.
+- Entity-Fallbacks fuer `documents`, `transactions`, `mails`, `todos`, `termine` und `vorgaenge` in `overviewEntityRoutes` gebuendelt.
+- Das bestehende Verhalten der vorhandenen Kacheln beibehalten, inklusive Filter-/Reload-Nebenwirkungen.
+- Keine Aenderung an `banking_dashboard/static/index.html`, da die gerenderten Kacheln bereits stabile `data-overview-key`- und `data-overview-entity`-Attribute besitzen.
+- Vorhandene Browser-Tests fuer den Overview-Klickpfad unveraendert genutzt.
 
 ## Nicht umgesetzte Punkte
 
-- Kein neuer Top-Level-Reiter fuer Belege oder Dokumente.
-- Keine Aenderung an `banking_dashboard/static/app.js`, `banking_dashboard/static/index.html` oder `banking_dashboard/server.py`.
-- Keine neue Mapping-Tabelle und keine Aenderung weiterer Overview-Kacheln.
+- Keine neuen Overview-Kacheln oder Zielbereiche hinzugefuegt.
+- Keine fachlichen Aenderungen an Transaktionen, Vorgaengen, Mails, To-Dos, Terminen oder Budget vorgenommen.
+- Keine Backend- oder API-Erweiterungen vorgenommen.
 
 ## Ausgefuehrte Tests
 
@@ -32,11 +34,11 @@ agent2/codex-20260706-094140
 
 ## Bekannte Einschraenkungen
 
-- Die Anwendung besitzt keinen separaten Top-Level-Tab fuer Dokumente/Belege. Die Kachel oeffnet deshalb den bestehenden Vorgangsbereich, in dem Dokumente fachlich als Belege verknuepft und bearbeitet werden.
-- Playwright/Chromium ist in dieser Umgebung verfuegbar; die uebersprungenen Tests betreffen andere Szenarien.
+- Keine bekannten Einschraenkungen fuer dieses Arbeitspaket.
+- Die 4 uebersprungenen Tests stammen aus vorhandenen Skip-Bedingungen und blockieren dieses Refactoring nicht.
 
 ## Hinweise fuer den Review-Agenten
 
-- Der neue Test steht in `DashboardTodoBrowserTests.test_unassigned_documents_overview_card_click_routes_to_documents_area`.
-- Der Test nutzt Mocks/Fakes fuer Mail- und Spam-Integration und fuehrt keine externen Dienste oder Logins aus.
+- Die zentrale Routing-Logik steht in `overviewCardRoutes` und `overviewEntityRoutes`.
+- `navigateFromOverviewCard` wertet zuerst den spezifischen Kachel-Key aus und nutzt danach den Entity-Fallback.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor der Umsetzung im Arbeitsbaum veraendert bzw. untracked und wurden nicht bearbeitet.
