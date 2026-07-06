@@ -8,57 +8,57 @@
 
 ## Begründung
 
-Der maßgebliche GitHub-Diff erfüllt die Anforderungen minimal und zielgerichtet; Branch-Zustand ist sauber.
+Der Diff ist für die fachliche Prüfung ausreichend: Es wurde ein gezielter Browser-Test in tests/test_dashboard.py ergänzt, der die echte Overview-Kachel unassigned_documents rendert, Metadaten prüft, klickt und den erwarteten Wechsel in den bestehenden Belege-/Dokumenten-Kontext absichert.
 
 ## Zusammenfassung
 
-Das Frontend-Routing für Overview-Karten wurde so ergänzt, dass `unassigned_documents` und `entity === "documents"` den bestehenden Vorgänge-/Dokumente-Kontext öffnen. Die API-Konfiguration wird per Test abgesichert, und ein Browser-Test deckt das Dokumenten-Entity-Routing ab. Keine blockierenden Probleme festgestellt.
+Akzeptiert: Der neue Playwright-Test deckt die echte Overview-Kachel `unassigned_documents` inklusive Key, Label, Entity `documents`, Count und Klickpfad ab. Er würde fehlschlagen, wenn die Kachel nicht mehr aus einem anderen aktiven Tab in den vorgesehenen Vorgangs-/Dokumentenbereich routet. Es wurden keine unnötigen Produktivcode-Änderungen vorgenommen.
 
-# Review Report
+## Review-Ergebnis
 
-## Ergebnis
+**Entscheidung:** Accepted
 
-**Accepted:** true
+## Prüfung gegen das Arbeitspaket
 
-## Geprüfte Anforderungen
+Das Arbeitspaket fordert einen expliziten UI-/Browser-Test für den Klickpfad der Overview-Kachel `unassigned_documents`, der nicht nur API-Daten prüft, sondern den tatsächlich genutzten Frontend-Klickpfad absichert.
 
-- Die Dashboard-Kachel `unassigned_documents` soll nicht mehr fälschlich in andere Bereiche wie Termine routen.
-- Karten mit `entity: documents` sollen den bestehenden Belege-/Dokumente-Bereich öffnen.
-- Andere Overview-Karten sollen unverändert bleiben.
-- Tests sollen die Dokumenten-Zuordnung absichern.
+Die Umsetzung ergänzt in `tests/test_dashboard.py` den Test `test_unassigned_documents_overview_card_click_routes_to_documents_area` innerhalb der Browser-Testklasse.
 
-## Bewertung der Umsetzung
+Der Test erfüllt die wesentlichen Anforderungen:
 
-Der maßgebliche GitHub-Diff ergänzt in `banking_dashboard/static/app.js` in `navigateFromOverviewCard` eine explizite Behandlung für:
+- Er erzeugt eine Testdatenbank und legt einen nicht zugewiesenen Beleg an.
+- Er startet den echten lokalen Dashboard-Server mit Fake-/Mock-Komponenten für Mail und Spam-Scoring.
+- Er öffnet das Frontend per Playwright im Browser.
+- Er selektiert die tatsächlich gerenderte Overview-Kachel über `data-overview-key='unassigned_documents'`.
+- Er prüft fachlich relevante Kennzeichen:
+  - `data-overview-entity='documents'`
+  - `aria-label='Nicht zugewiesene Dokumente: 1'`
+  - sichtbares Label `Nicht zugewiesene Dokumente`
+  - Count `1`
+- Er klickt zunächst eine andere Overview-Kachel (`unread_mails`) und verifiziert den Wechsel auf den Mail-Tab.
+- Anschließend klickt er die echte `unassigned_documents`-Kachel und prüft, dass wieder der bestehende Vorgangs-/Dokumentenbereich sichtbar und aktiv ist.
 
-- `key === "unassigned_documents"`
-- `entity === "documents"`
+Damit ist der zentrale Akzeptanzpunkt erfüllt: Der Test würde fehlschlagen, wenn die Kachel nicht mehr korrekt aus dem Frontend-Klickpfad heraus routet.
 
-Diese Fälle setzen `state.vorgaengeLoaded = false` und aktivieren anschließend den bestehenden `vorgaenge`-Tab. Aus dem nachgeladenen `index.html`-Kontext ist ersichtlich, dass es keinen separaten Top-Level-Tab für Belege/Dokumente gibt und Dokumente fachlich im Vorgangsbereich verarbeitet bzw. angezeigt werden. Damit ist das Routing auf den bestehenden Vorgänge-/Dokumente-Kontext repo-konsistent und führt keine neue Navigationsarchitektur ein.
+## Produktivcode und Scope
 
-Die bestehenden spezifischen Routen für offene Vorgänge, To-Dos, Transaktionen und Termine bleiben unverändert und werden durch die neue Bedingung nicht verdrängt, da sie weiterhin vorher abgearbeitet werden.
+Es wurden keine Änderungen an `banking_dashboard/static/app.js`, `banking_dashboard/static/index.html` oder `banking_dashboard/server.py` vorgenommen. Das ist plausibel, da laut Bericht der bestehende Klickpfad bereits korrekt funktioniert. Es gibt keinen erkennbaren Scope Creep und keine Änderung an geschützten oder fachlich kritischen Bereichen.
 
 ## Tests
 
-In `tests/test_dashboard.py` wurde ergänzt:
+Laut Implementation Report wurde ausgeführt:
 
-- Prüfung, dass die Overview-API weiterhin `unassigned_documents` mit `entity == "documents"` liefert.
-- Browser-Regression für eine Dokumenten-Karte, deren Routing über `entity = documents` erfolgt und den Vorgänge-Tab aktiviert.
+`python -m pytest tests/test_dashboard.py`
 
-Der Implementation Report nennt erfolgreich ausgeführte Tests:
+Ergebnis: `74 passed, 4 skipped`.
 
-- `pytest tests/test_dashboard.py`
-- `node --check banking_dashboard/static/app.js`
+Das ist für dieses Arbeitspaket ausreichend dokumentiert.
 
-## Hinweise
+## Nicht-blockierende Hinweise
 
-Im zusätzlich nachgeladenen Vollinhalt von `banking_dashboard/static/app.js` war die im GitHub-Diff sichtbare neue Bedingung an der betreffenden Stelle nicht enthalten, obwohl `source_ref` auf denselben Commit verweist. Für die Bewertung wurde gemäß Vorgabe der GitHub-Diff als maßgebliche Quelle der tatsächlich geänderten Stellen verwendet. Der übrige geladene Kontext war ausreichend, um zu bestätigen, dass `activateTab("vorgaenge")` der bestehende Vorgänge-/Dokumente-Kontext ist.
+- Der Browser wird aktuell erst am Ende des erfolgreichen Testpfads geschlossen. Bei einer fehlschlagenden Assertion könnte die Browser-Instanz offen bleiben. Ein `try/finally` um `browser.close()` wäre robuster.
+- Falls die UI künftig einen stabileren Dokumente-/Belege-spezifischen Selektor anbietet, könnte der Zielbereich noch präziser als nur über Vorgänge-Tab, Vorgänge-Panel und Tabelle geprüft werden.
 
-## Blockierende Punkte
+## Fazit
 
-Keine.
-
-## Nicht blockierende Vorschläge
-
-- Falls der bestehende Browser-Test nicht bereits die echte Kachel `unassigned_documents` anklickt, sollte ergänzend genau dieser Klickpfad getestet werden.
-- Bei weiteren Overview-Routing-Erweiterungen wäre eine zentrale Mapping-Struktur wartungsfreundlicher als zusätzliche Einzelbedingungen.
+Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch. Keine blockierenden Probleme festgestellt.
