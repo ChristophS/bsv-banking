@@ -8,57 +8,66 @@
 
 ## Begründung
 
-Der Diff ist für die fachliche Prüfung ausreichend: Es wurde ein gezielter Browser-Test in tests/test_dashboard.py ergänzt, der die echte Overview-Kachel unassigned_documents rendert, Metadaten prüft, klickt und den erwarteten Wechsel in den bestehenden Belege-/Dokumenten-Kontext absichert.
+Der GitHub-Diff ist fachlich schlüssig, zentralisiert die bestehende Overview-Kachel-Navigation ohne erkennbare Verhaltensänderung und die vorhandenen Dashboard-Browsertests decken die relevanten Klickpfade weiterhin ab.
 
 ## Zusammenfassung
 
-Akzeptiert: Der neue Playwright-Test deckt die echte Overview-Kachel `unassigned_documents` inklusive Key, Label, Entity `documents`, Count und Klickpfad ab. Er würde fehlschlagen, wenn die Kachel nicht mehr aus einem anderen aktiven Tab in den vorgesehenen Vorgangs-/Dokumentenbereich routet. Es wurden keine unnötigen Produktivcode-Änderungen vorgenommen.
+Die Umsetzung bündelt das Overview-Routing in app.js über zentrale Mapping-Objekte für spezifische Kachel-Keys und Entity-Fallbacks. Das bisherige Verhalten der vorhandenen Kacheln bleibt laut Diff erhalten; die bestehenden Tests decken die betroffenen Klickpfade ab. Daher accepted=true.
 
-## Review-Ergebnis
+# Review Report
 
-**Entscheidung:** Accepted
+## Ergebnis
 
-## Prüfung gegen das Arbeitspaket
+**Accepted:** true
 
-Das Arbeitspaket fordert einen expliziten UI-/Browser-Test für den Klickpfad der Overview-Kachel `unassigned_documents`, der nicht nur API-Daten prüft, sondern den tatsächlich genutzten Frontend-Klickpfad absichert.
+## Geprüfter Umfang
 
-Die Umsetzung ergänzt in `tests/test_dashboard.py` den Test `test_unassigned_documents_overview_card_click_routes_to_documents_area` innerhalb der Browser-Testklasse.
+Geändert wurden laut GitHub Compare:
 
-Der Test erfüllt die wesentlichen Anforderungen:
+- `banking_dashboard/static/app.js`
+- `feedback/implementation_report.md`
 
-- Er erzeugt eine Testdatenbank und legt einen nicht zugewiesenen Beleg an.
-- Er startet den echten lokalen Dashboard-Server mit Fake-/Mock-Komponenten für Mail und Spam-Scoring.
-- Er öffnet das Frontend per Playwright im Browser.
-- Er selektiert die tatsächlich gerenderte Overview-Kachel über `data-overview-key='unassigned_documents'`.
-- Er prüft fachlich relevante Kennzeichen:
-  - `data-overview-entity='documents'`
-  - `aria-label='Nicht zugewiesene Dokumente: 1'`
-  - sichtbares Label `Nicht zugewiesene Dokumente`
-  - Count `1`
-- Er klickt zunächst eine andere Overview-Kachel (`unread_mails`) und verifiziert den Wechsel auf den Mail-Tab.
-- Anschließend klickt er die echte `unassigned_documents`-Kachel und prüft, dass wieder der bestehende Vorgangs-/Dokumentenbereich sichtbar und aktiv ist.
+Der Branch ist sauber vergleichbar (`ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner und GitHub Compare).
 
-Damit ist der zentrale Akzeptanzpunkt erfüllt: Der Test würde fehlschlagen, wenn die Kachel nicht mehr korrekt aus dem Frontend-Klickpfad heraus routet.
+## Fachliche Bewertung gegen das Arbeitspaket
 
-## Produktivcode und Scope
+Das Arbeitspaket verlangte, die Navigation von der Overview zu bestehenden Zielbereichen in `app.js` zentral zu bündeln, ohne das Verhalten der vorhandenen Kacheln zu ändern.
 
-Es wurden keine Änderungen an `banking_dashboard/static/app.js`, `banking_dashboard/static/index.html` oder `banking_dashboard/server.py` vorgenommen. Das ist plausibel, da laut Bericht der bestehende Klickpfad bereits korrekt funktioniert. Es gibt keinen erkennbaren Scope Creep und keine Änderung an geschützten oder fachlich kritischen Bereichen.
+Der Diff ersetzt die bisherige verstreute `if`/`else`-Logik in `navigateFromOverviewCard` durch:
+
+- `overviewCardRoutes` für spezifische Kachel-Keys wie `open_vorgaenge`, `open_todos`, `unassigned_transactions`, `upcoming_termine`, `unassigned_termine` und `unassigned_documents`
+- `overviewEntityRoutes` für generische Entity-Fallbacks wie `documents`, `transactions`, `mails`, `todos`, `termine` und `vorgaenge`
+- `routeOverviewCardToEntity(entity)` als zentrale Fallback-Routing-Funktion
+
+Damit ist die Zuordnung in `app.js` erkennbar zentralisiert und für spätere Kacheln leichter erweiterbar.
+
+## Verhalten der bestehenden Kacheln
+
+Die im Diff abgebildeten Routen entsprechen dem bisherigen Verhalten:
+
+- `open_vorgaenge` setzt weiterhin den Vorgang-Filter auf offene Vorgänge und öffnet den Vorgänge-Tab.
+- `open_todos` setzt weiterhin den To-Do-Filter auf offene To-Dos und öffnet den To-Do-Tab.
+- `unassigned_transactions` setzt weiterhin den Transaktionsfilter und lädt Transaktionen im Transaktionen-Tab.
+- `upcoming_termine` setzt weiterhin den Termin-Filter auf offene Termine und öffnet den Termine-Tab.
+- `unassigned_termine` öffnet weiterhin den Termine-Tab mit Reload.
+- `unassigned_documents` bzw. Entity `documents` routet weiterhin in den Vorgänge-Bereich.
+- Generische Entity-Fallbacks für `transactions`, `mails`, `todos`, `termine` und sonstige Vorgänge bleiben äquivalent.
+
+Es ist keine fachliche Änderung an Transaktionen, Vorgängen, Mails, To-Dos, Terminen oder Budget erkennbar.
 
 ## Tests
 
-Laut Implementation Report wurde ausgeführt:
+`tests/test_dashboard.py` wurde in diesem Paket nicht geändert. Der geladene Testkontext enthält aber bereits passende Browser-Tests für das relevante Verhalten, insbesondere:
 
-`python -m pytest tests/test_dashboard.py`
+- `test_overview_cards_route_to_matching_tabs_and_filters`
+- `test_unassigned_documents_overview_card_click_routes_to_documents_area`
 
-Ergebnis: `74 passed, 4 skipped`.
+Diese Tests prüfen Klick- bzw. Tastaturpfade der bestehenden Overview-Kacheln und die erwarteten aktiven Tabs/Filter. Der Implementation Report nennt außerdem einen erfolgreichen Lauf von `tests/test_dashboard.py` mit `74 passed, 4 skipped`.
 
-Das ist für dieses Arbeitspaket ausreichend dokumentiert.
+## Hinweise
 
-## Nicht-blockierende Hinweise
+Der nachgeladene Inhalt von `banking_dashboard/static/app.js` wirkte gegenüber dem GitHub-Diff veraltet, weil dort die alte `if`/`else`-Implementierung sichtbar war. Da der GitHub-Diff für die tatsächlich geänderten Stellen maßgeblich ist und die Änderung dort vollständig nachvollziehbar ist, blockiert dieser Kontext-Widerspruch die Entscheidung nicht.
 
-- Der Browser wird aktuell erst am Ende des erfolgreichen Testpfads geschlossen. Bei einer fehlschlagenden Assertion könnte die Browser-Instanz offen bleiben. Ein `try/finally` um `browser.close()` wäre robuster.
-- Falls die UI künftig einen stabileren Dokumente-/Belege-spezifischen Selektor anbietet, könnte der Zielbereich noch präziser als nur über Vorgänge-Tab, Vorgänge-Panel und Tabelle geprüft werden.
+## Blockierende Probleme
 
-## Fazit
-
-Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch. Keine blockierenden Probleme festgestellt.
+Keine.
