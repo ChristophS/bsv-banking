@@ -371,10 +371,9 @@ class DashboardDataStoreTests(unittest.TestCase):
     def tearDown(self):
         self.temporary_directory.cleanup()
 
-    def _link_test_mail_to_vorgang(
+    def _create_test_mail(
         self,
         inbox_id: str,
-        vorgangs_id: str,
         *,
         is_read: bool = False,
         deleted: bool = False,
@@ -401,6 +400,24 @@ class DashboardDataStoreTests(unittest.TestCase):
                     now,
                 ),
             )
+            connection.commit()
+
+    def _link_test_mail_to_vorgang(
+        self,
+        inbox_id: str,
+        vorgangs_id: str,
+        *,
+        is_read: bool = False,
+        deleted: bool = False,
+    ) -> None:
+        self._create_test_mail(
+            inbox_id,
+            is_read=is_read,
+            deleted=deleted,
+        )
+        now = "2026-06-11T08:00:00+00:00"
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            connection.execute("PRAGMA foreign_keys = ON")
             connection.execute(
                 """
                 INSERT INTO inbox_vorgaenge (
@@ -780,6 +797,39 @@ class DashboardDataStoreTests(unittest.TestCase):
 
         self.assertEqual(reopened["status"], "in_bearbeitung")
         self.assertTrue(self._mail_is_read("mail_active"))
+
+    def test_create_vorgang_marks_linked_mails_read(self):
+        self._create_test_mail("mail_create_unread")
+        self._create_test_mail("mail_create_read", is_read=True)
+
+        created = self.store.create_vorgang(
+            {
+                "title": "Mailvorgang",
+                "mail_ids": ["mail_create_unread", "mail_create_read"],
+            }
+        )
+
+        self.assertTrue(created["vorgangs_id"].startswith("vorgang_"))
+        self.assertCountEqual(
+            ["mail_create_unread", "mail_create_read"],
+            [mail["inbox_id"] for mail in created["mails"]],
+        )
+        self.assertTrue(self._mail_is_read("mail_create_unread"))
+        self.assertTrue(self._mail_is_read("mail_create_read"))
+
+    def test_update_vorgang_marks_newly_linked_mail_read(self):
+        self._create_test_mail("mail_update_unread")
+
+        updated = self.store.update_vorgang(
+            "vorgang_tx_newer",
+            {"mail_ids": ["mail_update_unread"]},
+        )
+
+        self.assertEqual(
+            ["mail_update_unread"],
+            [mail["inbox_id"] for mail in updated["mails"]],
+        )
+        self.assertTrue(self._mail_is_read("mail_update_unread"))
 
     def test_vorgang_cannot_be_completed_with_incomplete_transaction(self):
         self.store.update_transaction_classification(

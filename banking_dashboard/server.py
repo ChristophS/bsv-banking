@@ -801,6 +801,7 @@ class DashboardDataStore:
                 ),
             )
             self._replace_vorgang_links(connection, vorgangs_id, values)
+            self._mark_vorgang_mails_read(connection, {vorgangs_id})
             connection.commit()
         result = self.vorgang_detail(vorgangs_id)
         if result is None:
@@ -894,6 +895,7 @@ class DashboardDataStore:
             if cursor.rowcount == 0:
                 raise LookupError("Vorgang nicht gefunden.")
             self._replace_vorgang_links(connection, vorgangs_id, values)
+            self._mark_vorgang_mails_read(connection, {vorgangs_id})
             connection.commit()
         result = self.vorgang_detail(vorgangs_id)
         if result is None:
