@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größere funktionale Erweiterung der bestehenden Vorgang-/Dokument-Zuordnung.
+**Grund:** Größere funktionale Erweiterung mit UI-, Vorgangs- und Dokumentzuordnungsfolgen; nicht so klein und risikoarm wie das gewählte Routing-Paket.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit Datenmodell-, Dokumenten- und Integrationsfragen.
+**Grund:** Eigenständiges größeres Modul mit erheblichem Konzept- und Integrationsumfang; nicht für ein kleines nächstes Arbeitspaket geeignet.
 
 **Feedback:**
 
@@ -26,18 +26,8 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Eigenes UI-/Filter-Thema, unabhängig vom aktuellen Arbeitspaket.
+**Grund:** Naheliegender Folgepunkt nach dem jetzigen Routing-Refactoring, aber fachlich separat.
 
 **Feedback:**
 
 - Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen.
-
-## 4. Overview-Routing bei weiteren Kacheln über eine zentrale Mapping-Tabelle vereinfachen
-
-**Priorität:** niedrig
-
-**Grund:** Wartbarkeitsverbesserung, aber nicht notwendig für den aktuellen Stand.
-
-**Feedback:**
-
-- Bereits vorhandener Backlog-Punkt 5.
