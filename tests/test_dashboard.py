@@ -3271,6 +3271,9 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     expect(
                         page.locator("#termin-hide-completed")
                     ).to_be_checked()
+                    expect(
+                        page.locator("#termin-special-filter")
+                    ).to_be_hidden()
 
                     with page.expect_response(
                         lambda response: "/api/termine?" in response.url
@@ -3285,6 +3288,22 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     expect(
                         page.locator("#termin-hide-completed")
                     ).to_be_checked()
+                    expect(
+                        page.locator("#termin-special-filter")
+                    ).to_contain_text(
+                        "Nicht zugewiesene anstehende Termine"
+                    )
+
+                    with page.expect_response(
+                        lambda response: "/api/termine?" in response.url
+                        and "unassigned_upcoming=false" in response.url
+                    ):
+                        page.locator(
+                            "#termin-special-filter-reset"
+                        ).click()
+                    expect(
+                        page.locator("#termin-special-filter")
+                    ).to_be_hidden()
 
                     page.locator(
                         "[data-overview-key='unassigned_documents']"

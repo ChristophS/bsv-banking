@@ -3033,6 +3033,39 @@ th[aria-sort="descending"] .sort-indicator {
   flex: 1;
 }
 
+.termin-special-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -8px 30px 24px;
+  padding: 10px 12px;
+  border: 1px solid #c9d9d1;
+  border-radius: 8px;
+  color: var(--green-900);
+  background: #eef6f1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.termin-special-filter[hidden] {
+  display: none;
+}
+
+.termin-special-filter button {
+  padding: 6px 10px;
+  border: 1px solid #abc5b8;
+  border-radius: 7px;
+  color: var(--green-900);
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.termin-special-filter button:hover {
+  background: #f7fbf9;
+}
+
 .todo-hide-completed {
   display: flex;
   align-items: center;
@@ -4372,6 +4405,12 @@ th[aria-sort="descending"] .sort-indicator {
     align-items: stretch;
     flex-direction: column;
     padding: 0 20px 20px;
+  }
+
+  .termin-special-filter {
+    align-items: stretch;
+    flex-direction: column;
+    margin: -6px 20px 20px;
   }
 
   .todo-form-row {
