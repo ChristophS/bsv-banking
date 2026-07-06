@@ -1311,6 +1311,11 @@ class MailIntegrationHTTPTests(unittest.TestCase):
         self.assertIn("titel", linked["vorgaenge"][0])
         self.assertIn("status", linked["vorgaenge"][0])
 
+        with urlopen(link_request, timeout=5) as response:
+            linked_again = json.load(response)
+        self.assertEqual([vorgangs_id], linked_again["vorgangs_ids"])
+        self.assertEqual(1, len(linked_again["vorgaenge"]))
+
         with urlopen(
             self.base_url + f"/api/mail/{inbox_id}/vorgaenge",
             timeout=5,
@@ -1426,6 +1431,32 @@ class MailIntegrationBrowserTests(unittest.TestCase):
                     expect(
                         page.locator(".mail-delete-button")
                     ).to_be_enabled()
+                    link_form = page.locator("[data-link-mail-vorgang]")
+                    expect(link_form).to_be_visible()
+                    expect(
+                        page.locator(".mail-vorgang-empty")
+                    ).to_contain_text("Noch keinem Vorgang zugeordnet")
+                    candidate_count = page.locator(
+                        ".mail-vorgang-candidate"
+                    ).count()
+                    self.assertGreater(candidate_count, 0)
+                    link_form.locator("input[name='vorgangs_id']").first.check()
+                    link_form.locator("button[type='submit']").click()
+                    expect(
+                        page.locator(".mail-vorgang-item")
+                    ).to_have_count(1)
+                    expect(
+                        page.locator(".mail-vorgang-item")
+                    ).to_contain_text("Entfernen")
+                    expect(
+                        page.locator(".mail-vorgang-candidate")
+                    ).to_have_count(candidate_count - 1)
+                    page.locator(
+                        ".mail-vorgang-item [data-unlink-mail-vorgang]"
+                    ).click()
+                    expect(
+                        page.locator(".mail-vorgang-empty")
+                    ).to_contain_text("Noch keinem Vorgang zugeordnet")
                     bulk_delete = page.locator("#mail-delete-spam")
                     expect(bulk_delete).to_be_enabled()
                     expect(bulk_delete).to_have_text("2 Spam-Mails löschen")

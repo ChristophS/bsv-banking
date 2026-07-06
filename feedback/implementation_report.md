@@ -2,44 +2,46 @@
 
 ## Branchname
 
-agent2/codex-20260706-103043
+agent2/codex-20260706-125527
 
 ## Geaenderte Dateien
 
-- banking_dashboard/server.py
-- tests/test_dashboard.py
+- tests/test_mail_integration.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Die Tagesableitung fuer Termin-Upcoming-Filter wurde in `banking_dashboard/server.py` in einer kleinen internen Hilfsfunktion `_termin_day_sql()` zentralisiert.
-- `overview_counts()` nutzt fuer `upcoming_termine` und `unassigned_termine` weiterhin den Kalendertag aus `beginnt_am`, jetzt ueber die gemeinsame Tagesableitung.
-- `list_termine(unassigned_upcoming=True)` nutzt dieselbe Tagesableitung und behandelt ISO-Datum und ISO-Zeitpunkt konsistent als Kalendertag.
-- Die vorhandene Sortierung und API-Ausgabe bleiben unveraendert; gespeicherte `starts_at`-Werte werden weiter original ausgegeben.
-- Ein Regressionstest deckt heute anstehende Termine mit reinem ISO-Datum und ISO-Zeitpunkt sowie einen vergangenen ISO-Zeitpunkt als Negativfall ab.
-- `transaction_store/database.py` wurde geprueft; dort existiert nur Termin-Schema/Index und keine anzupassende Tageslogik.
+- Die vorhandene Mail-Detail-UI und API-Integration fuer das Zuordnen bestehender Vorgaenge wurde geprueft.
+- Die bestehende UI nutzt `/api/vorgaenge` als Kandidatenliste und `/api/mail/{id}/vorgaenge` fuer die Verknuepfung.
+- Der bestehende UI-Refresh aktualisiert nach POST/DELETE die verknuepften Vorgaenge direkt in der Mail-Detailansicht.
+- Der API-Test `test_mail_can_be_linked_to_vorgang` prueft jetzt explizit, dass ein zweiter POST desselben Vorgangs keine doppelte Zuordnung erzeugt.
+- Der Browser-Test `test_mail_workspace_reads_tags_zooms_and_replies` deckt jetzt den sichtbaren Flow ab: vorhandenen Vorgang auswaehlen, zuordnen, Anzeige pruefen, Kandidatenliste ohne den verknuepften Vorgang pruefen und Zuordnung wieder entfernen.
+- Das bestehende Verhalten zum Erstellen eines neuen Vorgangs aus einer Mail wurde nicht veraendert.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung am Datenbankschema oder an Migrationen, da die fachliche Tageslogik in den Server-Abfragen liegt.
-- Keine Zeitzonen-Lokalisierungslogik fuer Offset-Zeitpunkte, da die bestehende Speicherung den Originalstring beibehaelt und das Arbeitspaket eine minimale Tagesnormalisierung verlangt.
-- Keine Ueberarbeitung der Termin-Sortierung, damit bestehende Listen- und API-Semantik stabil bleibt.
+- Keine neue Backend-Zuordnungslogik, da die vorhandenen Endpunkte und die Tabelle `inbox_vorgaenge` bereits passend vorhanden sind.
+- Keine Aenderung an `banking_dashboard/static/app.js`, `index.html`, `server.py` oder `mail_integration.py`, da die benoetigte Produktfunktionalitaet dort bereits repo-konform umgesetzt war.
+- Keine neue clientseitige Suchkomponente; die bestehende kompakte Suche in der Mail-Detailansicht wird verwendet.
 
 ## Ausgefuehrte Tests
 
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py`
 
 ## Testergebnis
 
 - `tests/test_dashboard.py`: 77 passed, 4 skipped
+- `tests/test_mail_integration.py`: 35 passed, 1 skipped
 
 ## Bekannte Einschraenkungen
 
-- Vier bestehende Tests wurden in der lokalen Umgebung uebersprungen, wie vom bestehenden Test-Setup vorgesehen.
-- ISO-Zeitpunkte mit Offset werden wie bisher nach dem gespeicherten Datumspraefix behandelt; es erfolgt keine Umrechnung in eine lokale Zeitzone.
+- Der Playwright-Browser-Test in `tests/test_mail_integration.py` wurde in dieser Umgebung uebersprungen, wenn Chromium nicht installiert ist. Die Testlogik fuer den UI-Flow ist ergaenzt und wird in einer Umgebung mit Playwright/Chromium ausgefuehrt.
+- Vier bestehende Dashboard-Tests wurden vom vorhandenen Test-Setup uebersprungen.
 
 ## Hinweise fuer den Review-Agenten
 
-- Relevante Logik: `DashboardDataStore.overview_counts()`, `DashboardDataStore.list_termine()` und `_termin_day_sql()` in `banking_dashboard/server.py`.
-- Relevanter Test: `DashboardDataStoreTests.test_today_termine_treat_iso_date_and_timestamp_as_upcoming_day` in `tests/test_dashboard.py`.
-- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.
+- Relevante UI-Stellen: `loadMailDetail()`, `renderMailVorgangSection()`, `submitMailVorgangLink()` und `unlinkMailVorgang()` in `banking_dashboard/static/app.js`.
+- Relevante Backend-Stellen: `DashboardMailManager.link_vorgang()`, `DashboardMailManager.unlink_vorgang()` und `InboxMailStore.link_vorgang()` in `banking_dashboard/mail_integration.py`.
+- `InboxMailStore.link_vorgang()` verwendet `INSERT OR IGNORE`, daher bleibt ein erneuter Link-Request idempotent.
+- `feedback/agent2_prompt.md` ist im Arbeitsbaum untracked sichtbar, wurde aber nicht geaendert.
