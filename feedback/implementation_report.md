@@ -2,26 +2,28 @@
 
 ## Branchname
 
-agent2/codex-20260706-102646
+agent2/codex-20260706-103043
 
 ## Geaenderte Dateien
 
+- banking_dashboard/server.py
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Der bestehende browsernahe Dashboard-Routing-Test wurde um einen Regressionsfall fuer den Spezialfilter `unassigned_upcoming` erweitert.
-- Der Test aktiviert zuerst die Spezialansicht fuer nicht zugewiesene anstehende Termine.
-- Danach wechselt der Test in einen anderen Tab und navigiert ueber den normalen Termine-Tab zur regulaeren Terminansicht zurueck.
-- Der Test verifiziert, dass die normale Terminladung mit `unassigned_upcoming=false` erfolgt und der Spezialfilter-Hinweis ausgeblendet ist.
-- Der vorhandene Reset-Test fuer den Spezialfilter bleibt erhalten und prueft weiterhin einen Request mit `unassigned_upcoming=false`.
+- Die Tagesableitung fuer Termin-Upcoming-Filter wurde in `banking_dashboard/server.py` in einer kleinen internen Hilfsfunktion `_termin_day_sql()` zentralisiert.
+- `overview_counts()` nutzt fuer `upcoming_termine` und `unassigned_termine` weiterhin den Kalendertag aus `beginnt_am`, jetzt ueber die gemeinsame Tagesableitung.
+- `list_termine(unassigned_upcoming=True)` nutzt dieselbe Tagesableitung und behandelt ISO-Datum und ISO-Zeitpunkt konsistent als Kalendertag.
+- Die vorhandene Sortierung und API-Ausgabe bleiben unveraendert; gespeicherte `starts_at`-Werte werden weiter original ausgegeben.
+- Ein Regressionstest deckt heute anstehende Termine mit reinem ISO-Datum und ISO-Zeitpunkt sowie einen vergangenen ISO-Zeitpunkt als Negativfall ab.
+- `transaction_store/database.py` wurde geprueft; dort existiert nur Termin-Schema/Index und keine anzupassende Tageslogik.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung an `banking_dashboard/static/app.js`, da die vorhandene UI-Logik den neuen Regressionsfall bereits erfuellt.
-- Keine Aenderung an `banking_dashboard/server.py`, da die API-Semantik fuer `unassigned_upcoming` unveraendert passend ist.
-- Keine neuen Terminfilter und keine Ueberarbeitung der Termin-Navigation.
+- Keine Aenderung am Datenbankschema oder an Migrationen, da die fachliche Tageslogik in den Server-Abfragen liegt.
+- Keine Zeitzonen-Lokalisierungslogik fuer Offset-Zeitpunkte, da die bestehende Speicherung den Originalstring beibehaelt und das Arbeitspaket eine minimale Tagesnormalisierung verlangt.
+- Keine Ueberarbeitung der Termin-Sortierung, damit bestehende Listen- und API-Semantik stabil bleibt.
 
 ## Ausgefuehrte Tests
 
@@ -29,15 +31,15 @@ agent2/codex-20260706-102646
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 76 passed, 4 skipped
+- `tests/test_dashboard.py`: 77 passed, 4 skipped
 
 ## Bekannte Einschraenkungen
 
 - Vier bestehende Tests wurden in der lokalen Umgebung uebersprungen, wie vom bestehenden Test-Setup vorgesehen.
-- Der neue Regressionsfall prueft beobachtbare Browser-Requests und UI-Zustand, keine internen JavaScript-Variablen.
+- ISO-Zeitpunkte mit Offset werden wie bisher nach dem gespeicherten Datumspraefix behandelt; es erfolgt keine Umrechnung in eine lokale Zeitzone.
 
 ## Hinweise fuer den Review-Agenten
 
-- Die Aenderung liegt in `DashboardTodoBrowserTests.test_overview_cards_route_to_matching_tabs_and_filters`.
-- Der relevante neue Ablauf ist: Spezialkarte `unassigned_termine` aktivieren, zu `unread_mails` wechseln, normalen `#termine-tab` anklicken, Request mit `unassigned_upcoming=false` erwarten.
+- Relevante Logik: `DashboardDataStore.overview_counts()`, `DashboardDataStore.list_termine()` und `_termin_day_sql()` in `banking_dashboard/server.py`.
+- Relevanter Test: `DashboardDataStoreTests.test_today_termine_treat_iso_date_and_timestamp_as_upcoming_day` in `tests/test_dashboard.py`.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.

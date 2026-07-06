@@ -4,7 +4,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -1609,6 +1609,43 @@ class DashboardDataStoreTests(unittest.TestCase):
             "Nicht zugewiesene anstehende Termine",
             unassigned_card["label"],
         )
+
+    def test_today_termine_treat_iso_date_and_timestamp_as_upcoming_day(self):
+        today = date.today()
+        today_date = today.isoformat()
+        yesterday_timestamp = (
+            today - timedelta(days=1)
+        ).isoformat() + "T23:59:59"
+        date_termin = self.store.create_termin(
+            {
+                "title": "Heutiger Datumstermin",
+                "starts_at": today_date,
+            }
+        )
+        timestamp_termin = self.store.create_termin(
+            {
+                "title": "Heutiger Zeitstempeltermin",
+                "starts_at": today_date + "T00:00:00",
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Gestriger Zeitstempeltermin",
+                "starts_at": yesterday_timestamp,
+            }
+        )
+
+        overview = self.store.overview_counts()
+        termine = self.store.list_termine(unassigned_upcoming=True)
+
+        self.assertEqual(2, overview["counts"]["upcoming_termine"])
+        self.assertEqual(2, overview["counts"]["unassigned_termine"])
+        self.assertEqual(
+            [date_termin["termin_id"], timestamp_termin["termin_id"]],
+            [termin["termin_id"] for termin in termine],
+        )
+        self.assertEqual(today_date, termine[0]["starts_at"])
+        self.assertEqual(today_date + "T00:00:00", termine[1]["starts_at"])
 
     def test_list_termine_filters_unassigned_upcoming_termine(self):
         expected = self.store.create_termin(
