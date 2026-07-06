@@ -2,42 +2,32 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Transaktionsparameter direkt im manuellen Direktabschluss-Flow bearbeitbar machen
-
-**Priorität:** hoch
-
-**Grund:** Als eigenes Folgepaket besser kontrollierbar. Zuerst den stabilen Direktabschluss mit vorhandenen, bereits klassifizierten Transaktionen sicherstellen; danach Inline-Klassifikation im Erstellflow ergänzen.
-
-**Feedback:**
-
-- Wenn ich einen Vorgang erstelle und es sind schon alle informationen da, dann will ich einen Vorgang direkt anlegen und erledigen koennen in einem Klick. Dazu gehoert auch, dass ich wenn eine Transaktion verknuepft ist bei dieser transaktion direkt die Parameter (Typ, Oberkategorie, unterkategorie, etc ) eintragen kann.
-
-## 2. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
+## 1. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
 **Priorität:** mittel
 
-**Grund:** Benötigt zusätzliche Fachklärung und greift tiefer in Zuordnungslogik und UI ein; nicht Teil des kleinen nächsten Pakets.
+**Grund:** Greift tiefer in die Zuordnungslogik zwischen Mail, Belegen, Vorgängen und indirekt Transaktionen ein; für ein kleines Folgepaket separat behandeln.
 
 **Feedback:**
 
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Ueberlege wie man geschickt damit umgehen kann
 
-## 3. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
+## 2. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit neuem Datenmodell und externer Integration; nicht Teil dieses Pakets.
+**Grund:** Eigenständiges größeres Modul mit neuem Datenmodell und externer Integration; nicht geeignet als kleines nächstes Arbeitspaket.
 
 **Feedback:**
 
-- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfaengern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es ueber DFBnet Verein laeuft.
+- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
 
-## 4. Dashboard-Usability schrittweise verbessern ohne Funktionsverlust
+## 3. Dashboard-Usability schrittweise verbessern ohne Funktionsverlust
 
 **Priorität:** mittel
 
-**Grund:** Querschnittsthema; später in konkrete kleine UX-Pakete zerlegen.
+**Grund:** Querschnittsthema ohne klar abgegrenzten Repo-Einstieg; später in konkrete kleine UX-Pakete zerlegen.
 
 **Feedback:**
 
-- Man merkt deutlich, dass das Tool gewachsen ist. Es ist stellenweise sehr unintuitiv oder unuebersichtlich. Vlt kannst du das verbessern ohne, dass Funktionalitaeten verloren gehen.
+- Man merkt deutlich, dass das Tool gewachsen ist. Es ist stellenweise sehr unintuitiv oder unübersichtlich. Vlt kannst du das verbessern ohne, dass Funktionalitäten verloren gehen.
