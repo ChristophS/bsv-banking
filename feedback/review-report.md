@@ -8,47 +8,47 @@
 
 ## Begründung
 
-Der Diff ist für die geänderte Zähllogik und die ergänzten Tests ausreichend aussagekräftig; die Umsetzung erfüllt die Akzeptanzkriterien ohne erkennbare Blocker.
+Der Diff ist für die fachliche und technische Prüfung ausreichend; die Anforderungen des Arbeitspakets sind umgesetzt und durch passende Tests abgesichert.
 
 ## Zusammenfassung
 
-Die Dashboard-Zählung für nicht zugewiesene Termine wurde auf geplante, nicht vergangene und unverknüpfte Termine eingeschränkt, die Kartenbeschriftung wurde präzisiert und ein Regressionstest deckt geplante, vergangene, abgeschlossene, abgesagte sowie verknüpfte Termine ab. Die Umsetzung ist fachlich passend und akzeptiert.
+Die Umsetzung ergänzt einen expliziten API-Filter `unassigned_upcoming=true`, verdrahtet den Klick auf die Overview-Karte `unassigned_termine` im Frontend auf diesen Filter und ergänzt Store-, HTTP- und UI-nahe Tests. Die Kriterien aus dem Arbeitspaket werden erfüllt; es gibt keine blockierenden Probleme.
 
 ## Review-Ergebnis
 
-**Entscheidung:** Accepted
+**Accepted: true**
 
-## Prüfung gegen das Arbeitspaket
+Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch.
 
-Die Umsetzung passt zum Ziel, die Dashboard-Kennzahlen für Termine fachlich präziser zu zählen:
+## Geprüfte Anforderungen
 
-- `unassigned_termine` wird in `DashboardDataStore.overview_counts()` nun nur noch für Termine gezählt, die:
-  - den bestehenden Status `TERMIN_STATUS_PLANNED` haben,
-  - deren Datumsteil von `beginnt_am` nicht in der Vergangenheit liegt,
-  - und die keinen Eintrag in `vorgang_termine` besitzen.
-- Damit werden abgeschlossene und abgesagte unzugewiesene Termine nicht mehr irreführend mitgezählt.
-- Die bestehende Vorgang-Termin-Zuordnung über `vorgang_termine` wird weiterverwendet.
-- Die Kartenbeschriftung wurde von „Nicht zugewiesene Termine“ auf „Nicht zugewiesene anstehende Termine“ präzisiert und ist damit konsistenter zur engeren Zähllogik.
-- In `app.js` aktiviert der Klick auf die Karte für unzugewiesene Termine nun ebenfalls den bestehenden Terminfilter zum Ausblenden abgeschlossener Termine. Eine separate Unzugewiesen-Filter-UI wurde nicht eingeführt, was zum Nicht-Scope des Arbeitspakets passt.
+- `GET /api/termine` unterstützt nun den expliziten Query-Parameter `unassigned_upcoming=true`.
+- `DashboardDataStore.list_termine()` filtert bei aktiviertem Parameter auf:
+  - `status = geplant`,
+  - Datum ab heute über `SUBSTR(t.beginnt_am, 1, 10) >= date.today().isoformat()`,
+  - keine Zuordnung in `vorgang_termine` per `NOT EXISTS`.
+- Der bestehende Aufruf ohne neuen Parameter bleibt unverändert; `hide_completed` wird nur dann verwendet, wenn der neue Spezialfilter nicht aktiv ist.
+- Der Frontend-State wurde um `terminUnassignedUpcoming` ergänzt.
+- Der Overview-Kartenklick für `unassigned_termine` aktiviert den Termin-Tab und setzt `unassigned_upcoming=true` beim Laden der Terminliste.
+- Allgemeine Termin-Navigation und `upcoming_termine` setzen den Spezialfilter zurück.
+- Tests wurden ergänzt für:
+  - Store-Filterlogik,
+  - HTTP/API-Filter,
+  - UI-nahes Kartenrouting mit Request auf `unassigned_upcoming=true`.
 
-## Tests
+## Technische Bewertung
 
-Der neue Test `test_overview_counts_only_relevant_open_upcoming_termine` deckt die wesentlichen fachlichen Fälle ab:
+Die SQL-Bedingung entspricht den im Auftrag geforderten Kriterien und ist passend als expliziter Filter in `list_termine()` integriert. Die Entscheidung, `unassigned_upcoming` separat von `hide_completed` zu führen und nicht zu überladen, entspricht den Hinweisen im Arbeitspaket.
 
-- geplanter zukünftiger Termin mit ISO-Zeitpunkt,
-- geplanter zukünftiger Termin mit ISO-Datum,
-- geplanter Termin in der Vergangenheit,
-- abgeschlossener zukünftiger Termin,
-- abgesagter zukünftiger Termin,
-- verknüpfter zukünftiger Termin.
+Die Frontend-Änderung ist minimal und integriert den neuen Filter in den bestehenden Terminlisten-State. Dass `hide_completed` beim unassigned-Kartenklick ebenfalls gesetzt wird, ist nicht blockierend, weil der Server bei `unassigned_upcoming=true` ohnehin die strengere fachliche Bedingung verwendet und geplante Termine filtert.
 
-Die erwarteten Werte `upcoming_termine == 3` und `unassigned_termine == 2` prüfen die neue Definition nachvollziehbar. Laut Implementation Report wurden die Dashboard-Tests erfolgreich ausgeführt: `75 passed, 4 skipped`.
+Die ergänzten Tests decken die zentralen Akzeptanzkriterien ab: ein unzugewiesener zukünftiger geplanter Termin erscheint, verknüpfte, vergangene, abgeschlossene und abgesagte Termine erscheinen nicht.
 
 ## Blockierende Probleme
 
-Keine blockierenden Probleme gefunden.
+Keine.
 
-## Nicht blockierende Hinweise
+## Nicht-blockierende Hinweise
 
-- Die Logik verwendet weiterhin den Datumsteil von `beginnt_am`; Termine am heutigen Tag werden also nicht anhand der Uhrzeit innerhalb des Tages unterschieden. Das ist im Report transparent dokumentiert und war im Arbeitspaket nur als Soll-/Grenzfall genannt.
-- Der Kartenklick für „Nicht zugewiesene anstehende Termine“ führt weiterhin in die allgemeine Terminansicht mit bestehendem Terminfilter, nicht in eine explizit auf unzugewiesene Termine eingeschränkte Ansicht. Da keine neue Filter-UI gefordert war, ist das nicht blockierend.
+- Der Spezialfilter ist im UI nicht sichtbar. Das ist laut Arbeitspaket nicht zwingend, aber für die Nachvollziehbarkeit durch Nutzer später wünschenswert.
+- Ein zusätzlicher UI-Test für das Zurücksetzen des Spezialfilters bei normaler Termin-Navigation wäre eine sinnvolle Ergänzung, ist aber nicht erforderlich für die Abnahme.
