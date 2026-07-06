@@ -645,6 +645,7 @@ const overviewCardRoutes = {
       activateTab("termine");
     },
     unassigned_termine: () => {
+      setTerminHideCompleted(true);
       state.termineLoaded = false;
       activateTab("termine");
     },

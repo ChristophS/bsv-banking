@@ -2,28 +2,28 @@
 
 ## Branchname
 
-agent2/rework-20260706-100641
+agent2/codex-20260706-101003
 
 ## Geaenderte Dateien
 
+- banking_dashboard/server.py
 - banking_dashboard/static/app.js
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Die bestehende Overview-Kachel-Navigation in `banking_dashboard/static/app.js` wurde gegen prototype-basierte Lookup-Treffer abgesichert.
-- `navigateFromOverviewCard` liest `overviewCardRoutes.byKey` und `overviewCardRoutes.byEntity` nur noch ueber eigene Properties per `Object.hasOwn`.
-- Bekannte `card.key`- und `entity`-Routen bleiben funktionsgleich erhalten.
-- Unbekannte Keys fallen weiterhin auf die Entity-Route oder zuletzt auf die bestehende sichere Vorgangsansicht zurueck.
-- Ungewoehnliche Werte wie `__proto__` und `constructor` werden nicht mehr als gueltige Mapping-Treffer behandelt.
-- Der bestehende Browser-Routingtest wurde um unbekannte und ungewoehnliche Overview-Werte erweitert.
+- `unassigned_termine` in `DashboardDataStore.overview_counts()` zaehlt nur noch geplante Termine, deren Datum nicht in der Vergangenheit liegt und die keinen Eintrag in `vorgang_termine` haben.
+- `upcoming_termine` bleibt auf geplante, nicht vergangene Termine beschraenkt und wird durch einen neuen Regressionstest gegen abgeschlossene, abgesagte und vergangene Termine abgesichert.
+- Die Kartenbeschriftung fuer die unzugewiesenen Termine wurde auf "Nicht zugewiesene anstehende Termine" praezisiert.
+- Die Overview-Kartenroute fuer `unassigned_termine` aktiviert wie `upcoming_termine` den bestehenden Terminfilter fuer geplante Termine.
+- Der neue Test deckt ISO-Zeitpunkte und ISO-Datum-only-Werte ab.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderungen an `banking_dashboard/static/index.html`, da die vorhandenen `data-overview-key`- und `data-overview-entity`-Attribute ausreichen.
-- Keine neuen Overview-Kacheln, Filter, API-Aenderungen oder Datenmodell-Aenderungen.
-- Keine spezifischeren Terminfilter fuer anstehende oder nicht zugewiesene Termine.
+- Keine neue Terminfilter-UI fuer explizit unzugewiesene Termine.
+- Keine Aenderungen am Datenbankschema oder an der Termin-Persistenz.
+- Keine Aenderungen an `banking_dashboard/static/index.html`, da die Overview-Kartenlabels aus der API kommen.
 
 ## Ausgefuehrte Tests
 
@@ -31,23 +31,15 @@ agent2/rework-20260706-100641
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 74 passed, 4 skipped
-
-## Nachbesserung nach Review
-
-- Das blockierende Review-Problem im Browser-Regressionstest wurde behoben.
-- `page_errors` wird nun in `test_overview_cards_route_to_matching_tabs_and_filters` initialisiert und der `page.on("pageerror", ...)`-Handler wird in derselben Testfunktion registriert, in der am Ende `self.assertEqual([], page_errors)` ausgefuehrt wird.
-- Damit ist die Assertion gegen Browser-Laufzeitfehler definiert und der Test prueft die abgesicherten Overview-Routen fuer bekannte, unbekannte und ungewoehnliche Keys ohne `NameError`.
-- Die fachliche Haertung in `banking_dashboard/static/app.js` blieb unveraendert erhalten.
+- `tests/test_dashboard.py`: 75 passed, 4 skipped
 
 ## Bekannte Einschraenkungen
 
-- Die Umsetzung behaelt das bestehende fachliche Verhalten bei. `upcoming_termine` und `unassigned_termine` fuehren weiterhin in die Terminansicht; nur `upcoming_termine` setzt wie bisher den Filter fuer abgeschlossene Termine.
-- Es wurden keine echten externen Dienste, Logins oder produktiven Daten verwendet.
+- Die Datumsgrenze nutzt wie die bestehende Logik den Datumsteil von `beginnt_am`; bei Terminen am heutigen Datum wird nicht zusaetzlich die Uhrzeit innerhalb des Tages ausgewertet.
+- Die Terminansicht hat weiterhin keinen eigenen Filter fuer "nicht zugewiesen"; der Kartenklick zeigt die bestehenden geplanten Termine an.
 
 ## Hinweise fuer den Review-Agenten
 
-- Der relevante Code steht in `overviewCardRoutes`, `navigateFromOverviewCard` und `ownOverviewRoute` in `banking_dashboard/static/app.js`.
-- Der Browser-Test `test_overview_cards_route_to_matching_tabs_and_filters` deckt bekannte Routen, einen unbekannten Key mit bekannter Entity, `__proto__` mit Entity-Fallback und `constructor` mit Fallback-Route ab.
-- Die Review-Nachbesserung betrifft nur die lokale Initialisierung von `page_errors` im Browser-Routingtest und den Implementation Report.
+- Die fachliche SQL-Aenderung liegt in `banking_dashboard/server.py` in `DashboardDataStore.overview_counts()`.
+- Der relevante Regressionstest ist `DashboardDataStoreTests.test_overview_counts_only_relevant_open_upcoming_termine`.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.

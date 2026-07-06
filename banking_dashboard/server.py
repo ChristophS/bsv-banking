@@ -576,12 +576,15 @@ class DashboardDataStore:
                         """
                         SELECT COUNT(*)
                         FROM termine AS t
-                        WHERE NOT EXISTS (
+                        WHERE t.status = ?
+                          AND SUBSTR(t.beginnt_am, 1, 10) >= ?
+                          AND NOT EXISTS (
                             SELECT 1
                             FROM vorgang_termine AS vt
                             WHERE vt.termin_id = t.termin_id
                         )
-                        """
+                        """,
+                        (TERMIN_STATUS_PLANNED, today),
                     ).fetchone()[0]
                 ),
             }
@@ -624,7 +627,7 @@ class DashboardDataStore:
             },
             {
                 "key": "unassigned_termine",
-                "label": "Nicht zugewiesene Termine",
+                "label": "Nicht zugewiesene anstehende Termine",
                 "count": counts["unassigned_termine"],
                 "entity": "termine",
             },
