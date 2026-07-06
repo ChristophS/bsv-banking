@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größere fachliche Erweiterung über Mail-Import, Dokumenthandling, Vorgangsdetail-UI und bestehende Verknüpfungslogik; nicht so klein und risikoarm wie die aktuelle Robustheitskorrektur.
+**Grund:** Größere fachliche Erweiterung über Mail-Import, Dokumenthandling, Vorgangsdetail-UI und bestehende Verknüpfungslogik; nicht als kleines, kontrollierbares Arbeitspaket abgrenzbar.
 
 **Feedback:**
 
@@ -16,18 +16,8 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit zusätzlichem Datenmodell- und Integrationsbedarf; aktuell nicht als kleines repo-konkretes Arbeitspaket gewählt.
+**Grund:** Eigenständiges größeres Modul mit zusätzlichem Datenmodell- und Integrationsbedarf; nicht Teil des kleinen nächsten Arbeitspakets.
 
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
-
-## 3. Spezifischere Terminfilter für anstehende und nicht zugewiesene Termine prüfen
-
-**Priorität:** niedrig
-
-**Grund:** Sinnvoller Folgepunkt im Dashboard, aber funktional getrennt vom jetzt gewählten Lookup-Härtungspaket.
-
-**Feedback:**
-
-- Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen.
