@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größere fachliche Erweiterung der bestehenden Vorgang-/Dokument-Zuordnung und deutlich größer als das jetzt gewählte kleine Test-Arbeitspaket.
+**Grund:** Größere fachliche Erweiterung der bestehenden Vorgang-/Dokument-Zuordnung mit Datenmodell- und UI-Auswirkungen; nicht klein genug für das jetzt gewählte Refactoring-Paket.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit Datenmodell- und Integrationsfragen; nicht klein genug für den nächsten Schritt.
+**Grund:** Eigenständiges größeres Modul mit Integrations- und Datenmodellfragen; derzeit nicht klein und risikoarm genug.
 
 **Feedback:**
 
@@ -26,30 +26,28 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Eigenes UI-/Filter-Thema; bleibt außerhalb der gezielten Absicherung des aktuellen Overview-Klickpfads.
+**Grund:** Eigenes UI-/Filter-Thema, aber ohne geladenen spezifischen Termin-Kontext derzeit weniger geeignet als das kleine Overview-Refactoring.
 
 **Feedback:**
 
 - Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen
 
-## 4. Overview-Routing bei weiteren Kacheln über eine zentrale Mapping-Tabelle vereinfachen
+## 4. Browser-Ressourcen im neuen Playwright-Test optional per try/finally schließen
 
 **Priorität:** niedrig
 
-**Grund:** Wartbarkeits-Refaktor statt unmittelbarer Fehlerbehebung; sollte separat nach der konkreten Absicherung des Klickpfads erfolgen.
+**Grund:** Nicht-blockierender Test-Cleanup-Hinweis; kleiner, aber weniger nutzwirksam als das jetzt gewählte UI-Refactoring.
 
 **Feedback:**
 
-- Review-Empfehlung zur Vereinfachung des Overview-Routings über eine zentrale Mapping-Tabelle
+- Review-Hinweis: Browser-Ressourcen im neuen Playwright-Test optional per try/finally schließen
 
-## 5. Browser-Ressourcen im neuen Playwright-Test optional per `try/finally` schließen
-
-**Priorität:** niedrig
-
-**Grund:** Nicht-blockierender Stabilitäts-/Cleanup-Hinweis aus dem Review.
-
-## 6. Bei künftig vorhandenem stabilem Belege-/Dokumenten-Selektor den Zielbereich noch spezifischer absichern
+## 5. Bei künftig vorhandenem stabilem Belege-/Dokumenten-Selektor den Zielbereich noch spezifischer absichern
 
 **Priorität:** niedrig
 
-**Grund:** Nicht-blockierender Hinweis zur künftigen Präzisierung der UI-Absicherung.
+**Grund:** Abhängig von künftig stabilerer UI-Struktur; aktuell kein eigenständiges vorrangiges Arbeitspaket.
+
+**Feedback:**
+
+- Review-Hinweis: Bei künftig vorhandenem stabilem Belege-/Dokumenten-Selektor den Zielbereich noch spezifischer absichern
