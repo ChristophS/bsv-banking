@@ -687,10 +687,17 @@ const overviewCardRoutes = {
 
 function navigateFromOverviewCard(key, entity) {
   const route =
-    overviewCardRoutes.byKey[key] ||
-    overviewCardRoutes.byEntity[entity] ||
+    ownOverviewRoute(overviewCardRoutes.byKey, key) ||
+    ownOverviewRoute(overviewCardRoutes.byEntity, entity) ||
     overviewCardRoutes.fallback;
   route();
+}
+
+function ownOverviewRoute(routes, name) {
+  if (Object.hasOwn(routes, name)) {
+    return routes[name];
+  }
+  return null;
 }
 
 function setTransactionHideCompletedVorgaenge(value) {

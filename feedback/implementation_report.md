@@ -2,20 +2,22 @@
 
 ## Branchname
 
-agent2/codex-20260706-095819
+agent2/codex-20260706-100230
 
 ## Geaenderte Dateien
 
 - banking_dashboard/static/app.js
+- tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Die Overview-Kachel-Navigation wurde in `banking_dashboard/static/app.js` auf die zentrale Mapping-Struktur `overviewCardRoutes` umgestellt.
-- Das Mapping nutzt `card.key` als primaeren Routenschluessel und faellt danach auf `entity`-Routing zurueck.
-- Die bisherigen Spezialfaelle fuer `open_vorgaenge`, `open_todos`, `unassigned_transactions`, `unassigned_documents`, `upcoming_termine` und `unassigned_termine` bleiben funktionsgleich erhalten.
-- Die beiden Termin-Kacheln sind trotz gemeinsamer `entity = termine` als separate key-spezifische Routen abgebildet.
-- Unbekannte Karten fallen auf eine sichere Vorgangsansicht zurueck und werfen keinen Frontend-Fehler.
+- Die bestehende Overview-Kachel-Navigation in `banking_dashboard/static/app.js` wurde gegen prototype-basierte Lookup-Treffer abgesichert.
+- `navigateFromOverviewCard` liest `overviewCardRoutes.byKey` und `overviewCardRoutes.byEntity` nur noch ueber eigene Properties per `Object.hasOwn`.
+- Bekannte `card.key`- und `entity`-Routen bleiben funktionsgleich erhalten.
+- Unbekannte Keys fallen weiterhin auf die Entity-Route oder zuletzt auf die bestehende sichere Vorgangsansicht zurueck.
+- Ungewoehnliche Werte wie `__proto__` und `constructor` werden nicht mehr als gueltige Mapping-Treffer behandelt.
+- Der bestehende Browser-Routingtest wurde um unbekannte und ungewoehnliche Overview-Werte erweitert.
 
 ## Nicht umgesetzte Punkte
 
@@ -38,6 +40,6 @@ agent2/codex-20260706-095819
 
 ## Hinweise fuer den Review-Agenten
 
-- Der relevante Code steht in `overviewCardRoutes` und `navigateFromOverviewCard` in `banking_dashboard/static/app.js`.
-- Die bestehenden Browser-Tests fuer Overview-Kachelrouting decken die aktuell vorhandenen Karten und einen dokumentenbasierten Entity-Fallback ab.
+- Der relevante Code steht in `overviewCardRoutes`, `navigateFromOverviewCard` und `ownOverviewRoute` in `banking_dashboard/static/app.js`.
+- Der Browser-Test `test_overview_cards_route_to_matching_tabs_and_filters` deckt bekannte Routen, einen unbekannten Key mit bekannter Entity, `__proto__` mit Entity-Fallback und `constructor` mit Fallback-Route ab.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.

@@ -2987,6 +2987,11 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     page = browser.new_page(
                         viewport={"width": 1500, "height": 1000}
                     )
+                    page_errors = []
+                    page.on(
+                        "pageerror",
+                        lambda error: page_errors.append(str(error)),
+                    )
                     page.goto(base_url, wait_until="networkidle")
 
                     card = page.locator(
@@ -3130,6 +3135,40 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     expect(page.locator("#vorgaenge-tab")).to_have_class(
                         re.compile("is-active")
                     )
+
+                    page.locator("[data-overview-key='unread_mails']").click()
+                    expect(page.locator("#mail-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    page.evaluate(
+                        """
+                        () => {
+                            const cards = document.querySelector("#overview-cards");
+                            for (const [key, entity, label] of [
+                                ["__proto__", "todos", "Proto"],
+                                ["constructor", "unknown_entity", "Constructor"],
+                            ]) {
+                                const button = document.createElement("button");
+                                button.type = "button";
+                                button.dataset.overviewKey = key;
+                                button.dataset.overviewEntity = entity;
+                                button.textContent = label;
+                                cards.append(button);
+                            }
+                        }
+                        """
+                    )
+                    page.locator("[data-overview-key='__proto__']").click()
+                    expect(page.locator("#todo-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+
+                    page.locator("[data-overview-key='unread_mails']").click()
+                    page.locator("[data-overview-key='constructor']").click()
+                    expect(page.locator("#vorgaenge-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    self.assertEqual([], page_errors)
                     browser.close()
             finally:
                 server.shutdown()
