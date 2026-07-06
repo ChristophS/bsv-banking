@@ -21,3 +21,15 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfaengern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es ueber DFBnet Verein laeuft.
+
+## 3. `unassigned_documents` später auf einen echten Belege-/Dokumente-Reiter routen
+
+**Priorität:** niedrig
+
+**Grund:** Sinnvoll, falls ein eigener Top-Level-Belege-/Dokumente-Reiter eingeführt wird; derzeit ist keine entsprechende Navigationsfläche vorhanden.
+
+## 4. Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen
+
+**Priorität:** niedrig
+
+**Grund:** Kann später ergänzt werden, sofern dies ohne größere neue Filterarchitektur möglich ist.
