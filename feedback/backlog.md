@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größere Erweiterung der bestehenden Vorgang-/Dokument-Zuordnung und nicht klein genug für das aktuelle, klar abgegrenzte Routing-Fix.
+**Grund:** Größere fachliche Erweiterung der bestehenden Vorgang-/Dokument-Zuordnung; nicht klein genug für dieses Test-Absicherungspaket.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit Datenmodell- und Integrationsfragen, nicht Teil des kleinen nächsten Arbeitspakets.
+**Grund:** Eigenständiges größeres Modul mit Datenmodell- und Integrationsfragen.
 
 **Feedback:**
 
@@ -26,20 +26,18 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Eigenes späteres UI-/Filter-Thema; wird durch das Routing-Fix für Dokumente nicht mitgelöst.
+**Grund:** Eigenes späteres UI-/Filter-Thema, nicht Teil des kleinen Testpakets.
 
 **Feedback:**
 
 - Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen
 
-## 4. Expliziten Browser-Test für den Klick auf `unassigned_documents` ergänzen
+## 4. Overview-Routing bei weiteren Kacheln über eine zentrale Mapping-Tabelle vereinfachen
 
 **Priorität:** niedrig
 
-**Grund:** Nicht-blockierende Review-Empfehlung zur Absicherung des konkreten Klickpfads auf die echte Kachel.
+**Grund:** Wartbarkeitsverbesserung, aber keine unmittelbar nötige kleine Absicherung wie der konkrete Kachel-Test.
 
-## 5. Overview-Routing bei weiteren Kacheln über eine zentrale Mapping-Tabelle vereinfachen
+**Feedback:**
 
-**Priorität:** niedrig
-
-**Grund:** Nicht-blockierende Review-Empfehlung für bessere Wartbarkeit bei künftigen Routing-Erweiterungen.
+- Nicht-blockierende Review-Empfehlung für bessere Wartbarkeit bei künftigen Routing-Erweiterungen.
