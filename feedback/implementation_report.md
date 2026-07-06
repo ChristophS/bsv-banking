@@ -2,29 +2,30 @@
 
 ## Branchname
 
-agent2/codex-20260706-090232
+agent2/codex-20260706-091118
 
 ## Geaenderte Dateien
 
-- banking_dashboard/server.py
 - banking_dashboard/static/app.js
+- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Der Mail-Vorgang-Import akzeptiert jetzt optional `transaction_classifications` als Liste mit `transaction_id` und den bestehenden Klassifikationsfeldern des PATCH-Endpunkts.
-- Inline-Klassifikationen werden vor dem optionalen Direktabschluss ueber `update_transaction_classification(...)` gespeichert.
-- Der anschliessende Direktabschluss nutzt weiterhin die bestehende Abschlusslogik ueber `update_vorgang_status(..., True)` und gibt Erfolg oder Ablehnung transparent in `direct_completion` zurueck.
-- Der Import-Request validiert Inline-Klassifikationen vor der Vorgangserstellung: nur verknuepfte Transaktionen, keine doppelten Eintraege, keine unbekannten Felder, Textwerte und Laengenlimit.
-- Die Mail-Import-UI zeigt fuer ausgewaehlte verknuepfte Transaktionen Inline-Klassifikationsfelder mit vorhandenen Werten und Klassifikationsoptionen an und sendet diese im Import-Request mit.
-- API-Tests decken Direktabschluss nach Inline-Klassifikation und Ablehnung ungueltiger Inline-Klassifikation ohne teilweise angelegten Mail-Vorgang ab.
+- Overview-Karten nutzen jetzt den von `/api/overview` gelieferten `key` als primaeren Routing-Anker.
+- Klicks auf Overview-Karten navigieren in die passenden bestehenden Reiter: Vorgänge, Mails, Transaktionen, To-Dos und Termine.
+- Die Karte fuer nicht zugewiesene Dokumente navigiert in den Vorgänge-Reiter, weil es in der aktuellen Top-Level-Navigation keinen eigenen Belege-/Dokumente-Reiter gibt und Dokumente dort bereits fachlich verknuepft werden.
+- Fuer offene Vorgänge, offene To-Dos, nicht zugewiesene Transaktionen und anstehende Termine werden vorhandene Filter-Checkboxen sichtbar gesetzt und die bestehenden Ladefluesse wiederverwendet.
+- Overview-Karten bleiben native Buttons, erhalten zusaetzlich `data-overview-key` und ein sprechendes `aria-label`.
+- Hover-, Fokus- und Aktiv-Zustaende fuer Overview-Karten wurden ergaenzt.
+- Ein Browser-Regressionstest prueft Kartenrouting, Filterzustand und Tastaturausloesung mit Fake-Mail-Backend.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung an `banking_dashboard/static/index.html`, weil der Mail-Import-Dialog dynamisch in `banking_dashboard/static/app.js` erzeugt wird.
-- Keine Aenderung an `transaction_store/database.py`, weil vorhandene Store-Methoden und Persistenzfelder ausreichen.
-- Keine externen Dienste, echten Logins oder Browser-Automationen verwendet.
+- Keine neue Backend-Logik oder neue Serverfilter fuer Dokumente, Mails oder unzugewiesene Termine.
+- Keine Aenderung an `banking_dashboard/static/index.html`, weil die Karten bereits als Buttons dynamisch in `app.js` erzeugt werden.
+- Kein eigener Dokumente-Reiter ergaenzt, da das eine Navigations-/Architekturerweiterung waere.
 
 ## Ausgefuehrte Tests
 
@@ -33,16 +34,17 @@ agent2/codex-20260706-090232
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 74 passed, 2 skipped
+- `tests/test_dashboard.py`: 74 passed, 3 skipped
 - `node --check banking_dashboard/static/app.js`: erfolgreich ohne Ausgabe
 
 ## Bekannte Einschraenkungen
 
-- Es wurde keine manuelle Browserpruefung des Mail-Import-Dialogs ausgefuehrt.
-- Die zwei bestehenden Browser-/Umgebungstests in `tests/test_dashboard.py` bleiben uebersprungen.
+- Fuer nicht zugewiesene Dokumente gibt es keinen eigenen bestehenden Reiter und keinen passenden Serverfilter; die Karte fuehrt daher zur bestehenden Vorgangsansicht.
+- Fuer nicht zugewiesene Termine gibt es keinen vorhandenen Unassigned-Filter; die Karte fuehrt zur bestehenden Terminansicht ohne neue Filterlogik.
+- Die uebersprungenen Tests sind umgebungsabhaengige Browser-/Playwright-Faelle.
 
 ## Hinweise fuer den Review-Agenten
 
-- Das Request-Format ist bewusst Top-Level `transaction_classifications`, damit `links.transaction_ids` unveraendert bleibt.
-- Die Validierung passiert vor `create_vorgang(...)`; ein 4xx fuer fehlerhafte Inline-Klassifikation legt daher keinen Mail-Vorgang und keine Importartefakte an.
+- Die Umsetzung bleibt rein im Frontend-Routing und nutzt vorhandene State- und Load-Funktionen.
+- Der neue Browser-Test verwendet `FakeDashboardMailBackend` und `FakeDashboardSpamScorer`; es werden keine externen Mail-, Graph- oder Login-Aktionen ausgefuehrt.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.

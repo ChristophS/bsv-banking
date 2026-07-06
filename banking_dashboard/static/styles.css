@@ -196,12 +196,26 @@ button {
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
+  outline: 0;
   text-align: left;
   box-shadow: 0 8px 20px rgba(30, 50, 41, 0.04);
+  transition: border-color 160ms ease, box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .overview-card:hover {
   border-color: var(--green-700);
+  box-shadow: 0 10px 24px rgba(30, 50, 41, 0.08);
+}
+
+.overview-card:focus-visible {
+  border-color: var(--green-700);
+  box-shadow: 0 0 0 3px rgba(38, 112, 85, 0.18),
+    0 10px 24px rgba(30, 50, 41, 0.08);
+}
+
+.overview-card:active {
+  transform: translateY(1px);
 }
 
 .overview-card-label {

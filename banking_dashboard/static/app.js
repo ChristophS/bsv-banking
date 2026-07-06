@@ -308,18 +308,10 @@ elements.overviewCards.addEventListener("click", (event) => {
   if (!button) {
     return;
   }
-  const entity = button.dataset.overviewEntity;
-  if (entity === "transactions") {
-    activateTab("transactions");
-  } else if (entity === "mails") {
-    activateTab("mail");
-  } else if (entity === "todos") {
-    activateTab("todos");
-  } else if (entity === "termine") {
-    activateTab("termine");
-  } else {
-    activateTab("vorgaenge");
-  }
+  navigateFromOverviewCard(
+    button.dataset.overviewKey,
+    button.dataset.overviewEntity,
+  );
 });
 
 elements.sortButtons.forEach((button) => {
@@ -614,7 +606,9 @@ function renderOverview() {
   for (const card of cards) {
     const button = mailElement("button", "overview-card");
     button.type = "button";
+    button.dataset.overviewKey = card.key || "";
     button.dataset.overviewEntity = card.entity || "vorgaenge";
+    button.setAttribute("aria-label", `${card.label}: ${card.count || 0}`);
     button.append(
       mailElement("span", "overview-card-label", card.label),
       mailElement(
@@ -625,6 +619,74 @@ function renderOverview() {
     );
     elements.overviewCards.append(button);
   }
+}
+
+function navigateFromOverviewCard(key, entity) {
+  if (key === "open_vorgaenge") {
+    setVorgangHideCompleted(true);
+    state.vorgaengeLoaded = false;
+    activateTab("vorgaenge");
+    return;
+  }
+  if (key === "open_todos") {
+    setTodoHideCompleted(true);
+    state.todosLoaded = false;
+    activateTab("todos");
+    return;
+  }
+  if (key === "unassigned_transactions") {
+    setTransactionHideCompletedVorgaenge(true);
+    activateTab("transactions");
+    loadTransactions();
+    return;
+  }
+  if (key === "upcoming_termine") {
+    setTerminHideCompleted(true);
+    state.termineLoaded = false;
+    activateTab("termine");
+    return;
+  }
+  if (key === "unassigned_termine") {
+    state.termineLoaded = false;
+    activateTab("termine");
+    return;
+  }
+  if (entity === "transactions") {
+    activateTab("transactions");
+    loadTransactions();
+  } else if (entity === "mails") {
+    state.mailsLoaded = false;
+    activateTab("mail");
+  } else if (entity === "todos") {
+    state.todosLoaded = false;
+    activateTab("todos");
+  } else if (entity === "termine") {
+    state.termineLoaded = false;
+    activateTab("termine");
+  } else {
+    state.vorgaengeLoaded = false;
+    activateTab("vorgaenge");
+  }
+}
+
+function setTransactionHideCompletedVorgaenge(value) {
+  state.hideCompletedVorgaengeTransactions = value;
+  elements.transactionHideCompletedVorgaenge.checked = value;
+}
+
+function setVorgangHideCompleted(value) {
+  state.vorgangHideCompleted = value;
+  elements.vorgangHideCompleted.checked = value;
+}
+
+function setTodoHideCompleted(value) {
+  state.todoHideCompleted = value;
+  elements.todoHideCompleted.checked = value;
+}
+
+function setTerminHideCompleted(value) {
+  state.terminHideCompleted = value;
+  elements.terminHideCompleted.checked = value;
 }
 
 async function loadTodos() {
