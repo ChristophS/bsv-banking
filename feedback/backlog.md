@@ -41,3 +41,15 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Review-Empfehlung zur Vereinfachung des Overview-Routings über eine zentrale Mapping-Tabelle
+
+## 5. Browser-Ressourcen im neuen Playwright-Test optional per `try/finally` schließen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierender Stabilitäts-/Cleanup-Hinweis aus dem Review.
+
+## 6. Bei künftig vorhandenem stabilem Belege-/Dokumenten-Selektor den Zielbereich noch spezifischer absichern
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierender Hinweis zur künftigen Präzisierung der UI-Absicherung.
