@@ -8,47 +8,35 @@
 
 ## Begründung
 
-Der Diff ist für die fachliche Prüfung ausreichend: Die bisherige Fallunterscheidung in navigateFromOverviewCard ist vollständig sichtbar und wurde nachvollziehbar durch eine zentrale Mapping-Struktur ersetzt; der Branch-Zustand ist sauber.
+Der Diff ist für die fachliche Prüfung ausreichend; die zentrale Lookup-Logik wurde gezielt abgesichert und passende Regressionstests wurden ergänzt.
 
 ## Zusammenfassung
 
-Die Overview-Kachel-Navigation wurde in app.js auf eine zentrale Routing-Tabelle mit key-spezifischen Routen, entity-Fallbacks und sicherem Standard-Fallback umgestellt. Das bisherige Verhalten der vorhandenen Karten bleibt anhand des Diffs funktionsgleich erhalten; daher wird die Umsetzung akzeptiert.
+Die Overview-Kartennavigation verwendet nun eigene Property-Lookups über Object.hasOwn und verhindert damit Treffer über geerbte Eigenschaften wie __proto__ oder constructor. Die ergänzten Browser-Regressionstests decken bekannte Routen sowie unbekannte und ungewöhnliche Werte ab. Es wurden keine blockierenden Probleme festgestellt.
 
 ## Review-Ergebnis
 
-Akzeptiert.
+**Entscheidung:** Accepted
 
 ## Prüfung gegen das Arbeitspaket
 
-Die Anforderung war, die Klicknavigation der Overview-Kacheln in `banking_dashboard/static/app.js` von verstreuter Falllogik auf eine zentrale Mapping-Tabelle oder äquivalente Konfiguration umzustellen, ohne das bestehende Dashboard-Verhalten fachlich zu verändern.
+Die Umsetzung adressiert die geforderte Härtung der Overview-Routing-Logik in `banking_dashboard/static/app.js`. Statt direkter Zugriffe wie `overviewCardRoutes.byKey[key]` und `overviewCardRoutes.byEntity[entity]` wird nun über `ownOverviewRoute(...)` mit `Object.hasOwn(routes, name)` geprüft, ob der jeweilige Schlüssel tatsächlich als eigene Property in der Mapping-Tabelle existiert.
 
-Der Diff ersetzt die bisherige `if`-/`else if`-Kette in `navigateFromOverviewCard(key, entity)` durch die zentrale Struktur `overviewCardRoutes` mit:
+Damit werden geerbte Eigenschaften wie `__proto__`, `constructor` oder `toString` nicht mehr als gültige Routing-Treffer behandelt. Für unbekannte Werte bleibt das bestehende Fallback erhalten, sodass kein Laufzeitfehler entstehen sollte und keine prototype-basierte Fehlroute ausgelöst wird.
 
-- `byKey` für karten-spezifische Routen,
-- `byEntity` als Entity-Fallback,
-- `fallback` als sichere Standardnavigation zur Vorgangsansicht.
+## Tests
 
-Damit ist die Zuordnung an einer zentralen Stelle lesbar definiert und spätere Kacheln können gezielt ergänzt werden.
+In `tests/test_dashboard.py` wurde der bestehende Browser-Test `test_overview_cards_route_to_matching_tabs_and_filters` erweitert. Er prüft weiterhin bekannte Routen und ergänzt Fälle für:
 
-## Verhalten der bestehenden Karten
+- einen unbekannten Key mit bekannter Entity,
+- `__proto__` mit Entity-Fallback,
+- `constructor` mit unbekannter Entity und damit Fallback-Route,
+- ausbleibende Browser-Page-Errors über `page_errors`.
 
-Die im alten Code vorhandenen Spezialfälle wurden funktionsgleich übernommen:
+Damit sind die Akzeptanzkriterien bezüglich mindestens eines unbekannten Keys und eines ungewöhnlichen Lookup-Werts erfüllt.
 
-- `open_vorgaenge`: setzt weiterhin `setVorgangHideCompleted(true)`, invalidiert Vorgänge und öffnet `vorgaenge`.
-- `open_todos`: setzt weiterhin `setTodoHideCompleted(true)`, invalidiert To-dos und öffnet `todos`.
-- `unassigned_transactions`: setzt weiterhin `setTransactionHideCompletedVorgaenge(true)`, öffnet `transactions` und lädt Transaktionen.
-- `upcoming_termine`: setzt weiterhin `setTerminHideCompleted(true)`, invalidiert Termine und öffnet `termine`.
-- `unassigned_termine`: invalidiert weiterhin Termine und öffnet `termine` ohne zusätzlichen Terminfilter.
-- `unassigned_documents`: invalidiert weiterhin Vorgänge und öffnet `vorgaenge`.
-- Entity-Fallbacks für `transactions`, `mails`, `todos`, `termine` und `documents` entsprechen dem bisherigen Verhalten.
-- Unbekannte Standardfälle fallen wie zuvor auf die Vorgangsansicht zurück.
+## Feststellungen
 
-Die Termin-Sonderfälle sind jetzt explizit als `key`-Routen dokumentiert, was die Anforderung erfüllt, Karten mit gleicher `entity` aber unterschiedlichem `key` unterschiedlich behandeln zu können.
+Keine blockierenden fachlichen oder technischen Probleme gefunden.
 
-## Tests und Scope
-
-Laut Implementation Report wurde `tests/test_dashboard.py` ausgeführt mit `74 passed, 4 skipped`. Es wurden keine serverseitigen APIs, Datenmodelle oder externen Integrationen geändert. Der Scope bleibt auf die Frontend-Routing-Umstellung und den Implementation Report beschränkt.
-
-## Nicht-blockierende Hinweise
-
-Die aktuelle Objekt-Lookup-Variante ist für die vorhandenen serverseitig erzeugten Karten ausreichend. Für maximale Robustheit gegenüber exotischen unbekannten Keys wie Prototype-Eigenschaftsnamen wäre eine Absicherung per `Object.hasOwn(overviewCardRoutes.byKey, key)` beziehungsweise prototype-losen Mapping-Objekten noch robuster. Das ist kein Blocker, da die vorhandenen fachlichen Kachel-Keys kontrolliert sind und normale unbekannte Keys sauber in den Fallback laufen.
+Nicht blockierend ist lediglich, dass `banking_dashboard/static/app.js` im GitHub Compare auftaucht, aber nicht in den Runner-validierten bzw. gestagten Pfaden. Da der GitHub Compare maßgeblich ist und die Änderung dort plausibel und auftragsgemäß ist, blockiert dies die Annahme nicht.
