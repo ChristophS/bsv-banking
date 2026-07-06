@@ -8,44 +8,47 @@
 
 ## Begründung
 
-Die nachgeladenen Kontextdateien reichen zusammen mit dem GitHub-Diff für die fachliche Prüfung aus; der Diff erfüllt die Anforderungen ohne blockierende Probleme.
+Der Diff ist für die fachliche Prüfung ausreichend: Die bisherige Fallunterscheidung in navigateFromOverviewCard ist vollständig sichtbar und wurde nachvollziehbar durch eine zentrale Mapping-Struktur ersetzt; der Branch-Zustand ist sauber.
 
 ## Zusammenfassung
 
-Es wurde ein fokussierter Playwright-Browsertest ergänzt, der die echte Overview-Kachel mit data-overview-key='unassigned_documents' rendert, anklickt und die Navigation in den Vorgänge-/Dokumentkontext sowie den erwarteten UI-Zustand prüft. Die Umsetzung ist fachlich passend und enthält keine unzulässigen Modell- oder Architekturänderungen.
+Die Overview-Kachel-Navigation wurde in app.js auf eine zentrale Routing-Tabelle mit key-spezifischen Routen, entity-Fallbacks und sicherem Standard-Fallback umgestellt. Das bisherige Verhalten der vorhandenen Karten bleibt anhand des Diffs funktionsgleich erhalten; daher wird die Umsetzung akzeptiert.
 
-# Review Report
+## Review-Ergebnis
 
-## Ergebnis
+Akzeptiert.
 
-**Accepted:** true
+## Prüfung gegen das Arbeitspaket
 
-## Geprüfte Anforderungen
+Die Anforderung war, die Klicknavigation der Overview-Kacheln in `banking_dashboard/static/app.js` von verstreuter Falllogik auf eine zentrale Mapping-Tabelle oder äquivalente Konfiguration umzustellen, ohne das bestehende Dashboard-Verhalten fachlich zu verändern.
 
-- `tests/test_dashboard.py` ergänzt einen automatisierten Playwright-Browsertest für den echten Klickpfad der Overview-Kachel `unassigned_documents`.
-- Der Test nutzt den produktiv gerenderten DOM-Selektor `[data-overview-key='unassigned_documents']` und prüft zusätzlich `data-overview-entity='documents'` sowie Label und Zähler.
-- Der Test erzeugt in einem temporären Belegordner ein echtes unzugewiesenes Dokument, sodass die Karte über den realen Server-/Overview-Pfad entsteht.
-- Nach dem Klick wird geprüft, dass der Vorgänge-Bereich aktiv und sichtbar ist und Transaktionen sowie Mails nicht aktiv/sichtbar sind.
-- Der aktuell vorhandene UI-Zustand wird abgesichert: leere Vorgangssuche und kein aktivierter Filter für abgeschlossene Vorgänge.
-- Es wurden keine fachlichen Änderungen an Beleg-, Vorgangs- oder Mail-Datenmodellen vorgenommen.
+Der Diff ersetzt die bisherige `if`-/`else if`-Kette in `navigateFromOverviewCard(key, entity)` durch die zentrale Struktur `overviewCardRoutes` mit:
 
-## Fachliche Bewertung
+- `byKey` für karten-spezifische Routen,
+- `byEntity` als Entity-Fallback,
+- `fallback` als sichere Standardnavigation zur Vorgangsansicht.
 
-Die Umsetzung erfüllt das Arbeitspaket. Der Test ist kein rein unitartiger Mapping-Test, sondern startet einen lokalen Dashboard-Server, lässt die Overview-Karten über `/api/overview` rendern und klickt anschließend die echte Karte im Browser. Damit ist der geforderte reale Klickpfad ausreichend abgesichert.
+Damit ist die Zuordnung an einer zentralen Stelle lesbar definiert und spätere Kacheln können gezielt ergänzt werden.
 
-Dass der Klick aktuell in den bestehenden Vorgänge-Bereich führt, ist durch den vorhandenen Frontend-Kontext nachvollziehbar: `navigateFromOverviewCard` routet `unassigned_documents` beziehungsweise `entity === 'documents'` in den Vorgänge-Tab, da es keinen separaten Dokumente-Tab gibt. Der Test prüft dabei auch, dass nicht versehentlich Transaktionen oder Mails geöffnet werden.
+## Verhalten der bestehenden Karten
 
-## Technische Bewertung
+Die im alten Code vorhandenen Spezialfälle wurden funktionsgleich übernommen:
 
-Der Test fügt sich in die bestehende Browser-Teststruktur ein und nutzt dieselben Skip-Mechanismen für fehlendes Playwright/Chromium wie die vorhandenen Tests. Das lokale Nicht-Ausführen des neuen Tests aufgrund fehlender Playwright-Installation ist deshalb nicht blockierend.
+- `open_vorgaenge`: setzt weiterhin `setVorgangHideCompleted(true)`, invalidiert Vorgänge und öffnet `vorgaenge`.
+- `open_todos`: setzt weiterhin `setTodoHideCompleted(true)`, invalidiert To-dos und öffnet `todos`.
+- `unassigned_transactions`: setzt weiterhin `setTransactionHideCompletedVorgaenge(true)`, öffnet `transactions` und lädt Transaktionen.
+- `upcoming_termine`: setzt weiterhin `setTerminHideCompleted(true)`, invalidiert Termine und öffnet `termine`.
+- `unassigned_termine`: invalidiert weiterhin Termine und öffnet `termine` ohne zusätzlichen Terminfilter.
+- `unassigned_documents`: invalidiert weiterhin Vorgänge und öffnet `vorgaenge`.
+- Entity-Fallbacks für `transactions`, `mails`, `todos`, `termine` und `documents` entsprechen dem bisherigen Verhalten.
+- Unbekannte Standardfälle fallen wie zuvor auf die Vorgangsansicht zurück.
 
-Der Branch-Zustand ist sauber: GitHub Compare ist `ahead`, `ahead_by=1`, `behind_by=0`, ohne Abweichungen zwischen Runner und GitHub Compare.
+Die Termin-Sonderfälle sind jetzt explizit als `key`-Routen dokumentiert, was die Anforderung erfüllt, Karten mit gleicher `entity` aber unterschiedlichem `key` unterschiedlich behandeln zu können.
 
-## Hinweise
+## Tests und Scope
 
-Die zusätzlich nachgeladene vollständige `tests/test_dashboard.py` wirkt gegenüber dem GitHub-Diff inkonsistent, weil der neue Test dort nicht enthalten ist. Für die Entscheidung war das nicht blockierend, da der GitHub-Diff als maßgebliche Quelle die tatsächliche Änderung eindeutig zeigt und die übrigen Kontextdateien das Routing und die DOM-Struktur ausreichend belegen.
+Laut Implementation Report wurde `tests/test_dashboard.py` ausgeführt mit `74 passed, 4 skipped`. Es wurden keine serverseitigen APIs, Datenmodelle oder externen Integrationen geändert. Der Scope bleibt auf die Frontend-Routing-Umstellung und den Implementation Report beschränkt.
 
-## Nicht-blockierende Vorschläge
+## Nicht-blockierende Hinweise
 
-- Browser-Ressourcen im neuen Test könnten robuster in einem `finally` oder über Kontextmanager geschlossen werden.
-- Bei späterer Einführung eines eigenen Dokumente-Tabs oder eines spezifischen Filters für nicht zugewiesene Dokumente sollte der Test den dann konkreteren Zielzustand zusätzlich prüfen.
+Die aktuelle Objekt-Lookup-Variante ist für die vorhandenen serverseitig erzeugten Karten ausreichend. Für maximale Robustheit gegenüber exotischen unbekannten Keys wie Prototype-Eigenschaftsnamen wäre eine Absicherung per `Object.hasOwn(overviewCardRoutes.byKey, key)` beziehungsweise prototype-losen Mapping-Objekten noch robuster. Das ist kein Blocker, da die vorhandenen fachlichen Kachel-Keys kontrolliert sind und normale unbekannte Keys sauber in den Fallback laufen.
