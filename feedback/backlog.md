@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigener Dokumenten-/Beleg-Öffnungsflow, klar getrennt vom priorisierten Abschluss- und Statuskonsistenz-Paket.
+**Grund:** Eigener Dokumenten-/Beleg-Öffnungsflow, klar getrennt vom Abschluss- und Statuskonsistenz-Paket.
 
 **Feedback:**
 
