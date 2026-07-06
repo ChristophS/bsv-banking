@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größere fachliche Erweiterung über Mail-Import, Dokumenthandling, Vorgangsdetail-UI und bestehende Verknüpfungslogik; nicht als kleines, kontrollierbares Arbeitspaket abgrenzbar.
+**Grund:** Größere fachliche Erweiterung über Mail-Import, Belegzuordnung, Vorgangsdetail-UI und bestehende Verknüpfungslogik. Für das nächste Paket wurde daraus nur ein kleiner präzisierender Zwischenschritt abgeleitet.
 
 **Feedback:**
 
