@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Den browsernahen Test nach Aktivierung des Spezialfilters zusätzlich mit `to_be_visible()` absichern.
+- Optional ein spezifischeres `aria-label` für die Zurücksetzen-Schaltfläche ergänzen.
