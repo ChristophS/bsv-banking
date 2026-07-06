@@ -21,3 +21,15 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
+
+## 3. Zeitlogik für `beginnt_am` bei ISO-Zeitpunkten prüfen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierender Hinweis aus dem Review; die aktuelle Logik nutzt weiterhin nur den Datumsteil und unterscheidet innerhalb des Tages nicht per Uhrzeit.
+
+## 4. Exakten Terminlisten-Filter für nicht zugewiesene Termine prüfen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierender Hinweis aus dem Review; der Kartenklick führt weiterhin in die allgemeine Terminansicht mit bestehendem Filter statt in eine explizit auf unzugewiesene Termine eingeschränkte Ansicht.
