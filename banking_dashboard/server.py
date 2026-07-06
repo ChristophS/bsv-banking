@@ -2941,10 +2941,24 @@ class DashboardDataStore:
         self,
         search: str = "",
         hide_completed: bool = False,
+        unassigned_upcoming: bool = False,
     ) -> list[dict[str, Any]]:
         conditions: list[str] = []
         parameters: list[str] = []
-        if hide_completed:
+        if unassigned_upcoming:
+            conditions.append(
+                """
+                t.status = ?
+                AND SUBSTR(t.beginnt_am, 1, 10) >= ?
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM vorgang_termine AS vt
+                    WHERE vt.termin_id = t.termin_id
+                )
+                """
+            )
+            parameters.extend((TERMIN_STATUS_PLANNED, date.today().isoformat()))
+        elif hide_completed:
             conditions.append("t.status = ?")
             parameters.append(TERMIN_STATUS_PLANNED)
         query = search.strip()
@@ -4771,6 +4785,13 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     search=query.get("search", [""])[0],
                     hide_completed=(
                         query.get("hide_completed", ["false"])[0].casefold()
+                        in {"1", "true", "yes", "on"}
+                    ),
+                    unassigned_upcoming=(
+                        query.get(
+                            "unassigned_upcoming",
+                            ["false"],
+                        )[0].casefold()
                         in {"1", "true", "yes", "on"}
                     ),
                 )

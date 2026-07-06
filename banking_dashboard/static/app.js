@@ -27,6 +27,7 @@ const state = {
   termine: [],
   terminSearch: "",
   terminHideCompleted: false,
+  terminUnassignedUpcoming: false,
   terminVorgaenge: [],
   editingTerminId: null,
   budgetsLoaded: false,
@@ -300,7 +301,13 @@ const chartColors = [
 const maxRuleConditions = 50;
 
 elements.tabs.forEach((tab) => {
-  tab.addEventListener("click", () => activateTab(tab.dataset.tab));
+  tab.addEventListener("click", () => {
+    if (tab.dataset.tab === "termine") {
+      setTerminUnassignedUpcoming(false);
+      state.termineLoaded = false;
+    }
+    activateTab(tab.dataset.tab);
+  });
 });
 
 elements.overviewCards.addEventListener("click", (event) => {
@@ -383,6 +390,7 @@ elements.terminSearch.addEventListener("input", () => {
 });
 elements.terminHideCompleted.addEventListener("change", () => {
   state.terminHideCompleted = elements.terminHideCompleted.checked;
+  setTerminUnassignedUpcoming(false);
   loadTermine();
 });
 elements.terminForm.addEventListener("submit", saveTermin);
@@ -641,11 +649,13 @@ const overviewCardRoutes = {
     // Termine share one entity, so key routes keep the current card-specific filters.
     upcoming_termine: () => {
       setTerminHideCompleted(true);
+      setTerminUnassignedUpcoming(false);
       state.termineLoaded = false;
       activateTab("termine");
     },
     unassigned_termine: () => {
       setTerminHideCompleted(true);
+      setTerminUnassignedUpcoming(true);
       state.termineLoaded = false;
       activateTab("termine");
     },
@@ -664,6 +674,7 @@ const overviewCardRoutes = {
       activateTab("mail");
     },
     termine: () => {
+      setTerminUnassignedUpcoming(false);
       state.termineLoaded = false;
       activateTab("termine");
     },
@@ -719,6 +730,10 @@ function setTodoHideCompleted(value) {
 function setTerminHideCompleted(value) {
   state.terminHideCompleted = value;
   elements.terminHideCompleted.checked = value;
+}
+
+function setTerminUnassignedUpcoming(value) {
+  state.terminUnassignedUpcoming = value;
 }
 
 async function loadTodos() {
@@ -1104,6 +1119,7 @@ async function loadTermine() {
   const parameters = new URLSearchParams({
     search: state.terminSearch,
     hide_completed: String(state.terminHideCompleted),
+    unassigned_upcoming: String(state.terminUnassignedUpcoming),
   });
   try {
     const requests = [fetch(`/api/termine?${parameters}`)];
