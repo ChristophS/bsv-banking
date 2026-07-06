@@ -31,3 +31,23 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Vorhandener Backlog-Punkt: Zeitlogik für `beginnt_am` bei ISO-Zeitpunkten prüfen
+
+## 4. Spezialfilter in der Terminansicht sichtbar machen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierender UX-Hinweis aus dem Review; verbessert Nachvollziehbarkeit des aktiven Filters.
+
+**Feedback:**
+
+- Aktiven Spezialfilter in der Terminansicht sichtbar machen, z. B. als Hinweis-Badge „Nicht zugewiesene anstehende Termine“ mit Zurücksetzen-Aktion.
+
+## 5. Spezialfilter bei normaler Termin-Navigation zurücksetzen testen
+
+**Priorität:** niedrig
+
+**Grund:** Zusätzlicher nicht-blockierender Frontend-Test aus dem Review; prüft das Zurücksetzen des Spezialfilters bei Standard-Navigation.
+
+**Feedback:**
+
+- Ergänzenden Frontend-Test hinzufügen, der prüft, dass der Spezialfilter nach normaler Termin-Tab-Navigation oder allgemeiner Termin-Route wieder deaktiviert ist.
