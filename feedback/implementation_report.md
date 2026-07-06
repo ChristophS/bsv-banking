@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260706-100230
+agent2/rework-20260706-100641
 
 ## Geaenderte Dateien
 
@@ -33,6 +33,13 @@ agent2/codex-20260706-100230
 
 - `tests/test_dashboard.py`: 74 passed, 4 skipped
 
+## Nachbesserung nach Review
+
+- Das blockierende Review-Problem im Browser-Regressionstest wurde behoben.
+- `page_errors` wird nun in `test_overview_cards_route_to_matching_tabs_and_filters` initialisiert und der `page.on("pageerror", ...)`-Handler wird in derselben Testfunktion registriert, in der am Ende `self.assertEqual([], page_errors)` ausgefuehrt wird.
+- Damit ist die Assertion gegen Browser-Laufzeitfehler definiert und der Test prueft die abgesicherten Overview-Routen fuer bekannte, unbekannte und ungewoehnliche Keys ohne `NameError`.
+- Die fachliche Haertung in `banking_dashboard/static/app.js` blieb unveraendert erhalten.
+
 ## Bekannte Einschraenkungen
 
 - Die Umsetzung behaelt das bestehende fachliche Verhalten bei. `upcoming_termine` und `unassigned_termine` fuehren weiterhin in die Terminansicht; nur `upcoming_termine` setzt wie bisher den Filter fuer abgeschlossene Termine.
@@ -42,4 +49,5 @@ agent2/codex-20260706-100230
 
 - Der relevante Code steht in `overviewCardRoutes`, `navigateFromOverviewCard` und `ownOverviewRoute` in `banking_dashboard/static/app.js`.
 - Der Browser-Test `test_overview_cards_route_to_matching_tabs_and_filters` deckt bekannte Routen, einen unbekannten Key mit bekannter Entity, `__proto__` mit Entity-Fallback und `constructor` mit Fallback-Route ab.
+- Die Review-Nachbesserung betrifft nur die lokale Initialisierung von `page_errors` im Browser-Routingtest und den Implementation Report.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.

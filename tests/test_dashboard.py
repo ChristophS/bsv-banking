@@ -3064,6 +3064,11 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     page = browser.new_page(
                         viewport={"width": 1500, "height": 1000}
                     )
+                    page_errors = []
+                    page.on(
+                        "pageerror",
+                        lambda error: page_errors.append(str(error)),
+                    )
                     page.goto(base_url, wait_until="networkidle")
 
                     page.locator(
