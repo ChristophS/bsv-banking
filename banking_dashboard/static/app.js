@@ -176,6 +176,10 @@ const elements = {
   todoEmpty: document.querySelector("#todo-empty"),
   terminSearch: document.querySelector("#termin-search"),
   terminHideCompleted: document.querySelector("#termin-hide-completed"),
+  terminSpecialFilter: document.querySelector("#termin-special-filter"),
+  terminSpecialFilterReset: document.querySelector(
+    "#termin-special-filter-reset",
+  ),
   terminCount: document.querySelector("#termin-count"),
   terminCountLabel: document.querySelector("#termin-count-label"),
   terminForm: document.querySelector("#termin-form"),
@@ -391,6 +395,11 @@ elements.terminSearch.addEventListener("input", () => {
 elements.terminHideCompleted.addEventListener("change", () => {
   state.terminHideCompleted = elements.terminHideCompleted.checked;
   setTerminUnassignedUpcoming(false);
+  loadTermine();
+});
+elements.terminSpecialFilterReset.addEventListener("click", () => {
+  setTerminUnassignedUpcoming(false);
+  state.termineLoaded = false;
   loadTermine();
 });
 elements.terminForm.addEventListener("submit", saveTermin);
@@ -734,6 +743,11 @@ function setTerminHideCompleted(value) {
 
 function setTerminUnassignedUpcoming(value) {
   state.terminUnassignedUpcoming = value;
+  renderTerminSpecialFilter();
+}
+
+function renderTerminSpecialFilter() {
+  elements.terminSpecialFilter.hidden = !state.terminUnassignedUpcoming;
 }
 
 async function loadTodos() {
