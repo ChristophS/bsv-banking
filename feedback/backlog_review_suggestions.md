@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Später `unassigned_documents` auf einen echten Belege-/Dokumente-Reiter routen, falls dieser als bestehende Top-Level-Ansicht eingeführt wird.
+- Später spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen, ohne die Navigationsarchitektur zu vergrößern.
