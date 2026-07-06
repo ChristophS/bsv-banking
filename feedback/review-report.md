@@ -8,47 +8,51 @@
 
 ## Begründung
 
-Der Diff ist für die fachliche und technische Prüfung ausreichend; die Anforderungen des Arbeitspakets sind umgesetzt und durch passende Tests abgesichert.
+Der Diff ist für die fachliche Prüfung ausreichend: Die UI-Ergänzung, State-Kopplung, Reset-Aktion, Styles und Testanpassung sind nachvollziehbar und erfüllen das Arbeitspaket ohne erkennbare Blocker.
 
 ## Zusammenfassung
 
-Die Umsetzung ergänzt einen expliziten API-Filter `unassigned_upcoming=true`, verdrahtet den Klick auf die Overview-Karte `unassigned_termine` im Frontend auf diesen Filter und ergänzt Store-, HTTP- und UI-nahe Tests. Die Kriterien aus dem Arbeitspaket werden erfüllt; es gibt keine blockierenden Probleme.
+Die Terminansicht zeigt bei aktivem Spezialfilter einen verständlichen Hinweis „Nicht zugewiesene anstehende Termine“ mit Zurücksetzen-Aktion. Der Hinweis ist an den bestehenden unassigned_upcoming-State gekoppelt und wird beim Reset wieder ausgeblendet; der Branch-Zustand ist sauber. Daher akzeptiert.
 
 ## Review-Ergebnis
 
-**Accepted: true**
+✅ **Akzeptiert**
 
-Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch.
+## Prüfung gegen das Arbeitspaket
 
-## Geprüfte Anforderungen
+Das Arbeitspaket fordert, dass in der Terminansicht sichtbar erkennbar ist, wenn der Spezialfilter `unassigned_upcoming` beziehungsweise „Nicht zugewiesene anstehende Termine“ aktiv ist, und dass eine einfache Zurücksetzen-/Schließen-Aktion zurück zur normalen Terminliste führt.
 
-- `GET /api/termine` unterstützt nun den expliziten Query-Parameter `unassigned_upcoming=true`.
-- `DashboardDataStore.list_termine()` filtert bei aktiviertem Parameter auf:
-  - `status = geplant`,
-  - Datum ab heute über `SUBSTR(t.beginnt_am, 1, 10) >= date.today().isoformat()`,
-  - keine Zuordnung in `vorgang_termine` per `NOT EXISTS`.
-- Der bestehende Aufruf ohne neuen Parameter bleibt unverändert; `hide_completed` wird nur dann verwendet, wenn der neue Spezialfilter nicht aktiv ist.
-- Der Frontend-State wurde um `terminUnassignedUpcoming` ergänzt.
-- Der Overview-Kartenklick für `unassigned_termine` aktiviert den Termin-Tab und setzt `unassigned_upcoming=true` beim Laden der Terminliste.
-- Allgemeine Termin-Navigation und `upcoming_termine` setzen den Spezialfilter zurück.
-- Tests wurden ergänzt für:
-  - Store-Filterlogik,
-  - HTTP/API-Filter,
-  - UI-nahes Kartenrouting mit Request auf `unassigned_upcoming=true`.
+Die Umsetzung ergänzt:
+
+- einen dedizierten Hinweisbereich `#termin-special-filter` in `banking_dashboard/static/index.html`, direkt unter der Termin-Toolbar,
+- einen verständlichen Hinweistext „Nicht zugewiesene anstehende Termine“,
+- eine Schaltfläche „Zurücksetzen“,
+- eine State-gekoppelte Anzeige über `renderTerminSpecialFilter()` in `banking_dashboard/static/app.js`,
+- einen Reset-Handler, der `setTerminUnassignedUpcoming(false)` aufruft und anschließend die Terminliste neu lädt,
+- passende Styles in `banking_dashboard/static/styles.css`,
+- eine Erweiterung des browsernahen Tests in `tests/test_dashboard.py`.
+
+## Fachliche Bewertung
+
+Die Muss-Kriterien sind erfüllt:
+
+- Der Spezialfilter wird verständlich benannt und ist nicht mit dem normalen `hide_completed`-Filter verwechselbar.
+- Der Hinweis ist standardmäßig per `hidden` ausgeblendet und wird über `state.terminUnassignedUpcoming` gesteuert.
+- Die Reset-Aktion entfernt den Spezialfilter und lädt `/api/termine` ohne aktiven `unassigned_upcoming`-Filter neu beziehungsweise laut Test mit `unassigned_upcoming=false`.
+- Nach dem Reset wird der Hinweis wieder ausgeblendet.
+- Die bestehende Serverfilterlogik wird nicht verändert, was dem Scope des Arbeitspakets entspricht.
 
 ## Technische Bewertung
 
-Die SQL-Bedingung entspricht den im Auftrag geforderten Kriterien und ist passend als expliziter Filter in `list_termine()` integriert. Die Entscheidung, `unassigned_upcoming` separat von `hide_completed` zu führen und nicht zu überladen, entspricht den Hinweisen im Arbeitspaket.
+Die Änderungen sind minimal-invasiv und passen zur bestehenden Frontend-Struktur. Es gibt keinen erkennbaren Scope Creep, keine verbotenen Änderungen und keinen unsauberen Branch-Zustand (`ahead_by=1`, `behind_by=0`).
 
-Die Frontend-Änderung ist minimal und integriert den neuen Filter in den bestehenden Terminlisten-State. Dass `hide_completed` beim unassigned-Kartenklick ebenfalls gesetzt wird, ist nicht blockierend, weil der Server bei `unassigned_upcoming=true` ohnehin die strengere fachliche Bedingung verwendet und geplante Termine filtert.
-
-Die ergänzten Tests decken die zentralen Akzeptanzkriterien ab: ein unzugewiesener zukünftiger geplanter Termin erscheint, verknüpfte, vergangene, abgeschlossene und abgesagte Termine erscheinen nicht.
-
-## Blockierende Probleme
-
-Keine.
+Der automatisierte Test deckt den Flow über die Overview-Karte und das Reset-Verhalten grundsätzlich ab. Nicht blockierend ist, dass die Sichtbarkeit des aktivierten Hinweises noch expliziter geprüft werden könnte.
 
 ## Nicht-blockierende Hinweise
 
-- Der Spezialfilter ist im UI nicht sichtbar. Das ist laut Arbeitspaket nicht zwingend, aber für die Nachvollziehbarkeit durch Nutzer später wünschenswert.
-- Ein zusätzlicher UI-Test für das Zurücksetzen des Spezialfilters bei normaler Termin-Navigation wäre eine sinnvolle Ergänzung, ist aber nicht erforderlich für die Abnahme.
+- Im Test wäre `expect(page.locator("#termin-special-filter")).to_be_visible()` nach Aktivierung robuster als nur `to_contain_text()`, weil Textinhalt allein nicht zwingend Sichtbarkeit beweist.
+- Optional könnte der Reset-Button ein spezifischeres `aria-label` erhalten, z. B. „Spezialfilter Nicht zugewiesene anstehende Termine zurücksetzen“.
+
+## Fazit
+
+Die Umsetzung erfüllt die Akzeptanzkriterien des Arbeitspakets. Keine blockierenden Probleme festgestellt.
