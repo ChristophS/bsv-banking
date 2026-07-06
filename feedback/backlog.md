@@ -26,18 +26,8 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Separater Prüfpunkt zur Terminlogik; nicht Teil des kleinen sichtbaren UI-Filterpakets.
+**Grund:** Separater Prüfpunkt zur Terminlogik; bewusst nicht mit dem aktuellen kleinen Regressionstest-Paket vermischt.
 
 **Feedback:**
 
 - Vorhandener Backlog-Punkt: Zeitlogik für beginnt_am bei ISO-Zeitpunkten prüfen
-
-## 4. Spezialfilter bei normaler Termin-Navigation zurücksetzen testen
-
-**Priorität:** niedrig
-
-**Grund:** Sinnvoller Folgepunkt, aber getrennt vom kleinen ersten UX-Schritt, um das Arbeitspaket kontrolliert zu halten.
-
-**Feedback:**
-
-- Ergänzenden Frontend-Test hinzufügen, der prüft, dass der Spezialfilter nach normaler Termin-Tab-Navigation oder allgemeiner Termin-Route wieder deaktiviert ist.
