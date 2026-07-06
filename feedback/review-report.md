@@ -8,40 +8,43 @@
 
 ## Begründung
 
-Der Diff ist für die fachliche Prüfung ausreichend: Server-Endpunkt, UI-Aktionen und Tests sind sichtbar und erfüllen die Akzeptanzkriterien ohne erkennbare Blocker.
+Der Diff ist für dieses kleine Arbeitspaket ausreichend aussagekräftig: Die zentrale Helper-Logik wird in create_vorgang und update_vorgang nach der Link-Aktualisierung und vor dem Commit aufgerufen, und passende Dashboard-Tests wurden ergänzt.
 
 ## Zusammenfassung
 
-Umgesetzt wurde ein neuer read-only Endpunkt zum Ausliefern des Originaldokuments eines katalogisierten Belegs sowie zusätzliche UI-Aktionen zur klaren Unterscheidung zwischen Katalogeintrag und Originaldokument. Die Umsetzung erfüllt die Muss-Anforderungen und ist durch passende HTTP-Tests abgedeckt.
+Die Umsetzung markiert verknüpfte Vorgangs-Mails beim Erstellen und Aktualisieren lokal als gelesen und nutzt dafür den vorhandenen Helper. Create- und Update-Testfälle wurden ergänzt; der Branch-Zustand ist sauber. Keine blockierenden Probleme gefunden.
 
 ## Review-Ergebnis
 
-**Akzeptiert.**
-
-Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch ausreichend.
+**Accepted:** Ja
 
 ## Geprüfte Anforderungen
 
-- Ein neuer GET-Endpunkt `/api/belege/<beleg_id>/document` wurde ergänzt.
-- Der Endpunkt verwendet ausschließlich den bestehenden Beleg-Lookup über `beleg_id`; es werden keine freien Pfadparameter akzeptiert.
-- Für unbekannte Belege wird ein 404-Fehler ausgelöst.
-- Für katalogisierte Belege ohne vorhandene Datei bzw. bei nicht lesbarer Datei wird ebenfalls ein 404-Fehler ausgelöst.
-- Die Datei wird aus `belege.dateipfad` ausgeliefert und mit Content-Type sowie Content-Disposition versehen.
-- Browser-taugliche Typen wie PDF, Bilder und Text werden inline ausgeliefert, andere als Attachment.
-- Die UI unterscheidet sichtbar zwischen `Katalogeintrag öffnen` und `Originaldokument öffnen`.
-- Die zusätzliche Aktion ist im Vorgangsdetail-Flow und in Beleg-/Dokument-Kontexten ergänzt worden.
-- Die bestehende Verknüpfungslogik über Vorgänge wurde im Diff nicht umgebaut.
+- Beim Anlegen eines Vorgangs mit `mail_ids` werden die verknüpften `inbox_messages` lokal als gelesen markiert.
+- Beim Aktualisieren eines Vorgangs werden verknüpfte Mails nach der Link-Aktualisierung lokal als gelesen markiert.
+- Die bestehende Abschlusslogik wurde im Diff nicht verändert.
+- Es wurden automatisierte Tests für einen Create- und einen Update-Fall ergänzt.
+- Es wurde keine Microsoft-Graph-seitige oder externe Read-Markierung eingeführt.
 
-## Tests
+## Technische Bewertung
 
-Es wurden passende Tests in `tests/test_dashboard.py` ergänzt für:
+In `banking_dashboard/server.py` wird nach `self._replace_vorgang_links(connection, vorgangs_id, values)` jeweils `self._mark_vorgang_mails_read(connection, {vorgangs_id})` aufgerufen, sowohl in `create_vorgang(...)` als auch in `update_vorgang(...)`. Der Zeitpunkt ist passend: Die Linktabellen sind bereits aktualisiert, der Commit erfolgt erst danach. Damit kann die vorhandene zentrale Helper-Logik innerhalb derselben Transaktion auf die aktuellen Verknüpfungen wirken.
 
-- erfolgreiche Auslieferung eines vorhandenen Originaldokuments,
-- unbekannte Beleg-ID mit 404,
-- katalogisierten Beleg mit fehlender Datei mit 404.
+Die Tests in `tests/test_dashboard.py` wurden sinnvoll erweitert:
 
-Der Implementation Report nennt erfolgreich ausgeführte Dashboard-Tests: `83 passed, 4 skipped`.
+- `test_create_vorgang_marks_linked_mails_read` legt eine ungelesene und eine bereits gelesene Mail an, erstellt einen Vorgang mit beiden `mail_ids` und prüft die Verknüpfung sowie `is_read`.
+- `test_update_vorgang_marks_newly_linked_mail_read` verknüpft eine zuvor ungelesene Mail nachträglich mit einem bestehenden Vorgang und prüft anschließend die lokale Read-Markierung.
 
-## Hinweise
+Die Umstrukturierung des Test-Helpers in `_create_test_mail` und `_link_test_mail_to_vorgang` ist nachvollziehbar und unterstützt die neuen Testfälle ohne fachlichen Scope Creep.
 
-Keine blockierenden Probleme festgestellt. Die zusätzlichen CSS-Änderungen sind nachvollziehbar und dienen nur der Darstellung der neuen Aktionen.
+## Branch-/Diff-Bewertung
+
+GitHub Compare zeigt einen sauberen Zustand: `ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner- und GitHub-Dateiliste. Geändert wurden nur die erwarteten Code-/Testdateien sowie der Implementation Report.
+
+## Blockierende Probleme
+
+Keine.
+
+## Nicht blockierende Hinweise
+
+- Optional könnte ein weiterer Update-Test den Fall absichern, dass ein Vorgang bereits Mails verknüpft hat und zusätzliche Mails ergänzt werden. Der aktuelle Test deckt aber das geforderte Mindestkriterium für Update ab.
