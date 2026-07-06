@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Expliziten Browser-Test für den Klick auf die echte `unassigned_documents`-Kachel ergänzen, falls nicht bereits durch bestehende Testschritte abgedeckt.
+- Overview-Routing perspektivisch in eine zentrale Mapping-Tabelle überführen, wenn weitere Kacheln oder Entitäten hinzukommen.
