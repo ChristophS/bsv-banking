@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größere funktionale Erweiterung mit UI-, Vorgangs- und Dokumentzuordnungsfolgen; nicht so klein und risikoarm wie das gewählte Routing-Paket.
+**Grund:** Größere fachliche Erweiterung über Mail-Import, Dokumenthandling, Vorgangsdetail-UI und bestehende Verknüpfungslogik; nicht so klein und risikoarm wie die aktuelle Robustheitskorrektur.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit erheblichem Konzept- und Integrationsumfang; nicht für ein kleines nächstes Arbeitspaket geeignet.
+**Grund:** Eigenständiges größeres Modul mit zusätzlichem Datenmodell- und Integrationsbedarf; aktuell nicht als kleines repo-konkretes Arbeitspaket gewählt.
 
 **Feedback:**
 
@@ -26,18 +26,8 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Naheliegender Folgepunkt nach dem jetzigen Routing-Refactoring, aber fachlich separat.
+**Grund:** Sinnvoller Folgepunkt im Dashboard, aber funktional getrennt vom jetzt gewählten Lookup-Härtungspaket.
 
 **Feedback:**
 
 - Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen.
-
-## 4. Mapping-Lookups gegen ungewöhnliche Keys absichern
-
-**Priorität:** niedrig
-
-**Grund:** Nicht-blockierende Robustheitsverbesserung für die zentrale Overview-Routing-Tabelle.
-
-**Feedback:**
-
-- Die Mapping-Lookups optional mit `Object.hasOwn` oder prototype-losen Objekten absichern, damit ungewöhnliche unbekannte `card.key`-/`entity`-Werte garantiert nicht mit geerbten Objekt-Eigenschaften kollidieren.
