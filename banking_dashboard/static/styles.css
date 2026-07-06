@@ -1077,6 +1077,10 @@ th[aria-sort="descending"] .sort-indicator {
   width: auto;
 }
 
+.data-table .vorgang-status-column {
+  width: 165px;
+}
+
 .data-table .amount-column {
   width: 145px;
   text-align: right;
@@ -1112,6 +1116,15 @@ th[aria-sort="descending"] .sort-indicator {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-vorgang-cell {
+  min-width: 150px;
+}
+
+.transaction-vorgang-cell .status-badge {
+  margin: 2px 6px 2px 0;
   white-space: nowrap;
 }
 

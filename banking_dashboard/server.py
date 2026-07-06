@@ -318,9 +318,28 @@ class DashboardDataStore:
                     n.zahlungsbeteiligter,
                     n.verwendungszweck,
                     n.betrag,
-                    n.kontostand_konto
+                    n.kontostand_konto,
+                    COUNT(DISTINCT tv.vorgangs_id) AS vorgaenge_count,
+                    COUNT(
+                        DISTINCT CASE
+                            WHEN v.status = 'abgeschlossen'
+                            THEN tv.vorgangs_id
+                        END
+                    ) AS completed_vorgaenge_count
                 FROM normalized_transactions AS n
+                LEFT JOIN transaktion_vorgaenge AS tv
+                  ON tv.transaktions_id = n.transaktions_id
+                LEFT JOIN vorgaenge AS v
+                  ON v.vorgangs_id = tv.vorgangs_id
                 {where}
+                GROUP BY
+                    n.transaktions_id,
+                    n.datum,
+                    n.kontoname,
+                    n.zahlungsbeteiligter,
+                    n.verwendungszweck,
+                    n.betrag,
+                    n.kontostand_konto
                 ORDER BY
                     {order_expression} {normalized_direction.upper()},
                     n.datum DESC,
@@ -328,7 +347,19 @@ class DashboardDataStore:
                 """,
                 tuple(parameters),
             ).fetchall()
-        return [dict(row) for row in rows]
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["vorgaenge_count"] = int(item["vorgaenge_count"] or 0)
+            item["completed_vorgaenge_count"] = int(
+                item["completed_vorgaenge_count"] or 0
+            )
+            item["has_vorgaenge"] = item["vorgaenge_count"] > 0
+            item["has_completed_vorgaenge"] = (
+                item["completed_vorgaenge_count"] > 0
+            )
+            result.append(item)
+        return result
 
     def transaction_period_bounds(self) -> dict[str, Any]:
         with closing(self._connect()) as connection:
