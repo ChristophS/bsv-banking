@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Größerer Eingriff in Datenmodell, Zuordnungen, UI und Auswertungen; nicht klein genug für das nächste kontrollierte Paket.
+**Grund:** Großer Eingriff in Datenmodell, Zuordnungen, UI und Auswertungen; nicht klein genug für dieses Folgepaket.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Separater Zuordnungs- und Vorschlags-Flow; bestehende Kandidaten-/Suggestion-Logik ist vorhanden, aber als eigenes Paket sauberer.
+**Grund:** Eigenständiger Zuordnungs-Flow; vorhandene Vorschlagslogik ist erkennbar, sollte aber separat umgesetzt werden.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Klar abgrenzbar, aber hinter dem ausgewählten hochprioren Dokument-Öffnungsproblem zurückgestellt.
+**Grund:** Klar abgrenzbar, aber weniger arbeitskritisch als der gewählte Mail-/Vorgangs-Fix.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Anderer Mail-/Dokumenten-Flow; sollte separat umgesetzt und getestet werden.
+**Grund:** Separater Mail-/Dokumenten-Flow mit UI-Auswirkungen; nicht Teil dieses kleinen Pakets.
 
 **Feedback:**
 
@@ -46,7 +46,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** UX-Verbesserung, aber nicht so arbeitskritisch wie der Dokument-Öffnungsfall.
+**Grund:** UI-/UX-Verbesserung, aber nicht so dringlich wie der gewählte Funktionsfix.
 
 **Feedback:**
 
@@ -56,7 +56,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Separater Erfassungsflow für Mail-/Vorgangsanlage; eigenes kleines Paket möglich.
+**Grund:** Kleines eigenes Paket im Vorgangsanlage-Flow, aber nicht das aktuell gewählte Prioritätsthema.
 
 **Feedback:**
 
@@ -66,7 +66,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigener Kandidaten-/Refresh-Flow zwischen Mail-Import-UI und aktuellen Transaktionsdaten.
+**Grund:** Eigenständiger Kandidaten-/Refresh-Flow zwischen Mail-Import-UI und Transaktionsdaten.
 
 **Feedback:**
 
@@ -76,7 +76,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigener fachlicher Spezialfall mit Abschlusslogik und Validierungsfolgen; besser separat.
+**Grund:** Eigener fachlicher Spezialfall mit Validierungs- und Abschlusslogik; separat behandeln.
 
 **Feedback:**
 
@@ -92,17 +92,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Wenn ich direkt aus dem Tool eine Mail sende, dann werden zeilenumbrüche ignoriert. Ich kann auch nicht auswählen an wen.
 
-## 10. Verknüpfte oder abgeschlossene Vorgangs-Mails automatisch als gelesen markieren
-
-**Priorität:** mittel
-
-**Grund:** Teilweise besteht schon Abschluss-Logik; der erweiterte Fall 'bereits bei Verknüpfung' bleibt ein eigenes Restpaket.
-
-**Feedback:**
-
-- Wenn ein Vorgang abgeschlossen ist, sollen zugehörige Mails automatisch als gelesen markiert werden. Bzw nicht nur bei abgeschlossenem Vorgang, sondern auch bei verknüpften (offenen) Vorgang.
-
-## 11. Dashboard-Startseite mit anstehenden Terminen, To-Dos, offenen Vorgängen und Alles-synchronisieren
+## 10. Dashboard-Startseite mit anstehenden Terminen, To-Dos, offenen Vorgängen und Alles-synchronisieren
 
 **Priorität:** mittel
 
@@ -112,21 +102,21 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Gut wäre, wenn man beim Start ein Dashboard hätte mit anstehenden Terminen, ToDos, offene Vorgänge, usw. UND einen Button mit "alles synchronisieren" Also Mails, Transaktionen vor allem
 
-## 12. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
+## 11. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
 **Priorität:** mittel
 
-**Grund:** Größere Dokument-/Zuordnungs-Erweiterung; sollte nicht mit dem einfachen Originaldokument-Öffnen vermischt werden.
+**Grund:** Größere Dokument-/Zuordnungs-Erweiterung; nicht Teil des aktuellen kleinen Pakets.
 
 **Feedback:**
 
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege, wie man geschickt damit umgehen kann.
 
-## 13. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
+## 12. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
 
 **Priorität:** mittel
 
-**Grund:** Neues größeres Modul mit Konzeptionsbedarf, klar außerhalb eines kleinen Folgepakets.
+**Grund:** Neues größeres Modul mit Konzeptionsbedarf; klar außerhalb eines kleinen nächsten Arbeitspakets.
 
 **Feedback:**
 
