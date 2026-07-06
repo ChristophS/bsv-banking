@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Der maßgebliche GitHub-Diff erfüllt die Anforderungen minimal und zielgerichtet; Branch-Zustand ist sauber.
+Die nachgeladenen Kontextdateien reichen zusammen mit dem GitHub-Diff für die fachliche Prüfung aus; der Diff erfüllt die Anforderungen ohne blockierende Probleme.
 
 ## Zusammenfassung
 
-Das Frontend-Routing für Overview-Karten wurde so ergänzt, dass `unassigned_documents` und `entity === "documents"` den bestehenden Vorgänge-/Dokumente-Kontext öffnen. Die API-Konfiguration wird per Test abgesichert, und ein Browser-Test deckt das Dokumenten-Entity-Routing ab. Keine blockierenden Probleme festgestellt.
+Es wurde ein fokussierter Playwright-Browsertest ergänzt, der die echte Overview-Kachel mit data-overview-key='unassigned_documents' rendert, anklickt und die Navigation in den Vorgänge-/Dokumentkontext sowie den erwarteten UI-Zustand prüft. Die Umsetzung ist fachlich passend und enthält keine unzulässigen Modell- oder Architekturänderungen.
 
 # Review Report
 
@@ -22,43 +22,30 @@ Das Frontend-Routing für Overview-Karten wurde so ergänzt, dass `unassigned_do
 
 ## Geprüfte Anforderungen
 
-- Die Dashboard-Kachel `unassigned_documents` soll nicht mehr fälschlich in andere Bereiche wie Termine routen.
-- Karten mit `entity: documents` sollen den bestehenden Belege-/Dokumente-Bereich öffnen.
-- Andere Overview-Karten sollen unverändert bleiben.
-- Tests sollen die Dokumenten-Zuordnung absichern.
+- `tests/test_dashboard.py` ergänzt einen automatisierten Playwright-Browsertest für den echten Klickpfad der Overview-Kachel `unassigned_documents`.
+- Der Test nutzt den produktiv gerenderten DOM-Selektor `[data-overview-key='unassigned_documents']` und prüft zusätzlich `data-overview-entity='documents'` sowie Label und Zähler.
+- Der Test erzeugt in einem temporären Belegordner ein echtes unzugewiesenes Dokument, sodass die Karte über den realen Server-/Overview-Pfad entsteht.
+- Nach dem Klick wird geprüft, dass der Vorgänge-Bereich aktiv und sichtbar ist und Transaktionen sowie Mails nicht aktiv/sichtbar sind.
+- Der aktuell vorhandene UI-Zustand wird abgesichert: leere Vorgangssuche und kein aktivierter Filter für abgeschlossene Vorgänge.
+- Es wurden keine fachlichen Änderungen an Beleg-, Vorgangs- oder Mail-Datenmodellen vorgenommen.
 
-## Bewertung der Umsetzung
+## Fachliche Bewertung
 
-Der maßgebliche GitHub-Diff ergänzt in `banking_dashboard/static/app.js` in `navigateFromOverviewCard` eine explizite Behandlung für:
+Die Umsetzung erfüllt das Arbeitspaket. Der Test ist kein rein unitartiger Mapping-Test, sondern startet einen lokalen Dashboard-Server, lässt die Overview-Karten über `/api/overview` rendern und klickt anschließend die echte Karte im Browser. Damit ist der geforderte reale Klickpfad ausreichend abgesichert.
 
-- `key === "unassigned_documents"`
-- `entity === "documents"`
+Dass der Klick aktuell in den bestehenden Vorgänge-Bereich führt, ist durch den vorhandenen Frontend-Kontext nachvollziehbar: `navigateFromOverviewCard` routet `unassigned_documents` beziehungsweise `entity === 'documents'` in den Vorgänge-Tab, da es keinen separaten Dokumente-Tab gibt. Der Test prüft dabei auch, dass nicht versehentlich Transaktionen oder Mails geöffnet werden.
 
-Diese Fälle setzen `state.vorgaengeLoaded = false` und aktivieren anschließend den bestehenden `vorgaenge`-Tab. Aus dem nachgeladenen `index.html`-Kontext ist ersichtlich, dass es keinen separaten Top-Level-Tab für Belege/Dokumente gibt und Dokumente fachlich im Vorgangsbereich verarbeitet bzw. angezeigt werden. Damit ist das Routing auf den bestehenden Vorgänge-/Dokumente-Kontext repo-konsistent und führt keine neue Navigationsarchitektur ein.
+## Technische Bewertung
 
-Die bestehenden spezifischen Routen für offene Vorgänge, To-Dos, Transaktionen und Termine bleiben unverändert und werden durch die neue Bedingung nicht verdrängt, da sie weiterhin vorher abgearbeitet werden.
+Der Test fügt sich in die bestehende Browser-Teststruktur ein und nutzt dieselben Skip-Mechanismen für fehlendes Playwright/Chromium wie die vorhandenen Tests. Das lokale Nicht-Ausführen des neuen Tests aufgrund fehlender Playwright-Installation ist deshalb nicht blockierend.
 
-## Tests
-
-In `tests/test_dashboard.py` wurde ergänzt:
-
-- Prüfung, dass die Overview-API weiterhin `unassigned_documents` mit `entity == "documents"` liefert.
-- Browser-Regression für eine Dokumenten-Karte, deren Routing über `entity = documents` erfolgt und den Vorgänge-Tab aktiviert.
-
-Der Implementation Report nennt erfolgreich ausgeführte Tests:
-
-- `pytest tests/test_dashboard.py`
-- `node --check banking_dashboard/static/app.js`
+Der Branch-Zustand ist sauber: GitHub Compare ist `ahead`, `ahead_by=1`, `behind_by=0`, ohne Abweichungen zwischen Runner und GitHub Compare.
 
 ## Hinweise
 
-Im zusätzlich nachgeladenen Vollinhalt von `banking_dashboard/static/app.js` war die im GitHub-Diff sichtbare neue Bedingung an der betreffenden Stelle nicht enthalten, obwohl `source_ref` auf denselben Commit verweist. Für die Bewertung wurde gemäß Vorgabe der GitHub-Diff als maßgebliche Quelle der tatsächlich geänderten Stellen verwendet. Der übrige geladene Kontext war ausreichend, um zu bestätigen, dass `activateTab("vorgaenge")` der bestehende Vorgänge-/Dokumente-Kontext ist.
+Die zusätzlich nachgeladene vollständige `tests/test_dashboard.py` wirkt gegenüber dem GitHub-Diff inkonsistent, weil der neue Test dort nicht enthalten ist. Für die Entscheidung war das nicht blockierend, da der GitHub-Diff als maßgebliche Quelle die tatsächliche Änderung eindeutig zeigt und die übrigen Kontextdateien das Routing und die DOM-Struktur ausreichend belegen.
 
-## Blockierende Punkte
+## Nicht-blockierende Vorschläge
 
-Keine.
-
-## Nicht blockierende Vorschläge
-
-- Falls der bestehende Browser-Test nicht bereits die echte Kachel `unassigned_documents` anklickt, sollte ergänzend genau dieser Klickpfad getestet werden.
-- Bei weiteren Overview-Routing-Erweiterungen wäre eine zentrale Mapping-Struktur wartungsfreundlicher als zusätzliche Einzelbedingungen.
+- Browser-Ressourcen im neuen Test könnten robuster in einem `finally` oder über Kontextmanager geschlossen werden.
+- Bei späterer Einführung eines eigenen Dokumente-Tabs oder eines spezifischen Filters für nicht zugewiesene Dokumente sollte der Test den dann konkreteren Zielzustand zusätzlich prüfen.
