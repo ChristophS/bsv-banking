@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Aktiven Spezialfilter in der Terminansicht sichtbar machen, z. B. als Hinweis-Badge „Nicht zugewiesene anstehende Termine“ mit Zurücksetzen-Aktion.
+- Ergänzenden Frontend-Test hinzufügen, der prüft, dass der Spezialfilter nach normaler Termin-Tab-Navigation oder allgemeiner Termin-Route wieder deaktiviert ist.
