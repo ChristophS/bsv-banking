@@ -15,7 +15,11 @@ from banking_dashboard.server import (
     default_transaction_period,
     fallback_mail_vorgang_analysis,
 )
-from transaction_store.database import connect_database
+from transaction_store.database import (
+    TERMIN_STATUS_CANCELLED,
+    TERMIN_STATUS_COMPLETED,
+    connect_database,
+)
 from transaction_store.rules import (
     connect_rules_database,
     list_classification_rules,
@@ -1550,6 +1554,61 @@ class DashboardDataStoreTests(unittest.TestCase):
         )
         self.assertEqual("documents", document_card["entity"])
         self.assertEqual(todo["todo_id"], self.store.list_todos()[0]["todo_id"])
+
+    def test_overview_counts_only_relevant_open_upcoming_termine(self):
+        self.store.create_termin(
+            {
+                "title": "Geplanter Zukunftstermin",
+                "starts_at": "2999-01-15T18:00:00+01:00",
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Geplanter Datumstermin",
+                "starts_at": "2999-01-16",
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Geplanter Vergangenheitstermin",
+                "starts_at": "2000-01-15T18:00:00+01:00",
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Abgeschlossener Zukunftstermin",
+                "starts_at": "2999-01-17T18:00:00+01:00",
+                "status": TERMIN_STATUS_COMPLETED,
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Abgesagter Zukunftstermin",
+                "starts_at": "2999-01-18T18:00:00+01:00",
+                "status": TERMIN_STATUS_CANCELLED,
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Verknuepfter Zukunftstermin",
+                "starts_at": "2999-01-19T18:00:00+01:00",
+                "vorgangs_ids": ["vorgang_tx_newer"],
+            }
+        )
+
+        overview = self.store.overview_counts()
+
+        self.assertEqual(3, overview["counts"]["upcoming_termine"])
+        self.assertEqual(2, overview["counts"]["unassigned_termine"])
+        unassigned_card = next(
+            card
+            for card in overview["cards"]
+            if card["key"] == "unassigned_termine"
+        )
+        self.assertEqual(
+            "Nicht zugewiesene anstehende Termine",
+            unassigned_card["label"],
+        )
 
     def test_vorgang_can_be_created_and_updated_with_many_entity_links(self):
         todo = self.store.create_todo({"title": "Beleg prüfen"})
