@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional bei zukünftigen Erweiterungen kurze Kommentare oder Tests je neuer Overview-Route ergänzen, damit neue Kacheln eindeutig an das zentrale Mapping angebunden werden.
+- Bei künftigen Reviews sicherstellen, dass nachgeladene Kontextdateien exakt zum Compare-Commit passen, um Verwirrung durch stale Kontext zu vermeiden.
