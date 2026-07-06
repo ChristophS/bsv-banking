@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Der Diff ist für die fachliche Prüfung ausreichend; die zentrale Lookup-Logik wurde gezielt abgesichert und passende Regressionstests wurden ergänzt.
+Der Diff ist für die geänderte Zähllogik und die ergänzten Tests ausreichend aussagekräftig; die Umsetzung erfüllt die Akzeptanzkriterien ohne erkennbare Blocker.
 
 ## Zusammenfassung
 
-Die Overview-Kartennavigation verwendet nun eigene Property-Lookups über Object.hasOwn und verhindert damit Treffer über geerbte Eigenschaften wie __proto__ oder constructor. Die ergänzten Browser-Regressionstests decken bekannte Routen sowie unbekannte und ungewöhnliche Werte ab. Es wurden keine blockierenden Probleme festgestellt.
+Die Dashboard-Zählung für nicht zugewiesene Termine wurde auf geplante, nicht vergangene und unverknüpfte Termine eingeschränkt, die Kartenbeschriftung wurde präzisiert und ein Regressionstest deckt geplante, vergangene, abgeschlossene, abgesagte sowie verknüpfte Termine ab. Die Umsetzung ist fachlich passend und akzeptiert.
 
 ## Review-Ergebnis
 
@@ -20,23 +20,35 @@ Die Overview-Kartennavigation verwendet nun eigene Property-Lookups über Object
 
 ## Prüfung gegen das Arbeitspaket
 
-Die Umsetzung adressiert die geforderte Härtung der Overview-Routing-Logik in `banking_dashboard/static/app.js`. Statt direkter Zugriffe wie `overviewCardRoutes.byKey[key]` und `overviewCardRoutes.byEntity[entity]` wird nun über `ownOverviewRoute(...)` mit `Object.hasOwn(routes, name)` geprüft, ob der jeweilige Schlüssel tatsächlich als eigene Property in der Mapping-Tabelle existiert.
+Die Umsetzung passt zum Ziel, die Dashboard-Kennzahlen für Termine fachlich präziser zu zählen:
 
-Damit werden geerbte Eigenschaften wie `__proto__`, `constructor` oder `toString` nicht mehr als gültige Routing-Treffer behandelt. Für unbekannte Werte bleibt das bestehende Fallback erhalten, sodass kein Laufzeitfehler entstehen sollte und keine prototype-basierte Fehlroute ausgelöst wird.
+- `unassigned_termine` wird in `DashboardDataStore.overview_counts()` nun nur noch für Termine gezählt, die:
+  - den bestehenden Status `TERMIN_STATUS_PLANNED` haben,
+  - deren Datumsteil von `beginnt_am` nicht in der Vergangenheit liegt,
+  - und die keinen Eintrag in `vorgang_termine` besitzen.
+- Damit werden abgeschlossene und abgesagte unzugewiesene Termine nicht mehr irreführend mitgezählt.
+- Die bestehende Vorgang-Termin-Zuordnung über `vorgang_termine` wird weiterverwendet.
+- Die Kartenbeschriftung wurde von „Nicht zugewiesene Termine“ auf „Nicht zugewiesene anstehende Termine“ präzisiert und ist damit konsistenter zur engeren Zähllogik.
+- In `app.js` aktiviert der Klick auf die Karte für unzugewiesene Termine nun ebenfalls den bestehenden Terminfilter zum Ausblenden abgeschlossener Termine. Eine separate Unzugewiesen-Filter-UI wurde nicht eingeführt, was zum Nicht-Scope des Arbeitspakets passt.
 
 ## Tests
 
-In `tests/test_dashboard.py` wurde der bestehende Browser-Test `test_overview_cards_route_to_matching_tabs_and_filters` erweitert. Er prüft weiterhin bekannte Routen und ergänzt Fälle für:
+Der neue Test `test_overview_counts_only_relevant_open_upcoming_termine` deckt die wesentlichen fachlichen Fälle ab:
 
-- einen unbekannten Key mit bekannter Entity,
-- `__proto__` mit Entity-Fallback,
-- `constructor` mit unbekannter Entity und damit Fallback-Route,
-- ausbleibende Browser-Page-Errors über `page_errors`.
+- geplanter zukünftiger Termin mit ISO-Zeitpunkt,
+- geplanter zukünftiger Termin mit ISO-Datum,
+- geplanter Termin in der Vergangenheit,
+- abgeschlossener zukünftiger Termin,
+- abgesagter zukünftiger Termin,
+- verknüpfter zukünftiger Termin.
 
-Damit sind die Akzeptanzkriterien bezüglich mindestens eines unbekannten Keys und eines ungewöhnlichen Lookup-Werts erfüllt.
+Die erwarteten Werte `upcoming_termine == 3` und `unassigned_termine == 2` prüfen die neue Definition nachvollziehbar. Laut Implementation Report wurden die Dashboard-Tests erfolgreich ausgeführt: `75 passed, 4 skipped`.
 
-## Feststellungen
+## Blockierende Probleme
 
-Keine blockierenden fachlichen oder technischen Probleme gefunden.
+Keine blockierenden Probleme gefunden.
 
-Nicht blockierend ist lediglich, dass `banking_dashboard/static/app.js` im GitHub Compare auftaucht, aber nicht in den Runner-validierten bzw. gestagten Pfaden. Da der GitHub Compare maßgeblich ist und die Änderung dort plausibel und auftragsgemäß ist, blockiert dies die Annahme nicht.
+## Nicht blockierende Hinweise
+
+- Die Logik verwendet weiterhin den Datumsteil von `beginnt_am`; Termine am heutigen Tag werden also nicht anhand der Uhrzeit innerhalb des Tages unterschieden. Das ist im Report transparent dokumentiert und war im Arbeitspaket nur als Soll-/Grenzfall genannt.
+- Der Kartenklick für „Nicht zugewiesene anstehende Termine“ führt weiterhin in die allgemeine Terminansicht mit bestehendem Terminfilter, nicht in eine explizit auf unzugewiesene Termine eingeschränkte Ansicht. Da keine neue Filter-UI gefordert war, ist das nicht blockierend.
