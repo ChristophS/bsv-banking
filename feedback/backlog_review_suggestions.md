@@ -1,2 +1,3 @@
-- Optional einen zusätzlichen Regressionstest für einen zukünftigen ISO-Zeitpunkt ergänzen, z. B. `YYYY-MM-DDT18:00:00`, um neben dem Heute-Fall auch einen expliziten Zukunftstag abzudecken.
-- Optional `_termin_day_sql()` kurz dokumentieren: Fachlich maßgeblich ist das gespeicherte Datumspräfix; Zeitzonen-Offsets werden nicht in lokale Kalendertage umgerechnet.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
