@@ -1,1 +1,3 @@
-- Optional die Mapping-Lookups mit `Object.hasOwn` oder prototype-losen Objekten absichern, damit auch ungewöhnliche unbekannte `card.key`-/`entity`-Werte garantiert nicht mit geerbten Objekt-Eigenschaften kollidieren.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
