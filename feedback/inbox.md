@@ -1,3 +1,8 @@
 # Inbox
 
-Keine offenen Eingaben.
+- Wenn ich einen Vorgang aus einer Transaktion heraus erstelle und dabei ein Dokument verknüpfen will. Kann ich auf Dokument öffnen gehen. Dann bekomme ich aber den Eintrag aus der Dokumentendatenbank. Ich will auch das originaldokument dazu sehen
+- Ich habe einen Vorschlag manuell als abgeschlossen markiert. Die dazugehörige Transaktion verschwidnet aber nicht, wenn ich den Filter setze "Transaktionen zu abgeschlossenen Vorgängen ausblenden". Auch die dazugehörige Mail wurde nicht als gelesen markiert. ich vermute keine Entität wird richtig als erledigt/abgeschlossen gesetzt
+- Ich benötige die Möglichkeit Transaktionen zu splitten. Da auf einer Rechnung oder innerhalb einer Transaktion Teilsummen zu Kategorie A und Teilsummen zu Kategorie B gehören können. Also ich brauche sowohl die Möglichkeit: Eine Transaktion - eien Rechnung - Teilsummen auf mehrere kategorien/Unterkategorien. Als auch die Möglichkeit Transaktion - mehrere Rechnungen und da vlt im Extremfall sogar innerhalb der Rechnungen verschiedene kateogrien/Unterkategorien
+- ich kann aus den Transaktionen heraus zwar einen Vorgang erstellen, aber nicht eine Transaktion einen Vorgang zuordnen. Wäre cool, wenn dann auch ein Vorschlag kommen könnte welcher Vorgang passend wäre
+- wenn ich eine Transaktion so klassifiziere, dass eine Abschlussregel greifen müsste sehe ich diese Transaktion immernoch unter Transaktionen mit Filter "Transaktionen zu abgeschlossenen Vorgängen ausblenden". erst wenn ich die Abschlussregel aufrufe und nochmal speichere wird diese anscheinend erst ausgeführt. Das soll nicht so ein
+- 
