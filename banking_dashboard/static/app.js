@@ -2574,7 +2574,7 @@ async function startMailVorgangReview(entryId, button) {
   button.disabled = true;
   button.textContent = "Analyse läuft";
   try {
-    const [response, , suggestions, candidates] = await Promise.all([
+    const [response, , suggestions, candidates, optionsResponse] = await Promise.all([
       fetch(
         `/api/mail/${encodeURIComponent(entryId)}/vorgang-analysis`,
         {method: "POST"},
@@ -2582,8 +2582,13 @@ async function startMailVorgangReview(entryId, button) {
       loadVorgangTypes(),
       loadVorgangSuggestions("mail", entryId).catch(() => null),
       loadLinkCandidates(),
+      fetch("/api/classification-options"),
     ]);
-    const payload = await readResponse(response);
+    const [payload, options] = await Promise.all([
+      readResponse(response),
+      readResponse(optionsResponse),
+    ]);
+    state.classificationOptions = options;
     state.mailVorgangReview = {
       entryId,
       analysis: payload.analysis,
@@ -2901,13 +2906,29 @@ function renderMailVorgangReview(
       transactions: candidatesPayload?.transactions || [],
     },
   };
+  const transactionItems = linkItems(transactionCandidates, "transactions");
+  const transactionSection = createSuggestionSection(
+    "Transaktionen verknüpfen",
+    "transaction_ids",
+    links.transaction_ids,
+    transactionItems,
+  );
+  const classificationSection = createMailTransactionClassificationSection(
+    form,
+    transactionItems,
+  );
+  transactionSection.addEventListener("change", (event) => {
+    if (event.target?.matches('input[type="checkbox"]')) {
+      renderMailTransactionClassificationRows(
+        classificationSection,
+        form,
+        transactionItems,
+      );
+    }
+  });
   fields.append(
-    createSuggestionSection(
-      "Transaktionen verknüpfen",
-      "transaction_ids",
-      links.transaction_ids,
-      linkItems(transactionCandidates, "transactions"),
-    ),
+    transactionSection,
+    classificationSection,
     createSuggestionSection(
       "Weitere Mails verknüpfen",
       "mail_ids",
@@ -2988,6 +3009,97 @@ function createMailReviewVorgangFields(vorgang) {
   grid.append(completed);
   section.append(grid);
   return section;
+}
+
+function createMailTransactionClassificationSection(form, transactionItems) {
+  const section = mailElement(
+    "section",
+    "detail-section mail-transaction-classifications",
+  );
+  section.dataset.mailTransactionClassifications = "";
+  section.append(mailElement("h3", "", "Klassifikation verknüpfter Transaktionen"));
+  renderMailTransactionClassificationRows(section, form, transactionItems);
+  return section;
+}
+
+function renderMailTransactionClassificationRows(section, form, transactionItems) {
+  section
+    .querySelectorAll("[data-mail-transaction-classification-list]")
+    .forEach((element) => element.remove());
+  const list = mailElement("div", "mail-review-list");
+  list.dataset.mailTransactionClassificationList = "";
+  const selected = new Set(readSuggestionFields(form).transaction_ids || []);
+  const itemsById = new Map(
+    (transactionItems || [])
+      .filter((item) => item?.id)
+      .map((item) => [String(item.id), item]),
+  );
+  const selectedItems = [...selected].map((id) => ({
+    ...(itemsById.get(id) || {}),
+    id,
+  }));
+  if (!selectedItems.length) {
+    list.append(
+      mailElement(
+        "p",
+        "suggestion-empty",
+        "Keine Transaktion ausgewählt.",
+      ),
+    );
+  }
+  for (const item of selectedItems) {
+    list.append(createMailTransactionClassificationRow(item));
+  }
+  section.append(list);
+}
+
+function createMailTransactionClassificationRow(item) {
+  const row = mailElement("fieldset", "mail-review-row classification-form");
+  row.dataset.mailTransactionClassification = String(item.id || "");
+  const legend = mailElement("legend");
+  legend.append(
+    mailElement("span", "", item.label || item.id),
+    mailElement(
+      "small",
+      "",
+      [
+        item.date ? formatDateTimeOrDate(item.date) : "",
+        item.amount ? currencyFormatter.format(Number(item.amount)) : "",
+        item.sender,
+        item.preview,
+        item.status,
+      ].filter(Boolean).join(" · "),
+    ),
+  );
+  const classification = item.classification || {};
+  row.append(
+    legend,
+    classificationField(
+      "Transaktionstyp",
+      "transaktionstyp",
+      classification.transaktionstyp,
+    ),
+    classificationField(
+      "Oberkategorie",
+      "oberkategorie",
+      classification.oberkategorie,
+    ),
+    classificationField(
+      "Unterkategorie",
+      "unterkategorie",
+      classification.unterkategorie,
+    ),
+    classificationField("Sphäre", "sphaere", classification.sphaere),
+    classificationField(
+      "Fachliche Beschreibung",
+      "fachliche_beschreibung",
+      classification.fachliche_beschreibung,
+      true,
+      true,
+    ),
+  );
+  configureClassificationEditorFields(row);
+  return row;
 }
 
 function createMailReviewEntityList(title, type, items, rowFactory) {
@@ -3218,6 +3330,7 @@ async function submitMailVorgangImport(event) {
 }
 
 function readMailVorgangReviewForm(form) {
+  const links = readSuggestionFields(form);
   return {
     vorgang: {
       title: form.elements.vorgang_title.value,
@@ -3225,7 +3338,11 @@ function readMailVorgangReviewForm(form) {
       vorgangstyp: form.elements.vorgang_type.value,
       completed: form.elements.vorgang_completed.checked,
     },
-    links: readSuggestionFields(form),
+    links,
+    transaction_classifications: readMailTransactionClassifications(
+      form,
+      links.transaction_ids || [],
+    ),
     documents: readReviewRows(form, "document").map((entry) => ({
       enabled: entry.enabled,
       attachment_index: Number(entry.row.dataset.attachmentIndex),
@@ -3253,6 +3370,22 @@ function readMailVorgangReviewForm(form) {
       location: entry.values.location,
     })),
   };
+}
+
+function readMailTransactionClassifications(form, transactionIds) {
+  const selected = new Set(transactionIds || []);
+  return [
+    ...form.querySelectorAll("[data-mail-transaction-classification]"),
+  ]
+    .filter((row) => selected.has(row.dataset.mailTransactionClassification))
+    .map((row) => ({
+      transaction_id: row.dataset.mailTransactionClassification,
+      ...Object.fromEntries(
+        [...row.querySelectorAll("input, textarea, select")]
+          .filter((field) => field.name)
+          .map((field) => [field.name, field.value]),
+      ),
+    }));
 }
 
 function readReviewRows(form, type) {
