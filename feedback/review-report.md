@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die Umsetzung erfüllt die Muss-Anforderungen fachlich und technisch; der GitHub-Diff ist maßgeblich und zeigt eine konsistente Erweiterung von API, UI und Tests. Es wurden keine blockierenden Probleme festgestellt.
+Der GitHub-Diff ist zusammen mit dem nachgeladenen Architekturkontext ausreichend für die fachliche Prüfung. Die Umsetzung erfüllt die wesentlichen Anforderungen; es gibt keine blockierenden Probleme.
 
 ## Zusammenfassung
 
-Der Mail-Vorgang-Import akzeptiert nun optionale Inline-Klassifikationen für verknüpfte Transaktionen, speichert diese vor dem optionalen Direktabschluss über die bestehende Store-Logik und gibt das Ergebnis des Direktabschlusses transparent zurück. Die UI bietet Eingabefelder für ausgewählte Transaktionen und die Tests decken zentrale Erfolgs- und Validierungsfälle ab. Accepted, da die Akzeptanzkriterien im Wesentlichen erfüllt sind.
+Die Dashboard-Overview-Karten werden per Key/Entity auf bestehende Reiter geroutet, relevante vorhandene Filterzustände werden gesetzt, die Karten bleiben tastaturbedienbare Buttons und es wurden passende UI-Styles sowie ein Browser-Regressionstest ergänzt. Akzeptiert, da die Muss-Kriterien im bestehenden Frontend ohne neue Backend-Architektur umgesetzt wurden.
 
 # Review Report
 
@@ -20,44 +20,57 @@ Der Mail-Vorgang-Import akzeptiert nun optionale Inline-Klassifikationen für ve
 
 **Accepted:** true
 
-## Geprüfte Grundlage
+## Geprüfter Umfang
 
-- Soll-Anforderung aus `next_task_markdown`
-- Tatsächlicher GitHub-Diff für `banking_dashboard/server.py`, `banking_dashboard/static/app.js` und `tests/test_dashboard.py`
-- Implementation Report von Agent 2
-- Nachgeladener Architekturkontext zu Store-/Vorgangs-/Klassifikationslogik
+Geändert wurden laut GitHub Compare:
 
-Hinweis: Die nachgeladenen Vollversionen einzelner Dateien wirkten in den geänderten Abschnitten nicht vollständig deckungsgleich mit dem GitHub-Diff. Für die Bewertung der tatsächlichen Änderungen wurde daher regelkonform der GitHub-Diff als maßgebliche Quelle verwendet; der Kontext war dennoch ausreichend, um die bestehende Store- und Abschlusslogik zu prüfen.
+- `banking_dashboard/static/app.js`
+- `banking_dashboard/static/styles.css`
+- `tests/test_dashboard.py`
+- `feedback/implementation_report.md`
 
-## Fachliche Bewertung
+Der Branch ist sauber vergleichbar: `ahead_by=1`, `behind_by=0`, `compare_status=ahead`, keine Abweichungen zwischen Runner- und GitHub-Compare-Dateien.
 
-Die Umsetzung erweitert den Mail-Vorgang-Import um ein Top-Level-Feld `transaction_classifications`. Die Klassifikationen werden eindeutig über `transaction_id` referenziert und nur für im selben Import verknüpfte Transaktionen akzeptiert. Vor dem optionalen Direktabschluss werden die Werte über `update_transaction_classification(...)` gespeichert, sodass die bestehende Klassifikations- und Abschlusslogik weiterverwendet wird.
+## Fachliche Bewertung gegen das Arbeitspaket
 
-Der optionale Direktabschluss wird anschließend über `update_vorgang_status(..., True)` versucht. Schlägt er wegen unvollständiger Abschlussbedingungen fehl, bleibt der Vorgang offen und die Response enthält über `direct_completion` eine verständliche Ablehnungsinformation. Erfolgreiche Klassifikationsupdates werden zusätzlich in `transaction_classifications` zurückgegeben.
+Die Umsetzung macht die bestehenden Overview-Karten als interaktive Einstiegspunkte nutzbar:
 
-Die Validierung der Inline-Klassifikationen erfolgt vor der Vorgangserstellung für zentrale Fehlerfälle: falscher Typ, fehlende `transaction_id`, nicht verknüpfte Transaktionen, doppelte Einträge, unbekannte Felder, Nicht-Textwerte und Längenlimit. Dadurch werden typische fehlerhafte Requests ohne stillen Teilzustand abgelehnt.
+- Die Karten werden weiterhin als native `button`-Elemente gerendert und sind damit per Tastatur fokussierbar und per Enter/Space auslösbar.
+- `data-overview-key` wird aus den vom Backend gelieferten Overview-Cards übernommen und als primärer Routing-Anker verwendet.
+- Das Routing deckt die geforderten Kernkarten ab:
+  - `open_vorgaenge` → Reiter `vorgaenge` mit aktiviertem `hide_completed`-Filter.
+  - `unread_mails` → Reiter `mail` über Entity-Fallback und erneutes Laden der Mailansicht.
+  - `unassigned_transactions` → Reiter `transactions` mit aktiviertem vorhandenen Filter `hide_completed_vorgaenge` und Reload.
+  - `open_todos` → Reiter `todos` mit aktiviertem `hide_completed`-Filter.
+  - `upcoming_termine` → Reiter `termine` mit aktiviertem vorhandenen Termin-Hide-Completed-Filter.
+  - `unassigned_termine` → Reiter `termine` ohne neue Filterlogik.
+- Für `unassigned_documents` wird mangels vorhandenem Top-Level-Belege-/Dokumente-Reiter auf die Vorgangsansicht geroutet. Das ist im gegebenen UI-Kontext nachvollziehbar, da kein bestehender Dokumente-Reiter in `index.html` existiert und keine neue Navigationsarchitektur Teil des Arbeitspakets sein sollte.
+- Für Vorgänge, To-Dos, Transaktionen und Termine werden vorhandene State-/Filter-/Reload-Flows wiederverwendet, statt neue Backend-Logik einzuführen.
+- Die Filterzustände werden im UI sichtbar gesetzt, indem die vorhandenen Checkboxen synchron mit dem State aktualisiert werden.
+- Hover-, Fokus- und Active-Styles für Overview-Karten wurden ergänzt.
 
-## UI-Bewertung
+## Technische Bewertung
 
-Die Mail-Import-UI lädt Klassifikationsoptionen, zeigt für ausgewählte verknüpfte Transaktionen Klassifikationsfelder an, befüllt diese aus vorhandenen Kandidaten-Klassifikationsdaten und sendet die Werte im Import-Request mit. Die Feldnamen entsprechen den bestehenden Klassifikationsfeldern des PATCH-Endpunkts.
+Die neue Funktion `navigateFromOverviewCard` kapselt das Kartenrouting klar und nutzt bestehende Funktionen wie `activateTab`, `loadTransactions`, `loadVorgaenge`, `loadTodos`, `loadTermine` und `loadMails` indirekt über die vorhandene Tab-Ladelogik.
 
-Die direkte Abschlussmeldung wird im UI anhand von `direct_completion` konkreter formuliert, insbesondere bei abgewiesenem Abschluss.
+Die Setter-Funktionen für Filterzustände synchronisieren jeweils State und Checkbox. Dadurch ist der aktive Filterzustand für Nutzer sichtbar und die folgenden Load-Funktionen senden die vorhandenen Query-Parameter wie `hide_completed` beziehungsweise `hide_completed_vorgaenge`.
 
-## Testbewertung
+Die Umsetzung führt keine neue Backend-Logik, keine neuen Datenmodelle und keine externen Aktionen ein. Die Projektregel, Vorgänge als zentrales fachliches Objekt nicht grundlos umzubauen, wird eingehalten.
 
-Die neuen Tests decken folgende zentrale Pfade ab:
+## Tests
 
-- Inline-Klassifikation wird vor Direktabschluss gespeichert und ermöglicht direkten Abschluss.
-- Ungültige Inline-Klassifikation wird mit HTTP 400 abgelehnt und erzeugt keinen Mail-Vorgang beziehungsweise keine offensichtlichen Teilzustände.
+Es wurde ein Browser-Regressionstest ergänzt, der mehrere Karten anklickt beziehungsweise per Tastatur auslöst und die Zielreiter sowie relevante Filter-Checkboxen prüft. Laut Implementation Report liefen:
 
-Laut Implementation Report wurden `tests/test_dashboard.py` und `node --check banking_dashboard/static/app.js` erfolgreich ausgeführt.
+- `pytest tests/test_dashboard.py`: 74 passed, 3 skipped
+- `node --check banking_dashboard/static/app.js`: erfolgreich
 
-## Nicht-blockierende Hinweise
+Die übersprungenen Playwright-/Browserfälle sind plausibel umgebungsabhängig und nicht blockierend.
 
-- Die UI könnte Zahlungsbeteiligten und Verwendungszweck in der Inline-Klassifikationszeile noch expliziter ausgeben; aktuell ist dies abhängig von den vorhandenen Kandidatenfeldern.
-- Zusätzliche Tests für den offenen Vorgang bei unvollständiger Inline-Klassifikation und für das Verhalten ohne `transaction_classifications` wären hilfreich.
-- Ein Mehrtransaktions-Test würde die Reihenfolge „alle Klassifikationen speichern, dann Direktabschluss prüfen“ noch stärker absichern.
+## Hinweise
 
-## Fazit
+Der nachgeladene `additional_repo_context` für `banking_dashboard/static/app.js` wirkte an den geänderten Stellen teilweise wie der Stand vor dem Patch. Für die Review-Entscheidung war das nicht blockierend, weil der GitHub-Diff laut Vorgabe maßgeblich ist und der geladene Kontext dennoch die bestehende Tab-, Filter- und Backend-Key-Struktur ausreichend erkennen ließ.
 
-Keine blockierenden Probleme gefunden. Die Muss-Anforderungen und Akzeptanzkriterien sind im Wesentlichen erfüllt.
+## Nicht-blockierende Verbesserungsvorschläge
+
+- Falls später ein eigener Belege-/Dokumente-Reiter entsteht, sollte `unassigned_documents` dorthin statt in die Vorgänge-Ansicht navigieren.
+- Für Termine könnten später spezifischere Filter für „anstehend“ und „nicht zugewiesen“ ergänzt werden, sofern das ohne größere neue Filterarchitektur möglich ist.
