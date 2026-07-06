@@ -1539,9 +1539,16 @@ class DashboardDataStoreTests(unittest.TestCase):
             {card["key"] for card in overview["cards"]},
         )
         self.assertEqual(0, overview["counts"]["unassigned_transactions"])
+        self.assertEqual(0, overview["counts"]["unassigned_documents"])
         self.assertEqual(1, overview["counts"]["open_todos"])
         self.assertEqual(1, overview["counts"]["upcoming_termine"])
         self.assertEqual(1, overview["counts"]["unassigned_termine"])
+        document_card = next(
+            card
+            for card in overview["cards"]
+            if card["key"] == "unassigned_documents"
+        )
+        self.assertEqual("documents", document_card["entity"])
         self.assertEqual(todo["todo_id"], self.store.list_todos()[0]["todo_id"])
 
     def test_vorgang_can_be_created_and_updated_with_many_entity_links(self):
@@ -3033,6 +3040,24 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     page.locator(
                         "[data-overview-key='unassigned_documents']"
                     ).press(" ")
+                    expect(page.locator("#vorgaenge-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+
+                    page.locator("[data-overview-key='unread_mails']").click()
+                    page.evaluate(
+                        """
+                        () => {
+                            const button = document.createElement("button");
+                            button.type = "button";
+                            button.dataset.overviewKey = "custom_documents";
+                            button.dataset.overviewEntity = "documents";
+                            button.textContent = "Dokumente";
+                            document.querySelector("#overview-cards").append(button);
+                        }
+                        """
+                    )
+                    page.locator("[data-overview-key='custom_documents']").click()
                     expect(page.locator("#vorgaenge-tab")).to_have_class(
                         re.compile("is-active")
                     )
