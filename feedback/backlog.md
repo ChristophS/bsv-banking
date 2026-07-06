@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigener Dokument-/Preview-Flow und nicht Teil der kleinen Mail-zu-bestehendem-Vorgang-Verknüpfung.
+**Grund:** Eigenständiger Dokument-/Preview-Flow im Mail-Import; bewusst nicht mit der kleinen Sortieränderung vermischen.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Reine UX-Anpassung im Importformular; separat halten, damit das nächste Paket klein und fokussiert bleibt.
+**Grund:** Reine UX-Anpassung im Importformular; separater UI-Flow.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigener Funktionsfluss für To-Dos, nicht direkt Teil der Mail-Vorgangszuordnung.
+**Grund:** Eigener To-Do-Erfassungsfluss im Mail-/Entitäten-Import, getrennt von der Sortierung.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Betrifft Refresh- und Kandidatenlogik im Importflow; getrennt vom Zuordnen zu bestehenden Vorgängen.
+**Grund:** Betrifft Refresh-/Kandidatenlogik im Importflow und vermutlich Datenneuladen in Mail/Vorgang-Verknüpfung.
 
 **Feedback:**
 
@@ -46,7 +46,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigenständiger Fachfall mit Abschlussregeln, Klassifikation und Sonderlogik.
+**Grund:** Eigenständiger Fachfall mit Abschluss- und Klassifikationslogik; zu groß für dieses kleine Paket.
 
 **Feedback:**
 
@@ -56,7 +56,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Separater Compose-/Reply-Flow mit eigener UI und Payload-Logik.
+**Grund:** Separater Compose-/Reply-Flow mit Backend-Payload und UI-Anpassungen.
 
 **Feedback:**
 
@@ -66,7 +66,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Status- und Mail-Workflow übergreifend; sinnvoll als nachgelagerte Erweiterung.
+**Grund:** Übergreifender Mail-/Vorgangsstatus-Workflow; getrennt von der Listen-Sortierung.
 
 **Feedback:**
 
@@ -82,27 +82,17 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Gut wäre, wenn man beim Start ein Dashboard hätte mit anstehenden Terminen, ToDos, offene Vorgänge, usw. UND einen Button mit "alles synchronisieren" Also Mails, Transaktionen vor allem
 
-## 9. Vorgangsübersicht: offene/in Bearbeitung vor abgeschlossenen Vorgängen sortieren
-
-**Priorität:** hoch
-
-**Grund:** Klein und klar abgrenzbar, aber nicht Teil des aktuellen Mail-Verknüpfungsflows.
-
-**Feedback:**
-
-- In der Vorgangsübersicht sollen Vorgänge, die in Bearbeitung sind über den abgeschlossenen Vorgängen angezeigt werden
-
-## 10. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
+## 9. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
 **Priorität:** mittel
 
-**Grund:** Größere fachliche Erweiterung über Dokumenthandling, Vorgangsdetail-UI und Zuordnungslogik.
+**Grund:** Größere fachliche Erweiterung über Dokumenthandling und Zuordnungslogik; nicht Teil des kleinen Sortierpakets.
 
 **Feedback:**
 
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege, wie man geschickt damit umgehen kann.
 
-## 11. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
+## 10. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
 
 **Priorität:** mittel
 
