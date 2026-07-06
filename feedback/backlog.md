@@ -22,31 +22,21 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
 
-## 3. Zeitlogik für `beginnt_am` bei ISO-Zeitpunkten prüfen
+## 3. Zeitlogik für beginnt_am bei ISO-Zeitpunkten prüfen
 
 **Priorität:** niedrig
 
-**Grund:** Weiterhin separater, nicht-blockierender Prüfpunkt; bewusst nicht mit dem kleinen Filterpaket vermischen.
+**Grund:** Separater Prüfpunkt zur Terminlogik; nicht Teil des kleinen sichtbaren UI-Filterpakets.
 
 **Feedback:**
 
-- Vorhandener Backlog-Punkt: Zeitlogik für `beginnt_am` bei ISO-Zeitpunkten prüfen
+- Vorhandener Backlog-Punkt: Zeitlogik für beginnt_am bei ISO-Zeitpunkten prüfen
 
-## 4. Spezialfilter in der Terminansicht sichtbar machen
-
-**Priorität:** niedrig
-
-**Grund:** Nicht-blockierender UX-Hinweis aus dem Review; verbessert Nachvollziehbarkeit des aktiven Filters.
-
-**Feedback:**
-
-- Aktiven Spezialfilter in der Terminansicht sichtbar machen, z. B. als Hinweis-Badge „Nicht zugewiesene anstehende Termine“ mit Zurücksetzen-Aktion.
-
-## 5. Spezialfilter bei normaler Termin-Navigation zurücksetzen testen
+## 4. Spezialfilter bei normaler Termin-Navigation zurücksetzen testen
 
 **Priorität:** niedrig
 
-**Grund:** Zusätzlicher nicht-blockierender Frontend-Test aus dem Review; prüft das Zurücksetzen des Spezialfilters bei Standard-Navigation.
+**Grund:** Sinnvoller Folgepunkt, aber getrennt vom kleinen ersten UX-Schritt, um das Arbeitspaket kontrolliert zu halten.
 
 **Feedback:**
 
