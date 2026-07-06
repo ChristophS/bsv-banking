@@ -3294,6 +3294,35 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         "Nicht zugewiesene anstehende Termine"
                     )
 
+                    page.locator("[data-overview-key='unread_mails']").click()
+                    expect(page.locator("#mail-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    with page.expect_response(
+                        lambda response: "/api/termine?" in response.url
+                        and "unassigned_upcoming=false" in response.url
+                    ):
+                        page.locator("#termine-tab").click()
+                    expect(page.locator("#termine-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    expect(
+                        page.locator("#termin-special-filter")
+                    ).to_be_hidden()
+
+                    with page.expect_response(
+                        lambda response: "/api/termine?" in response.url
+                        and "unassigned_upcoming=true" in response.url
+                    ):
+                        page.locator(
+                            "[data-overview-key='unassigned_termine']"
+                        ).click()
+                    expect(
+                        page.locator("#termin-special-filter")
+                    ).to_contain_text(
+                        "Nicht zugewiesene anstehende Termine"
+                    )
+
                     with page.expect_response(
                         lambda response: "/api/termine?" in response.url
                         and "unassigned_upcoming=false" in response.url
