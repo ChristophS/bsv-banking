@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Tiefe Erweiterung der bestehenden Vorgang-/Dokument-Zuordnungslogik; größer und risikoreicher als das kleine Usability-Paket.
+**Grund:** Größere Erweiterung der bestehenden Vorgang-/Dokument-Zuordnung und nicht klein genug für das aktuelle, klar abgegrenzte Routing-Fix.
 
 **Feedback:**
 
@@ -16,20 +16,18 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges größeres Modul mit zusätzlichem Datenmodell und externer Integration; nicht klein genug für den nächsten kontrollierten Schritt.
+**Grund:** Eigenständiges größeres Modul mit Datenmodell- und Integrationsfragen, nicht Teil des kleinen nächsten Arbeitspakets.
 
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfaengern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es ueber DFBnet Verein laeuft.
 
-## 3. `unassigned_documents` später auf einen echten Belege-/Dokumente-Reiter routen
+## 3. Spezifischere Terminfilter für anstehende und nicht zugewiesene Termine prüfen
 
 **Priorität:** niedrig
 
-**Grund:** Sinnvoll, falls ein eigener Top-Level-Belege-/Dokumente-Reiter eingeführt wird; derzeit ist keine entsprechende Navigationsfläche vorhanden.
+**Grund:** Eigenes späteres UI-/Filter-Thema; wird durch das Routing-Fix für Dokumente nicht mitgelöst.
 
-## 4. Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen
+**Feedback:**
 
-**Priorität:** niedrig
-
-**Grund:** Kann später ergänzt werden, sofern dies ohne größere neue Filterarchitektur möglich ist.
+- Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen
