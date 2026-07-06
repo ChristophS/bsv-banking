@@ -2,30 +2,26 @@
 
 ## Branchname
 
-agent2/codex-20260706-102229
+agent2/codex-20260706-102646
 
 ## Geaenderte Dateien
 
-- banking_dashboard/static/app.js
-- banking_dashboard/static/index.html
-- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- In der Terminansicht wird bei aktivem Spezialfilter `unassigned_upcoming` ein sichtbarer Hinweis `Nicht zugewiesene anstehende Termine` angezeigt.
-- Der Hinweis ist an `state.terminUnassignedUpcoming` gekoppelt und wird beim Aktivieren/Zuruecksetzen des Spezialfilters gerendert.
-- Eine Zuruecksetzen-Aktion im Hinweis entfernt nur den Spezialfilter und laedt die Terminliste mit `unassigned_upcoming=false` neu.
-- Die normale Terminansicht und die Overview-Karte fuer anstehende Termine zeigen den Spezialfilterhinweis nicht dauerhaft an.
-- Der bestehende Serverfilter `unassigned_upcoming` wird unveraendert weiter ueber `loadTermine()` verwendet.
-- Der vorhandene Playwright-nahe Dashboard-Test prueft den sichtbaren Spezialfilterhinweis und das Reset-Verhalten.
+- Der bestehende browsernahe Dashboard-Routing-Test wurde um einen Regressionsfall fuer den Spezialfilter `unassigned_upcoming` erweitert.
+- Der Test aktiviert zuerst die Spezialansicht fuer nicht zugewiesene anstehende Termine.
+- Danach wechselt der Test in einen anderen Tab und navigiert ueber den normalen Termine-Tab zur regulaeren Terminansicht zurueck.
+- Der Test verifiziert, dass die normale Terminladung mit `unassigned_upcoming=false` erfolgt und der Spezialfilter-Hinweis ausgeblendet ist.
+- Der vorhandene Reset-Test fuer den Spezialfilter bleibt erhalten und prueft weiterhin einen Request mit `unassigned_upcoming=false`.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung an der fachlichen Terminfilterlogik.
-- Keine neuen Spezialfilter oder generischen Filter-Frameworks.
-- Keine Ueberarbeitung der Zeitlogik von `beginnt_am`/`starts_at`.
+- Keine Aenderung an `banking_dashboard/static/app.js`, da die vorhandene UI-Logik den neuen Regressionsfall bereits erfuellt.
+- Keine Aenderung an `banking_dashboard/server.py`, da die API-Semantik fuer `unassigned_upcoming` unveraendert passend ist.
+- Keine neuen Terminfilter und keine Ueberarbeitung der Termin-Navigation.
 
 ## Ausgefuehrte Tests
 
@@ -37,13 +33,11 @@ agent2/codex-20260706-102229
 
 ## Bekannte Einschraenkungen
 
-- Die Zuruecksetzen-Aktion entfernt ausschliesslich den Spezialfilter `unassigned_upcoming`; andere Terminfilter wie `hide_completed` bleiben entsprechend dem bestehenden Zustand erhalten.
-- Vier browsernahe Tests wurden in der lokalen Umgebung uebersprungen, wie vom bestehenden Test-Setup vorgesehen.
+- Vier bestehende Tests wurden in der lokalen Umgebung uebersprungen, wie vom bestehenden Test-Setup vorgesehen.
+- Der neue Regressionsfall prueft beobachtbare Browser-Requests und UI-Zustand, keine internen JavaScript-Variablen.
 
 ## Hinweise fuer den Review-Agenten
 
-- Der neue Hinweis sitzt in `banking_dashboard/static/index.html` direkt unter der Termin-Toolbar.
-- Die State-Kopplung und Reset-Aktion liegen in `banking_dashboard/static/app.js` bei `setTerminUnassignedUpcoming()` und dem Handler fuer `#termin-special-filter-reset`.
-- Das Styling liegt in `banking_dashboard/static/styles.css` bei den Todo-/Termin-Toolbar-Regeln.
-- Die Testabsicherung erweitert `DashboardTodoBrowserTests.test_overview_cards_route_to_matching_tabs_and_filters`.
+- Die Aenderung liegt in `DashboardTodoBrowserTests.test_overview_cards_route_to_matching_tabs_and_filters`.
+- Der relevante neue Ablauf ist: Spezialkarte `unassigned_termine` aktivieren, zu `unread_mails` wechseln, normalen `#termine-tab` anklicken, Request mit `unassigned_upcoming=false` erwarten.
 - `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.
