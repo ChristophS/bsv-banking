@@ -651,6 +651,11 @@ function navigateFromOverviewCard(key, entity) {
     activateTab("termine");
     return;
   }
+  if (key === "unassigned_documents" || entity === "documents") {
+    state.vorgaengeLoaded = false;
+    activateTab("vorgaenge");
+    return;
+  }
   if (entity === "transactions") {
     activateTab("transactions");
     loadTransactions();

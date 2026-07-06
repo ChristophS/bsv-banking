@@ -2,30 +2,27 @@
 
 ## Branchname
 
-agent2/codex-20260706-091118
+agent2/codex-20260706-091746
 
 ## Geaenderte Dateien
 
 - banking_dashboard/static/app.js
-- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Overview-Karten nutzen jetzt den von `/api/overview` gelieferten `key` als primaeren Routing-Anker.
-- Klicks auf Overview-Karten navigieren in die passenden bestehenden Reiter: Vorgänge, Mails, Transaktionen, To-Dos und Termine.
-- Die Karte fuer nicht zugewiesene Dokumente navigiert in den Vorgänge-Reiter, weil es in der aktuellen Top-Level-Navigation keinen eigenen Belege-/Dokumente-Reiter gibt und Dokumente dort bereits fachlich verknuepft werden.
-- Fuer offene Vorgänge, offene To-Dos, nicht zugewiesene Transaktionen und anstehende Termine werden vorhandene Filter-Checkboxen sichtbar gesetzt und die bestehenden Ladefluesse wiederverwendet.
-- Overview-Karten bleiben native Buttons, erhalten zusaetzlich `data-overview-key` und ein sprechendes `aria-label`.
-- Hover-, Fokus- und Aktiv-Zustaende fuer Overview-Karten wurden ergaenzt.
-- Ein Browser-Regressionstest prueft Kartenrouting, Filterzustand und Tastaturausloesung mit Fake-Mail-Backend.
+- Das Overview-Routing behandelt `key = unassigned_documents` jetzt explizit.
+- Overview-Karten mit `entity = documents` werden ebenfalls explizit auf den bestehenden Vorgangs-/Dokumentenbereich geroutet.
+- Die bestehende API-Konfiguration fuer `unassigned_documents` bleibt unveraendert bei `entity = documents`.
+- Die Browser-Regression prueft zusaetzlich eine Dokumenten-Karte, deren Routing nur ueber `entity = documents` kommt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neue Backend-Logik oder neue Serverfilter fuer Dokumente, Mails oder unzugewiesene Termine.
-- Keine Aenderung an `banking_dashboard/static/index.html`, weil die Karten bereits als Buttons dynamisch in `app.js` erzeugt werden.
-- Kein eigener Dokumente-Reiter ergaenzt, da das eine Navigations-/Architekturerweiterung waere.
+- Kein neuer Top-Level-Reiter fuer Belege oder Dokumente.
+- Keine neue Dokumenten- oder Beleg-Persistenz.
+- Keine Aenderung an `banking_dashboard/static/index.html`, da kein neuer stabiler Tab-Identifier erforderlich war.
+- Keine Aenderung an `banking_dashboard/server.py`, da die Overview-Karte dort bereits korrekt modelliert ist.
 
 ## Ausgefuehrte Tests
 
@@ -39,12 +36,11 @@ agent2/codex-20260706-091118
 
 ## Bekannte Einschraenkungen
 
-- Fuer nicht zugewiesene Dokumente gibt es keinen eigenen bestehenden Reiter und keinen passenden Serverfilter; die Karte fuehrt daher zur bestehenden Vorgangsansicht.
-- Fuer nicht zugewiesene Termine gibt es keinen vorhandenen Unassigned-Filter; die Karte fuehrt zur bestehenden Terminansicht ohne neue Filterlogik.
-- Die uebersprungenen Tests sind umgebungsabhaengige Browser-/Playwright-Faelle.
+- In der vorhandenen Top-Level-Navigation gibt es keinen separaten Belege-/Dokumente-Reiter; die Kachel oeffnet daher den bestehenden Vorgangsbereich, in dem Dokumente fachlich verknuepft und bearbeitet werden.
+- Die Playwright-basierten Browsertests bleiben umgebungsabhaengig und wurden in dieser Umgebung uebersprungen.
 
 ## Hinweise fuer den Review-Agenten
 
-- Die Umsetzung bleibt rein im Frontend-Routing und nutzt vorhandene State- und Load-Funktionen.
-- Der neue Browser-Test verwendet `FakeDashboardMailBackend` und `FakeDashboardSpamScorer`; es werden keine externen Mail-, Graph- oder Login-Aktionen ausgefuehrt.
-- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.
+- Die Korrektur ist auf das zentrale Frontend-Mapping in `navigateFromOverviewCard` beschraenkt.
+- Andere Overview-Karten wurden nicht umgeroutet.
+- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor der Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.
