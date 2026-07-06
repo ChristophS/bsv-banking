@@ -31,3 +31,15 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen
+
+## 4. Expliziten Browser-Test für den Klick auf `unassigned_documents` ergänzen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierende Review-Empfehlung zur Absicherung des konkreten Klickpfads auf die echte Kachel.
+
+## 5. Overview-Routing bei weiteren Kacheln über eine zentrale Mapping-Tabelle vereinfachen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierende Review-Empfehlung für bessere Wartbarkeit bei künftigen Routing-Erweiterungen.
