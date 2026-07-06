@@ -7048,10 +7048,11 @@ function createSuggestionSection(
     label.append(checkbox, text);
     row.append(label);
     if (entityType && item.id) {
+      const actions = mailElement("div", "document-actions");
       const openButton = mailElement(
         "button",
         "suggestion-open-action",
-        "Öffnen",
+        entityType === "beleg" ? "Katalogeintrag öffnen" : "Öffnen",
       );
       openButton.type = "button";
       openButton.dataset.openEntityType = entityType;
@@ -7059,7 +7060,11 @@ function createSuggestionSection(
       openButton.addEventListener("click", () => {
         openEntityPreview(entityType, item.id);
       });
-      row.append(openButton);
+      actions.append(openButton);
+      if (entityType === "beleg") {
+        actions.append(originalDocumentLink(item.id));
+      }
+      row.append(actions);
     }
     list.append(row);
   }
@@ -7356,7 +7361,37 @@ async function renderBelegEntityPreview(belegId) {
     detailField("Beschreibung", beleg.description || beleg.beschreibung, true),
     detailField("Pfad", beleg.path || beleg.dateipfad, true, true),
     detailField("Vorgangs-IDs", joinValues(beleg.vorgangs_ids), true, true),
+    belegActionField(beleg),
   ], elements.entityPreviewContent);
+}
+
+function belegActionField(beleg) {
+  const field = detailField("Aktionen", "", true);
+  const value = field.querySelector(".detail-value");
+  value.classList.remove("is-empty");
+  value.replaceChildren();
+  const actions = mailElement("div", "document-actions");
+  actions.append(
+    originalDocumentLink(beleg.beleg_id, Boolean(beleg.vorhanden)),
+  );
+  value.append(actions);
+  return field;
+}
+
+function originalDocumentLink(belegId, enabled = true) {
+  const link = document.createElement("a");
+  link.className = "secondary-action document-open-action";
+  link.href = `/api/belege/${encodeURIComponent(belegId)}/document`;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.textContent = "Originaldokument öffnen";
+  if (!enabled) {
+    link.removeAttribute("href");
+    link.removeAttribute("target");
+    link.setAttribute("aria-disabled", "true");
+    link.title = "Originaldatei ist nicht vorhanden";
+  }
+  return link;
 }
 
 function entityVorgangSelect(vorgaenge, selectedIds = []) {
@@ -7795,16 +7830,31 @@ function appendVorgangEntitySections(vorgang, details) {
     );
   }
   for (const beleg of vorgang.belege || []) {
-    entityFields.push(
-      detailField(
-        beleg.dateiname || beleg.beleg_id,
-        beleg.vorhanden
-          ? beleg.dateipfad
-          : `${beleg.dateipfad} (Datei nicht vorhanden)`,
-        true,
-        true,
-      ),
+    const field = detailField(
+      beleg.dateiname || beleg.beleg_id,
+      beleg.vorhanden
+        ? beleg.dateipfad
+        : `${beleg.dateipfad} (Datei nicht vorhanden)`,
+      true,
+      true,
     );
+    const value = field.querySelector(".detail-value");
+    const actions = mailElement("div", "document-actions");
+    const catalogButton = mailElement(
+      "button",
+      "suggestion-open-action",
+      "Katalogeintrag öffnen",
+    );
+    catalogButton.type = "button";
+    catalogButton.addEventListener("click", () => {
+      openEntityPreview("beleg", beleg.beleg_id);
+    });
+    actions.append(
+      catalogButton,
+      originalDocumentLink(beleg.beleg_id, Boolean(beleg.vorhanden)),
+    );
+    value.append(actions);
+    entityFields.push(field);
   }
   appendDetailSection(
     "Zugeordnete Entitäten",
