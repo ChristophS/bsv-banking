@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Browser-Ressourcen in Playwright-Tests konsequent per Kontextmanager oder `finally` schließen.
+- Bei künftiger Einführung einer dedizierten Dokumentansicht oder eines Filters für nicht zugewiesene Dokumente den Regressionstest entsprechend präzisieren.
