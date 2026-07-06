@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die maßgeblichen GitHub-Diffs erfüllen die Muss-Anforderungen: bestehender POST-/Validierungsfluss wird genutzt, die UI sendet bereits completed und Verknüpfungs-IDs aus dem Kandidatenkatalog, Backend-Fehler werden nun dauerhaft im Formular angezeigt und API-Tests decken Erfolg und Ablehnung ab.
+Die Umsetzung erfüllt die Muss-Anforderungen fachlich und technisch; der GitHub-Diff ist maßgeblich und zeigt eine konsistente Erweiterung von API, UI und Tests. Es wurden keine blockierenden Probleme festgestellt.
 
 ## Zusammenfassung
 
-Akzeptiert: Der bestehende manuelle Vorgangs-Erstellflow unterstützt den Direktabschluss mit verknüpften Transaktionen bereits, und diese Umsetzung ergänzt die notwendige sichtbare Formular-Fehleranzeige sowie API-Tests für erfolgreichen und blockierten Direktabschluss.
+Der Mail-Vorgang-Import akzeptiert nun optionale Inline-Klassifikationen für verknüpfte Transaktionen, speichert diese vor dem optionalen Direktabschluss über die bestehende Store-Logik und gibt das Ergebnis des Direktabschlusses transparent zurück. Die UI bietet Eingabefelder für ausgewählte Transaktionen und die Tests decken zentrale Erfolgs- und Validierungsfälle ab. Accepted, da die Akzeptanzkriterien im Wesentlichen erfüllt sind.
 
 # Review Report
 
@@ -20,43 +20,44 @@ Akzeptiert: Der bestehende manuelle Vorgangs-Erstellflow unterstützt den Direkt
 
 **Accepted:** true
 
-## Geprüfter Umfang
+## Geprüfte Grundlage
 
-Geprüft wurden das Arbeitspaket, der Implementation Report, der GitHub-Diff und der nachgeladene Kontext zu `banking_dashboard/static/app.js`, `banking_dashboard/server.py` und `transaction_store/database.py`.
+- Soll-Anforderung aus `next_task_markdown`
+- Tatsächlicher GitHub-Diff für `banking_dashboard/server.py`, `banking_dashboard/static/app.js` und `tests/test_dashboard.py`
+- Implementation Report von Agent 2
+- Nachgeladener Architekturkontext zu Store-/Vorgangs-/Klassifikationslogik
 
-Hinweis: Der nachgeladene Vollinhalt von `banking_dashboard/static/app.js` zeigt an der geänderten Stelle nicht die im GitHub-Diff enthaltene `.form-error`-Ergänzung. Für die Bewertung ist gemäß Vorgabe der GitHub-Diff maßgeblich; der übrige Kontext war ausreichend, um den bestehenden Flow zu prüfen.
+Hinweis: Die nachgeladenen Vollversionen einzelner Dateien wirkten in den geänderten Abschnitten nicht vollständig deckungsgleich mit dem GitHub-Diff. Für die Bewertung der tatsächlichen Änderungen wurde daher regelkonform der GitHub-Diff als maßgebliche Quelle verwendet; der Kontext war dennoch ausreichend, um die bestehende Store- und Abschlusslogik zu prüfen.
 
-## Bewertung gegen die Anforderungen
+## Fachliche Bewertung
 
-### Direktabschluss per POST `/api/vorgaenge`
+Die Umsetzung erweitert den Mail-Vorgang-Import um ein Top-Level-Feld `transaction_classifications`. Die Klassifikationen werden eindeutig über `transaction_id` referenziert und nur für im selben Import verknüpfte Transaktionen akzeptiert. Vor dem optionalen Direktabschluss werden die Werte über `update_transaction_classification(...)` gespeichert, sodass die bestehende Klassifikations- und Abschlusslogik weiterverwendet wird.
 
-Erfüllt. `DashboardDataStore.create_vorgang(...)` verarbeitet `completed=true`, setzt den Status auf `abgeschlossen` und ruft vor dem Insert `_validate_vorgang_completion_values(...)` auf. Diese Validierung nutzt die bestehenden Abschlussbedingungen für unvollständig klassifizierte Transaktionen sowie Rechnung-Transaktion/Dokument-Anforderungen. Es wurde keine neue Sonderlogik für manuelle Vorgänge eingeführt.
+Der optionale Direktabschluss wird anschließend über `update_vorgang_status(..., True)` versucht. Schlägt er wegen unvollständiger Abschlussbedingungen fehl, bleibt der Vorgang offen und die Response enthält über `direct_completion` eine verständliche Ablehnungsinformation. Erfolgreiche Klassifikationsupdates werden zusätzlich in `transaction_classifications` zurückgegeben.
 
-Die neuen Tests in `tests/test_dashboard.py` decken ab:
+Die Validierung der Inline-Klassifikationen erfolgt vor der Vorgangserstellung für zentrale Fehlerfälle: falscher Typ, fehlende `transaction_id`, nicht verknüpfte Transaktionen, doppelte Einträge, unbekannte Felder, Nicht-Textwerte und Längenlimit. Dadurch werden typische fehlerhafte Requests ohne stillen Teilzustand abgelehnt.
 
-- erfolgreichen Direktabschluss eines neu angelegten Vorgangs mit verknüpfter vollständig klassifizierter Transaktion,
-- HTTP-400-Ablehnung bei unvollständig klassifizierter Transaktion,
-- kein stilles Offen-Anlegen im Fehlerfall.
+## UI-Bewertung
 
-### UI-Verknüpfungsauswahl und completed-Option
+Die Mail-Import-UI lädt Klassifikationsoptionen, zeigt für ausgewählte verknüpfte Transaktionen Klassifikationsfelder an, befüllt diese aus vorhandenen Kandidaten-Klassifikationsdaten und sendet die Werte im Import-Request mit. Die Feldnamen entsprechen den bestehenden Klassifikationsfeldern des PATCH-Endpunkts.
 
-Erfüllt durch den bestehenden Erstellflow in `renderVorgangCreateForm(...)`: Das Formular lädt über `loadLinkCandidates()` den vorhandenen Kandidatenkatalog aus `GET /api/vorgaenge/link-candidates`, rendert unter anderem die Sektion `Transaktionen` und sendet über `readVorgangForm(...)` sowohl `completed` als auch `transaction_ids`, `mail_ids`, `todo_ids`, `beleg_ids` und `termin_ids` an `POST /api/vorgaenge`.
+Die direkte Abschlussmeldung wird im UI anhand von `direct_completion` konkreter formuliert, insbesondere bei abgewiesenem Abschluss.
 
-Die vorhandene Kandidatendarstellung enthält bei Transaktionen zudem Klassifikationsinformationen über `transactionClassificationSummary(...)`, sodass Nutzer erkennen können, ob die Transaktion vollständig klassifiziert ist.
+## Testbewertung
 
-### Sichtbare Backend-Fehlermeldung im Frontend
+Die neuen Tests decken folgende zentrale Pfade ab:
 
-Erfüllt. Der Diff ergänzt im Erstellformular ein dauerhaft sichtbares Element `.form-error`, setzt es vor jedem Submit zurück und befüllt es im Catch-Zweig mit `error.message`. Damit wird die vom Backend gelieferte konkrete Fehlermeldung nicht nur als kurzlebiger Toast angezeigt, sondern bleibt im Formular sichtbar.
+- Inline-Klassifikation wird vor Direktabschluss gespeichert und ermöglicht direkten Abschluss.
+- Ungültige Inline-Klassifikation wird mit HTTP 400 abgelehnt und erzeugt keinen Mail-Vorgang beziehungsweise keine offensichtlichen Teilzustände.
 
-### Keine unerlaubte Architekturänderung / Scope Creep
+Laut Implementation Report wurden `tests/test_dashboard.py` und `node --check banking_dashboard/static/app.js` erfolgreich ausgeführt.
 
-Erfüllt. Es wurden keine geschützten produktiven Daten, Secrets oder externen Dienste verändert. Die Persistenz- und Abschlusslogik bleibt unverändert und wird wiederverwendet. Die zusätzliche CSS-Regel ist klein und zweckbezogen.
+## Nicht-blockierende Hinweise
 
-### Tests und Branch-Zustand
+- Die UI könnte Zahlungsbeteiligten und Verwendungszweck in der Inline-Klassifikationszeile noch expliziter ausgeben; aktuell ist dies abhängig von den vorhandenen Kandidatenfeldern.
+- Zusätzliche Tests für den offenen Vorgang bei unvollständiger Inline-Klassifikation und für das Verhalten ohne `transaction_classifications` wären hilfreich.
+- Ein Mehrtransaktions-Test würde die Reihenfolge „alle Klassifikationen speichern, dann Direktabschluss prüfen“ noch stärker absichern.
 
-Der Branch ist sauber vergleichbar (`ahead_by=1`, `behind_by=0`, `compare_status=ahead`). Laut Implementation Report wurde `tests/test_dashboard.py` erfolgreich ausgeführt (`72 passed, 2 skipped`). Die zwei neuen API-Tests sind fachlich passend für die Kernanforderung.
+## Fazit
 
-## Nicht blockierende Hinweise
-
-- Ein UI-/Browser-Test für die neue Formular-Fehleranzeige wäre hilfreich, aber für dieses Paket nicht zwingend.
-- Die Direktabschluss-Checkbox im manuellen Erstellformular könnte noch einen kurzen erläuternden Hilfetext erhalten, analog zum Mail-Flow.
+Keine blockierenden Probleme gefunden. Die Muss-Anforderungen und Akzeptanzkriterien sind im Wesentlichen erfüllt.
