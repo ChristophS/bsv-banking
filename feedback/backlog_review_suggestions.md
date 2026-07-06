@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Prozessual prüfen, warum `banking_dashboard/static/app.js` als `extra_in_github_compare` gemeldet wurde, obwohl diese Datei fachlich Bestandteil des Arbeitspakets ist.
+- Falls ältere Browser unterstützt werden sollen, kann `Object.hasOwn(...)` durch `Object.prototype.hasOwnProperty.call(...)` ersetzt werden.
