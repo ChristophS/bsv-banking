@@ -1,3 +1,3 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- UI-Anzeige der verknüpften Transaktionen im Mail-Import um explizite Felder für Zahlungsbeteiligten und Verwendungszweck ergänzen.
+- Zusätzliche API-Tests für unvollständige Inline-Klassifikation mit abgewiesenem Direktabschluss ergänzen.
+- Mehrtransaktions-Test für Inline-Klassifikationen ergänzen, um die Reihenfolge aller Updates vor dem Direktabschluss abzusichern.
