@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional den Originaldokument-Link in allen UI-Kontexten anhand von `vorhanden` deaktivieren, sofern diese Information dort verfügbar ist.
+- Optional `dateityp` vor dem Setzen des `Content-Type`-Headers defensiv normalisieren bzw. gegen Steuerzeichen absichern.
