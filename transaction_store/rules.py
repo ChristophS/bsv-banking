@@ -307,6 +307,11 @@ def apply_completion_rules(
     transaction_ids: Sequence[str] | None = None,
 ) -> int:
     changed = 0
+    _ensure_standard_vorgaenge_for_completion_rules(
+        connection,
+        rules,
+        transaction_ids,
+    )
     for vorgangs_id in _automatic_vorgaenge(connection, transaction_ids):
         transactions = _vorgang_transactions(connection, vorgangs_id)
         completed = bool(transactions) and all(
@@ -334,6 +339,102 @@ def apply_completion_rules(
         )
         changed += cursor.rowcount
     return changed
+
+
+def _ensure_standard_vorgaenge_for_completion_rules(
+    connection: sqlite3.Connection,
+    rules: Sequence[CompletionRule],
+    transaction_ids: Sequence[str] | None,
+) -> None:
+    if not rules:
+        return
+    for transaction in _completion_rule_candidate_transactions(
+        connection,
+        transaction_ids,
+    ):
+        if (
+            not _has_complete_classification(transaction)
+            or not matching_completion_rules(transaction, rules)
+        ):
+            continue
+        standard_vorgangs_id = f"vorgang_{transaction['transaction_id']}"
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO vorgaenge (
+                vorgangs_id,
+                vorgangstyp,
+                status,
+                erstellt_am,
+                aktualisiert_am
+            ) VALUES (
+                ?,
+                ?,
+                'in_bearbeitung',
+                STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+            )
+            """,
+            (standard_vorgangs_id, transaction["transaction_type"]),
+        )
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO transaktion_vorgaenge (
+                transaktions_id,
+                vorgangs_id
+            ) VALUES (?, ?)
+            """,
+            (transaction["transaction_id"], standard_vorgangs_id),
+        )
+
+
+def _completion_rule_candidate_transactions(
+    connection: sqlite3.Connection,
+    transaction_ids: Sequence[str] | None,
+) -> list[sqlite3.Row]:
+    columns = """
+        t.transaction_id, t.purpose, t.counterparty,
+        t.account_name, t.account_number, t.booking_text,
+        t.amount, t.transaction_type, t.top_category,
+        t.sub_category, t.sphere, t.professional_description
+    """
+    condition = """
+        NOT EXISTS (
+            SELECT 1
+            FROM transaktion_vorgaenge AS tv
+            WHERE tv.transaktions_id = t.transaction_id
+        )
+    """
+    if transaction_ids is None:
+        return list(
+            connection.execute(
+                f"""
+                SELECT {columns}
+                FROM transactions AS t
+                WHERE {condition}
+                ORDER BY t.transaction_id
+                """
+            )
+        )
+
+    rows: list[sqlite3.Row] = []
+    for offset in range(0, len(transaction_ids), 900):
+        chunk = transaction_ids[offset : offset + 900]
+        if not chunk:
+            continue
+        placeholders = ", ".join("?" for _ in chunk)
+        rows.extend(
+            connection.execute(
+                f"""
+                SELECT {columns}
+                FROM transactions AS t
+                WHERE t.transaction_id IN ({placeholders})
+                  AND {condition}
+                ORDER BY t.transaction_id
+                """,
+                tuple(chunk),
+            )
+        )
+    return rows
 
 
 def apply_rule_pipeline(

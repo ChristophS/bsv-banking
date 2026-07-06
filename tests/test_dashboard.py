@@ -488,6 +488,11 @@ class DashboardDataStoreTests(unittest.TestCase):
             [row["transaktions_id"] for row in unfiltered],
             ["tx_newer", "tx_older"],
         )
+        newer = unfiltered[0]
+        self.assertEqual(newer["vorgaenge_count"], 2)
+        self.assertEqual(newer["completed_vorgaenge_count"], 1)
+        self.assertTrue(newer["has_vorgaenge"])
+        self.assertTrue(newer["has_completed_vorgaenge"])
         self.assertEqual(
             [row["transaktions_id"] for row in filtered],
             ["tx_newer"],
@@ -998,6 +1003,48 @@ class DashboardDataStoreTests(unittest.TestCase):
             reopened["vorgaenge"][0]["status"],
             "in_bearbeitung",
         )
+
+    def test_completion_rules_create_completed_standard_vorgang(self):
+        connection = connect_database(self.database_path)
+        try:
+            connection.execute(
+                """
+                DELETE FROM transaktion_vorgaenge
+                WHERE transaktions_id = 'tx_newer'
+                """
+            )
+            connection.execute(
+                """
+                DELETE FROM vorgaenge
+                WHERE vorgangs_id = 'vorgang_tx_newer'
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        self.store.create_completion_rule(
+            {
+                "name": "Alle Ausgaben abschliessen",
+                "enabled": True,
+                "match_field": "transaction_type",
+                "match_operator": "equals",
+                "match_value": "Ausgabe",
+                "apply_now": False,
+            }
+        )
+
+        result = self.store.update_transaction_classification(
+            "tx_newer",
+            {"fachliche_beschreibung": "Automatisch abgeschlossen"},
+        )
+
+        self.assertEqual(
+            [vorgang["vorgangs_id"] for vorgang in result["vorgaenge"]],
+            ["vorgang_tx_newer"],
+        )
+        self.assertEqual(result["vorgaenge"][0]["status"], "abgeschlossen")
+        self.assertFalse(result["vorgaenge"][0]["status_manuell"])
 
     def test_completion_rules_do_not_override_manual_status(self):
         self.store.create_completion_rule(
@@ -1935,6 +1982,16 @@ class DashboardHTTPTests(unittest.TestCase):
             self.assertEqual(
                 payload["transactions"][0]["transaktions_id"],
                 "tx_older",
+            )
+            self.assertIn("vorgaenge_count", payload["transactions"][0])
+            self.assertIn(
+                "completed_vorgaenge_count",
+                payload["transactions"][0],
+            )
+            self.assertIn("has_vorgaenge", payload["transactions"][0])
+            self.assertIn(
+                "has_completed_vorgaenge",
+                payload["transactions"][0],
             )
 
         with urlopen(

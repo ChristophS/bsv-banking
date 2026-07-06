@@ -6439,6 +6439,7 @@ function renderTransactions(transactions) {
       tableCell(transaction.kontoname, "account-cell"),
       tableCell(transaction.zahlungsbeteiligter, "counterparty-cell"),
       purposeCell(transaction.verwendungszweck),
+      transactionVorgangCell(transaction),
       amountCell(transaction.betrag),
       balanceCell(transaction.kontostand_konto),
     );
@@ -6454,6 +6455,38 @@ function tableCell(value, className = "") {
   cell.className = className;
   cell.textContent = value || "";
   cell.title = value || "";
+  return cell;
+}
+
+function transactionVorgangCell(transaction) {
+  const cell = document.createElement("td");
+  cell.className = "transaction-vorgang-cell";
+  const count = Number(transaction.vorgaenge_count || 0);
+  const completedCount = Number(transaction.completed_vorgaenge_count || 0);
+  if (!count) {
+    const empty = document.createElement("span");
+    empty.className = "is-unavailable";
+    empty.textContent = "Kein Vorgang";
+    cell.append(empty);
+    return cell;
+  }
+
+  const linked = document.createElement("span");
+  linked.className = "status-badge is-open";
+  linked.textContent = count === 1 ? "Vorgang" : `${count} Vorgänge`;
+  linked.title = `${count} verknüpfte Vorgänge`;
+  cell.append(linked);
+
+  if (completedCount) {
+    const completed = document.createElement("span");
+    completed.className = "status-badge is-complete";
+    completed.textContent =
+      completedCount === count
+        ? "Abgeschlossen"
+        : `${completedCount} abgeschlossen`;
+    completed.title = `${completedCount} von ${count} Vorgängen abgeschlossen`;
+    cell.append(completed);
+  }
   return cell;
 }
 
