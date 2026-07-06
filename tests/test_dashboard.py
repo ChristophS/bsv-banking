@@ -2943,6 +2943,105 @@ class DashboardHTTPTests(unittest.TestCase):
 
 
 class DashboardTodoBrowserTests(unittest.TestCase):
+    def test_overview_cards_route_to_matching_tabs_and_filters(self):
+        try:
+            from playwright.sync_api import expect, sync_playwright
+        except ImportError:
+            self.skipTest("Playwright ist nicht installiert.")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            store = DashboardDataStore(database_path)
+            store.create_todo({"title": "Offene Aufgabe"})
+            store.create_termin(
+                {
+                    "title": "Mitgliederversammlung",
+                    "starts_at": "2999-01-15T18:00:00+01:00",
+                }
+            )
+            server = create_server(
+                database_path,
+                port=0,
+                mail_backend=FakeDashboardMailBackend(),
+                mail_spam_scorer=FakeDashboardSpamScorer(),
+            )
+            thread = threading.Thread(
+                target=server.serve_forever,
+                daemon=True,
+            )
+            thread.start()
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+            try:
+                with sync_playwright() as playwright:
+                    try:
+                        browser = playwright.chromium.launch(headless=True)
+                    except Exception as exc:
+                        self.skipTest(
+                            f"Chromium ist nicht installiert: {exc}"
+                        )
+                    page = browser.new_page(
+                        viewport={"width": 1500, "height": 1000}
+                    )
+                    page.goto(base_url, wait_until="networkidle")
+
+                    page.locator(
+                        "[data-overview-key='open_vorgaenge']"
+                    ).click()
+                    expect(page.locator("#vorgaenge-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    expect(
+                        page.locator("#vorgang-hide-completed")
+                    ).to_be_checked()
+
+                    page.locator("[data-overview-key='open_todos']").click()
+                    expect(page.locator("#todo-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    expect(
+                        page.locator("#todo-hide-completed")
+                    ).to_be_checked()
+
+                    page.locator(
+                        "[data-overview-key='unassigned_transactions']"
+                    ).click()
+                    expect(page.locator("#transactions-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    expect(
+                        page.locator(
+                            "#transaction-hide-completed-vorgaenge"
+                        )
+                    ).to_be_checked()
+
+                    page.locator("[data-overview-key='unread_mails']").click()
+                    expect(page.locator("#mail-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+
+                    page.locator(
+                        "[data-overview-key='upcoming_termine']"
+                    ).press("Enter")
+                    expect(page.locator("#termine-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    expect(
+                        page.locator("#termin-hide-completed")
+                    ).to_be_checked()
+
+                    page.locator(
+                        "[data-overview-key='unassigned_documents']"
+                    ).press(" ")
+                    expect(page.locator("#vorgaenge-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    browser.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
     def test_suggestions_are_not_checked_only_because_of_score(self):
         try:
             from playwright.sync_api import sync_playwright
