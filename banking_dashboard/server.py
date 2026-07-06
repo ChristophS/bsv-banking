@@ -5471,7 +5471,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
     def _mail_vorgang_import(self, entry_id: str) -> dict[str, Any]:
         payload = self._read_json_body()
-        allowed = {"vorgang", "documents", "todos", "termine", "links"}
+        allowed = {
+            "vorgang",
+            "documents",
+            "todos",
+            "termine",
+            "links",
+            "transaction_classifications",
+        }
         unknown = sorted(set(payload) - allowed)
         if unknown:
             raise ValueError(
@@ -5484,6 +5491,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not isinstance(raw_vorgang, dict):
             raise ValueError("Vorgangsdaten fehlen.")
         links = payload.get("links") if isinstance(payload.get("links"), dict) else {}
+        transaction_ids = _list_of_strings(links.get("transaction_ids", []))
+        transaction_classifications = _mail_transaction_classifications(
+            payload.get("transaction_classifications"),
+            transaction_ids,
+        )
         requested_completed = (
             bool(raw_vorgang.get("completed"))
             if isinstance(raw_vorgang.get("completed"), bool)
@@ -5504,9 +5516,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                         [inbox_id, *_list_of_strings(links.get("mail_ids", []))]
                     )
                 ),
-                "transaction_ids": _list_of_strings(
-                    links.get("transaction_ids", [])
-                ),
+                "transaction_ids": transaction_ids,
                 "todo_ids": _list_of_strings(links.get("todo_ids", [])),
                 "beleg_ids": _list_of_strings(links.get("beleg_ids", [])),
                 "termin_ids": _list_of_strings(links.get("termin_ids", [])),
@@ -5579,6 +5589,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     source_reference=inbox_id,
                 )
             )
+        updated_classifications = []
+        for transaction_id, values in transaction_classifications:
+            updated_classifications.append(
+                self.server.data_store.update_transaction_classification(
+                    transaction_id,
+                    values,
+                )["transaction"]
+            )
         completion_error = ""
         if requested_completed:
             try:
@@ -5612,6 +5630,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             "documents": imported_documents,
             "todos": imported_todos,
             "termine": imported_termine,
+            "transaction_classifications": updated_classifications,
         }
 
     def _balance_history_response(
@@ -6514,6 +6533,68 @@ def _list_of_strings(value: Any) -> list[str]:
         for item in value
         if str(item or "").strip()
     ]
+
+
+def _mail_transaction_classifications(
+    value: Any,
+    transaction_ids: list[str],
+) -> list[tuple[str, dict[str, str]]]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError("transaction_classifications muss eine Liste sein.")
+    linked_ids = set(transaction_ids)
+    result: list[tuple[str, dict[str, str]]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"transaction_classifications[{index}] muss ein Objekt sein."
+            )
+        transaction_id = str(item.get("transaction_id") or "").strip()
+        if not transaction_id:
+            raise ValueError(
+                f"transaction_classifications[{index}].transaction_id fehlt."
+            )
+        if transaction_id not in linked_ids:
+            raise ValueError(
+                "Inline-Klassifikation ist nur fuer verknuepfte "
+                f"Transaktionen erlaubt: {transaction_id}"
+            )
+        if transaction_id in seen:
+            raise ValueError(
+                "Inline-Klassifikation wurde mehrfach fuer dieselbe "
+                f"Transaktion gesendet: {transaction_id}"
+            )
+        seen.add(transaction_id)
+        unknown_fields = sorted(
+            set(item) - {"transaction_id"} - set(CLASSIFICATION_FIELDS)
+        )
+        if unknown_fields:
+            raise ValueError(
+                "Unbekannte Klassifikationsfelder: "
+                + ", ".join(unknown_fields)
+            )
+        values = {
+            field: item[field]
+            for field in CLASSIFICATION_FIELDS
+            if field in item
+        }
+        if not values:
+            raise ValueError(
+                f"Mindestens ein Klassifikationsfeld fuer {transaction_id} "
+                "ist erforderlich."
+            )
+        for field, field_value in values.items():
+            if not isinstance(field_value, str):
+                raise ValueError(f"Das Feld {field} muss Text enthalten.")
+            if len(field_value.strip()) > MAX_CLASSIFICATION_FIELD_LENGTH:
+                raise ValueError(
+                    f"Das Feld {field} darf hoechstens "
+                    f"{MAX_CLASSIFICATION_FIELD_LENGTH} Zeichen enthalten."
+                )
+        result.append((transaction_id, values))
+    return result
 
 
 def _int_value(value: Any) -> int:
