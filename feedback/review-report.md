@@ -8,49 +8,40 @@
 
 ## Begründung
 
-Der Diff ist ausreichend aussagekräftig und erfüllt die fachlichen Anforderungen des Arbeitspakets ohne erkennbare blockierende Probleme.
+Der Diff ist für die fachliche Prüfung ausreichend: Server-Endpunkt, UI-Aktionen und Tests sind sichtbar und erfüllen die Akzeptanzkriterien ohne erkennbare Blocker.
 
 ## Zusammenfassung
 
-Die Umsetzung ergänzt serverseitig den Mail-Lesestatus-Nachzug bei manuellem und regelbasiertem Vorgangsabschluss, aktualisiert die Transaktionsliste im Frontend nach PATCH-Aktionen und ergänzt passende Dashboard-Tests. Die Anforderungen werden erfüllt.
+Umgesetzt wurde ein neuer read-only Endpunkt zum Ausliefern des Originaldokuments eines katalogisierten Belegs sowie zusätzliche UI-Aktionen zur klaren Unterscheidung zwischen Katalogeintrag und Originaldokument. Die Umsetzung erfüllt die Muss-Anforderungen und ist durch passende HTTP-Tests abgedeckt.
 
 ## Review-Ergebnis
 
-**Accepted:** Ja
+**Akzeptiert.**
 
-## Prüfung gegen Arbeitspaket
+Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch ausreichend.
 
-Die Umsetzung adressiert die geforderten Punkte:
+## Geprüfte Anforderungen
 
-- `DashboardDataStore.update_vorgang_status()` ruft beim manuellen Setzen auf abgeschlossen `_mark_vorgang_mails_read(...)` auf.
-- `_mark_vorgang_mails_read(...)` aktualisiert `inbox_messages.is_read = 1` für über `inbox_vorgaenge` verknüpfte Mails und schließt gelöschte Mails über `deleted_at IS NULL` aus.
-- Beim Wiederöffnen wird kein automatisches Zurücksetzen auf ungelesen vorgenommen.
-- `DashboardDataStore.update_transaction_classification()` ermittelt abgeschlossene Vorgänge vor und nach `apply_completion_rules(...)` und zieht nur neu abgeschlossene Vorgänge nach.
-- Die bestehende SQL-Semantik des Filters `hide_completed_vorgaenge` wurde nicht unnötig verändert.
-- Im Frontend wird nach erfolgreichem Vorgangsstatus- oder Klassifikations-PATCH `loadTransactions()` aufgerufen, wodurch die aktuelle Transaktionsliste mit bestehendem UI-Filterzustand neu geladen wird.
-- Die ergänzten Tests decken manuellen Abschluss, regelbasierten Abschluss, Mail-Lesestatus, gelöschte Mails und den unmittelbaren Filtereffekt ab.
-
-## Technische Bewertung
-
-Die neue Hilfsfunktion ist klein, intern gekapselt und nutzt parametrisierte SQL-Statements. Die Verwendung einer sortierten, bereinigten ID-Menge verhindert unnötige doppelte Updates. Die Tabellenexistenzprüfung macht den Nachzug robust gegenüber Test- oder Migrationszuständen, in denen Inbox-Tabellen möglicherweise nicht vorhanden sind.
-
-Die Änderung in `update_transaction_classification()` ist sinnvoll platziert: Der Zustand wird vor der Klassifikationsänderung ermittelt, danach werden Abschlussregeln angewandt, anschließend werden nur die neu abgeschlossenen Vorgänge betrachtet. Damit wird der geforderte Effekt unmittelbar innerhalb derselben Schreibtransaktion hergestellt.
-
-Der Branch-Zustand ist sauber: GitHub Compare ist `ahead`, `behind_by=0`, ein Commit, keine Abweichungen zwischen Runner und GitHub Compare.
+- Ein neuer GET-Endpunkt `/api/belege/<beleg_id>/document` wurde ergänzt.
+- Der Endpunkt verwendet ausschließlich den bestehenden Beleg-Lookup über `beleg_id`; es werden keine freien Pfadparameter akzeptiert.
+- Für unbekannte Belege wird ein 404-Fehler ausgelöst.
+- Für katalogisierte Belege ohne vorhandene Datei bzw. bei nicht lesbarer Datei wird ebenfalls ein 404-Fehler ausgelöst.
+- Die Datei wird aus `belege.dateipfad` ausgeliefert und mit Content-Type sowie Content-Disposition versehen.
+- Browser-taugliche Typen wie PDF, Bilder und Text werden inline ausgeliefert, andere als Attachment.
+- Die UI unterscheidet sichtbar zwischen `Katalogeintrag öffnen` und `Originaldokument öffnen`.
+- Die zusätzliche Aktion ist im Vorgangsdetail-Flow und in Beleg-/Dokument-Kontexten ergänzt worden.
+- Die bestehende Verknüpfungslogik über Vorgänge wurde im Diff nicht umgebaut.
 
 ## Tests
 
-Laut Implementierungsbericht wurde ausgeführt:
+Es wurden passende Tests in `tests/test_dashboard.py` ergänzt für:
 
-- `python -m pytest tests/test_dashboard.py`
+- erfolgreiche Auslieferung eines vorhandenen Originaldokuments,
+- unbekannte Beleg-ID mit 404,
+- katalogisierten Beleg mit fehlender Datei mit 404.
 
-Ergebnis:
+Der Implementation Report nennt erfolgreich ausgeführte Dashboard-Tests: `83 passed, 4 skipped`.
 
-- `80 passed, 4 skipped`
+## Hinweise
 
-Die neuen Tests sind fachlich passend zum Arbeitspaket.
-
-## Nicht blockierende Hinweise
-
-- Ein zusätzlicher Test für den Mischfall aus offenem und abgeschlossenem Vorgang an derselben Transaktion wäre hilfreich, falls dieser nicht bereits in bestehenden Tests enthalten ist.
-- Beim manuellen Status-Update wird auch dann markiert, wenn ein bereits abgeschlossener Vorgang erneut mit `completed=true` gespeichert wird. Das ist nicht kritisch, da nur idempotent `is_read=1` gesetzt wird.
+Keine blockierenden Probleme festgestellt. Die zusätzlichen CSS-Änderungen sind nachvollziehbar und dienen nur der Darstellung der neuen Aktionen.
