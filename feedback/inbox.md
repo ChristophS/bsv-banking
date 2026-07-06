@@ -1,3 +1,6 @@
 # Inbox
 
-Keine offenen Eingaben.
+- Bei den Transaktionen ist nicht ersichtlich, zu welcher Transaktion schon ein Vorgang erstellt wurde oder welche abgeschlossen wurde. Da bitte Tags oder so mit hin machen
+- Ich habe folgendes problem. Ich will ja nach und nach alle Transaktionen "abarbeiten", so dass diese klassifiziert sind und als Vorgänge abgeschlossen wurden. Es können immer ein oder mehrere Transaktionen an einem Vorgang hängen. ich kann ja bei den Transaktionen Regeln und automatische Abschlussregeln rstellen. Die Regeln sind zur Zuordnung von Parametern. Die Abschlussregeln funktionieren aber nicht. Wenn eine automatische Abschlussregel zutrifft, dann soll die entsprechende Transaktion als Vorgang angelegt werden und direkt abgeschlossen werden. Das hat mal funktioniert, funktioniert aber leider nicht. Vermutlich weil ich in einer vorherigen Anweisung die harte Vorgabe "Jede Transaktion ist ein Vorgang" entfernt habe. Das soll auch immernoch so sein, aber wenn ich automatische Regeln habe, dann ist das so "Transaktion 0 Vorgang und direkt abgeschlossen)"
+
+Diese beiden Regeln, vor allem die zweite, beeinflussen die Arbeit mit dem Tool erheblich. Sie sollen unbedingt als höchste Priorität gesetzt werden und als nächstes Arbeitspaket abgearbeitet werden.
