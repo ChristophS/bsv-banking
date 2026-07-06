@@ -1,2 +1,3 @@
-- Ergänze bei Gelegenheit einen UI-/DOM-Test für die neue Vorgangsstatus-Spalte in der Transaktionsliste.
-- Prüfe optional, ob `changed_vorgaenge` oder ein separates Feld neu erzeugte Standard-Vorgänge ausweisen sollte.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
