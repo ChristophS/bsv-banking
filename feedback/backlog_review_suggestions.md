@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Ergänzenden Regressionstest für Transaktionen mit mehreren Vorgängen aufnehmen: Eine Transaktion mit mindestens einem offenen und einem abgeschlossenen Vorgang muss bei aktivem `hide_completed_vorgaenge` sichtbar bleiben.
+- Optional prüfen, ob der Mail-Nachzug beim manuellen Statuswechsel nur bei tatsächlichem Übergang von nicht abgeschlossen zu abgeschlossen ausgeführt werden soll. Funktional ist die aktuelle idempotente Umsetzung unproblematisch.
