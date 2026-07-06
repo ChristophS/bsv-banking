@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die nachgeladenen Produktdateien zeigen, dass die Mail-Detailansicht bereits eine kompakte Zuordnung zu bestehenden Vorgängen über die vorhandenen Endpunkte nutzt; der Diff ergänzt passende Absicherung für Idempotenz und UI-Flow. Es gibt keine blockierenden fachlichen oder technischen Probleme.
+Die Umsetzung erfüllt die fachlichen Akzeptanzkriterien auf Basis des GitHub-Compare-Diffs; es wurden keine blockierenden Probleme gefunden.
 
 ## Zusammenfassung
 
-Akzeptiert: Die bestehende Mail-Detail-UI erlaubt die Auswahl und Verknüpfung vorhandener Vorgänge über /api/vorgaenge und /api/mail/{id}/vorgaenge, aktualisiert die Anzeige nach POST/DELETE und verhindert doppelte Zuordnungen über Backend-Idempotenz sowie Kandidatenfilterung. Der Diff ergänzt dafür relevante Tests.
+Die Abschlussregel-Automatik erzeugt bzw. nutzt wieder Standard-Vorgänge für passende klassifizierte Transaktionen und schließt sie automatisch ab, ohne manuelle Status zu überschreiben. Die Transaktionslisten-API und UI wurden um aggregierte Vorgangsstatusinformationen und sichtbare Badges erweitert. Accepted, da Soll-Anforderungen und Branch-Zustand passen.
 
 # Review Report
 
@@ -20,47 +20,68 @@ Akzeptiert: Die bestehende Mail-Detail-UI erlaubt die Auswahl und Verknüpfung v
 
 **Accepted:** true
 
-## Geprüfter Umfang
+## Geprüfte Grundlage
 
-- Maßgeblicher Diff: Änderungen an `tests/test_mail_integration.py` und `feedback/implementation_report.md`.
-- Nachgeladener Kontext: `banking_dashboard/static/app.js`, `banking_dashboard/static/index.html`, `banking_dashboard/server.py`, `banking_dashboard/mail_integration.py`, `tests/test_mail_integration.py`.
-- Branch-Zustand: `ahead`, 1 Commit voraus, 0 Commits zurück; keine Abweichungen zwischen Runner- und GitHub-Compare-Dateiliste.
+- Soll-Anforderung aus `next_task_markdown`
+- GitHub-Compare-Diff als maßgebliche Quelle der Änderungen
+- Implementation Report von Agent 2
+- Nachgeladener Repo-Kontext für bestehende Regeln, Schema, API und UI-Flows
+- Branch-Zustand: `compare_status=ahead`, `ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner und GitHub Compare
 
-## Fachliche Bewertung gegen das Arbeitspaket
+Hinweis: Einige nachgeladene vollständige Dateien wirkten gegenüber dem Compare-Diff veraltet. Da der GitHub-Compare-Diff maßgeblich ist und der benötigte Umgebungskontext trotzdem ausreichend war, wurde die fachliche Bewertung auf Basis des Diffs vorgenommen.
 
-Die Produktfunktionalität war laut Umsetzungsbericht bereits vorhanden und wurde im nachgeladenen Kontext bestätigt:
+## Fachliche Bewertung
 
-- In `loadMailDetail()` werden Maildetails, bestehende Mail-Vorgang-Verknüpfungen und Vorgangskandidaten geladen.
-- `renderMailVorgangSection()` zeigt verknüpfte Vorgänge direkt in der Mail-Detailansicht an und bietet eine kompakte Auswahl vorhandener Vorgänge.
-- `submitMailVorgangLink()` nutzt `POST /api/mail/{id}/vorgaenge` und aktualisiert anschließend die angezeigten verknüpften Vorgänge.
-- `unlinkMailVorgang()` nutzt `DELETE /api/mail/{id}/vorgaenge/{vorgangs_id}` und aktualisiert die Detailansicht ebenfalls.
-- Die Kandidatenliste wird aus `/api/vorgaenge` geladen und filtert bereits verknüpfte Vorgänge clientseitig aus.
-- Die bestehende Funktion zum Erstellen eines neuen Vorgangs aus einer Mail (`data-mail-create-vorgang` / `startMailVorgangReview`) bleibt unverändert.
+### Automatische Abschlussregeln
 
-Backend-seitig ist die vorhandene Zuordnung ebenfalls passend umgesetzt:
+Die Änderung in `transaction_store/rules.py` behebt die wahrscheinliche Ursache: `apply_completion_rules` betrachtete bisher nur vorhandene automatische Vorgänge. Für passende, vollständig klassifizierte Transaktionen ohne Vorgangsverknüpfung wird nun vor dem Abschlusslauf ein Standard-Vorgang `vorgang_<transaction_id>` erzeugt und verknüpft.
 
-- `DashboardMailManager.link_vorgang()` validiert das Payload-Feld `vorgangs_id`, löst die Mail-ID auf und nutzt den vorhandenen `InboxMailStore`.
-- `InboxMailStore.link_vorgang()` prüft Mail und Vorgang und verwendet `INSERT OR IGNORE` in `inbox_vorgaenge`; doppelte Zuordnungen werden dadurch robust ignoriert.
-- `linked_vorgaenge()` liefert sowohl `vorgangs_ids` als auch Detailobjekte, die die UI direkt anzeigen kann.
+Danach greift die bestehende Abschlusslogik:
 
-## Bewertung der Diff-Änderungen
+- alle verknüpften Transaktionen müssen vollständig klassifiziert sein,
+- mindestens eine aktive Abschlussregel muss passen,
+- Rechnungsvorgänge benötigen weiterhin einen Beleg,
+- Statusänderungen erfolgen weiterhin nur bei `status_manuell = 0`.
 
-Der tatsächliche Diff ergänzt Tests statt Produktcode:
+Damit bleiben manuelle Statussperren respektiert. Bestehende manuell gesetzte Vorgänge werden nicht durch die Automatik überschrieben.
 
-- Der API-Test `test_mail_can_be_linked_to_vorgang` prüft laut Diff zusätzlich, dass ein zweiter POST desselben Vorgangs keine doppelte Zuordnung erzeugt.
-- Der Browser-Test `test_mail_workspace_reads_tags_zooms_and_replies` deckt laut Diff den sichtbaren UI-Flow ab: Formular sichtbar, bestehender Vorgang auswählbar, Zuordnung sichtbar, Kandidat danach entfernt, Entfernen der Verknüpfung sichtbar.
+### API-Erweiterung für Transaktionsliste
 
-Das passt zur Situation, dass die Produktfunktionalität bereits im Repository vorhanden war. Für dieses Arbeitspaket ist es fachlich akzeptabel, die vorhandene Umsetzung durch gezielte Regressionstests abzusichern, solange die Akzeptanzkriterien dadurch erfüllt sind.
+`DashboardDataStore.list_transactions()` liefert laut Diff pro Transaktion zusätzliche aggregierte Metadaten:
 
-## Hinweise
+- `vorgaenge_count`
+- `completed_vorgaenge_count`
+- `has_vorgaenge`
+- `has_completed_vorgaenge`
 
-Der nachgeladene Vollinhalt von `tests/test_mail_integration.py` scheint die im GitHub-Diff gezeigten neuen Test-Hunks nicht zu enthalten. Da der GitHub-Diff laut Review-Regeln maßgeblich für die tatsächlich geänderten Stellen ist und die Produktkontextdateien für die fachliche Entscheidung ausreichen, blockiert das die Entscheidung nicht.
+Die Benennung ist mehrfachverknüpfungsfähig und passt zur Soll-Anforderung. Die bestehende `hide_completed_vorgaenge`-Semantik bleibt erhalten, weil die vorhandene Filterbedingung weiterhin Transaktionen nur dann ausblendet, wenn mindestens ein Vorgang existiert und kein offener Vorgang mehr verknüpft ist.
 
-## Nicht-blockierende Vorschläge
+### Frontend-Anzeige
 
-- Die UI aktualisiert nach POST/DELETE derzeit aus dem Response-Payload und rendert die Detailansicht neu. Das erfüllt die Akzeptanzkriterien; optional könnte später ein vollständiger `loadMailDetail()`-Refresh genutzt werden, um noch enger dem Hinweis des Arbeitspakets zu entsprechen.
-- Der Playwright-Test ist sinnvoll, kann aber je nach Umgebung übersprungen werden. Langfristig wäre ein zusätzlicher nicht-browserbasierter Test für Kandidatenfilterung und Submit-State hilfreich.
+Die Transaktionsliste erhält eine neue Spalte `Vorgang`. Das Rendering zeigt:
+
+- `Kein Vorgang`, wenn keine Verknüpfung existiert,
+- `Vorgang` bzw. `n Vorgänge`, wenn Verknüpfungen existieren,
+- `Abgeschlossen` oder `n abgeschlossen`, wenn abgeschlossene Vorgänge darunter sind.
+
+Damit wird nicht fälschlich nur ein Gesamtstatus signalisiert, sondern zumindest zwischen verknüpft und abgeschlossen vorhanden unterschieden. Bei Teilabschluss wird eine Anzahl angezeigt.
+
+### Tests
+
+Der Diff ergänzt relevante Tests in `tests/test_dashboard.py`:
+
+- API-Felder in `/api/transactions`,
+- Aggregation für mehrere verknüpfte Vorgänge,
+- automatische Erzeugung und Abschluss eines Standard-Vorgangs,
+- bestehende manuelle Statussperre bleibt durch vorhandene Tests abgedeckt.
+
+Agent 2 berichtet erfolgreiche Läufe für `tests/test_dashboard.py` und `tests/test_transactions.py`. Das ist für den Umfang plausibel.
+
+## Nicht blockierende Hinweise
+
+- Ein zusätzlicher Frontend-/Browser-Test für die neue Badge-Spalte wäre wünschenswert.
+- `changed_vorgaenge` zählt Statusaktualisierungen, aber nicht neu erzeugte Standard-Vorgänge. Das ist nicht blockierend, könnte aber später für mehr Transparenz verbessert werden.
 
 ## Fazit
 
-Die Muss-Kriterien sind erfüllt: Eine Mail kann einem bestehenden Vorgang zugeordnet werden, die Anzeige aktualisiert sich sofort, doppelte Zuordnungen werden verhindert bzw. idempotent behandelt, die vorhandenen Endpunkte werden genutzt und der bestehende Vorgang-anlegen-Flow bleibt unverändert. Keine Blocker gefunden.
+Die Umsetzung erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Es gibt keine blockierenden fachlichen oder technischen Probleme.
