@@ -1,2 +1,3 @@
-- Optional eine präzisere Zeitlogik für `beginnt_am` ergänzen, sodass bei ISO-Zeitpunkten am heutigen Datum auch die Uhrzeit berücksichtigt wird.
-- Optional einen expliziten Terminlisten-Filter für „nicht zugewiesen“ ergänzen, damit der Klick auf die Dashboard-Karte exakt dieselbe Teilmenge zeigt, die gezählt wurde.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
