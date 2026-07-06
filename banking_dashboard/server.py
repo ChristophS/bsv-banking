@@ -15,7 +15,7 @@ from datetime import date, datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 from urllib.parse import parse_qs, unquote, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -501,6 +501,10 @@ class DashboardDataStore:
         ) as rules_connection:
             completion_rules = load_completion_rules(rules_connection)
         with closing(self._connect(writable=True)) as connection:
+            completed_before = self._completed_vorgaenge_for_transaction(
+                connection,
+                transaktions_id,
+            )
             cursor = connection.execute(
                 f"""
                 UPDATE transactions
@@ -516,6 +520,14 @@ class DashboardDataStore:
                 connection,
                 completion_rules,
                 [transaktions_id],
+            )
+            completed_after = self._completed_vorgaenge_for_transaction(
+                connection,
+                transaktions_id,
+            )
+            self._mark_vorgang_mails_read(
+                connection,
+                completed_after - completed_before,
             )
             connection.commit()
 
@@ -1067,6 +1079,8 @@ class DashboardDataStore:
                 """,
                 (status, vorgangs_id),
             )
+            if completed:
+                self._mark_vorgang_mails_read(connection, {vorgangs_id})
             connection.commit()
 
         detail = self.vorgang_detail(vorgangs_id)
@@ -3611,6 +3625,56 @@ class DashboardDataStore:
         for vorgang in result:
             vorgang["status_manuell"] = bool(vorgang["status_manuell"])
         return result
+
+    def _completed_vorgaenge_for_transaction(
+        self,
+        connection: sqlite3.Connection,
+        transaktions_id: str,
+    ) -> set[str]:
+        rows = connection.execute(
+            """
+            SELECT v.vorgangs_id
+            FROM vorgaenge AS v
+            JOIN transaktion_vorgaenge AS tv
+              ON tv.vorgangs_id = v.vorgangs_id
+            WHERE tv.transaktions_id = ?
+              AND v.status = 'abgeschlossen'
+            """,
+            (transaktions_id,),
+        ).fetchall()
+        return {str(row["vorgangs_id"]) for row in rows}
+
+    def _mark_vorgang_mails_read(
+        self,
+        connection: sqlite3.Connection,
+        vorgangs_ids: Iterable[str],
+    ) -> None:
+        cleaned_ids = tuple(
+            sorted({str(vorgangs_id).strip() for vorgangs_id in vorgangs_ids})
+        )
+        if not cleaned_ids:
+            return
+        if not (
+            _table_exists(connection, "inbox_messages")
+            and _table_exists(connection, "inbox_vorgaenge")
+        ):
+            return
+        placeholders = ", ".join("?" for _ in cleaned_ids)
+        connection.execute(
+            f"""
+            UPDATE inbox_messages
+            SET
+                is_read = 1,
+                updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+            WHERE deleted_at IS NULL
+              AND inbox_id IN (
+                  SELECT iv.inbox_id
+                  FROM inbox_vorgaenge AS iv
+                  WHERE iv.vorgangs_id IN ({placeholders})
+              )
+            """,
+            cleaned_ids,
+        )
 
     def _suggestion_context(
         self,
