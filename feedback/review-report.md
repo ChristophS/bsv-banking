@@ -8,37 +8,69 @@
 
 ## Begründung
 
-Der Diff ist für die fachliche Prüfung ausreichend aussagekräftig: Es wurde gezielt ein browsernaher Regressionstest ergänzt, der den Spezialfilter aktiviert, anschließend über eine normale Tab-Navigation zurückkehrt und den API-Request mit unassigned_upcoming=false erwartet.
+Der vorhandene Diff und der nachgeladene Kontext reichen für die fachliche Prüfung aus; die Umsetzung erfüllt die Akzeptanzkriterien ohne erkennbare Blocker.
 
 ## Zusammenfassung
 
-Akzeptiert: Der bestehende Dashboard-Routing-Test wurde um den geforderten Regressionsfall erweitert. Die Spezialansicht für nicht zugewiesene anstehende Termine wird aktiviert, danach wird über die normale Termin-Navigation zurück gewechselt und geprüft, dass die Terminladung mit unassigned_upcoming=false erfolgt.
+Die Termin-Upcoming-Tageslogik wurde für die relevanten SQL-Abfragen über eine kleine Hilfsfunktion vereinheitlicht und durch einen Regressionstest für ISO-Datum und ISO-Zeitpunkt abgesichert. Der Branch ist sauber ahead und die Änderungen bleiben im vorgesehenen Scope.
 
-## Review-Ergebnis
+# Review Report
 
-**Entscheidung:** Accepted
+## Ergebnis
 
-## Geprüfte Anforderungen
+**Accepted:** true
 
-- Es wurde ein automatisierter Test in `tests/test_dashboard.py` ergänzt.
-- Der Test nutzt zunächst explizit die Spezialansicht über `data-overview-key='unassigned_termine'` und erwartet einen Request mit `unassigned_upcoming=true` beziehungsweise den sichtbaren Spezialfilterhinweis.
-- Danach wechselt der Test in einen anderen regulären Bereich (`unread_mails` / Mail-Tab) und navigiert anschließend über `#termine-tab` zurück zur normalen Terminansicht.
-- Für diese normale Terminladung wird ein API-Request auf `/api/termine` mit `unassigned_upcoming=false` erwartet.
-- Zusätzlich wird geprüft, dass der Spezialfilterhinweis ausgeblendet ist.
+## Geprüfter Umfang
 
-Damit deckt der neue Test den geforderten Rücksetzfall des Spezialfilters beim Wechsel zurück in die reguläre Terminansicht ab.
+Geändert wurden laut GitHub Compare:
 
-## Technische Bewertung
+- `banking_dashboard/server.py`
+- `tests/test_dashboard.py`
+- `feedback/implementation_report.md`
 
-Die Änderung ist testzentriert und berührt keinen Produktivcode, was zum Arbeitspaket passt. Der Test orientiert sich an beobachtbarem Browser-/UI-Verhalten und an den tatsächlich ausgelösten API-Requests, statt interne JavaScript-Zustände zu prüfen. Die bestehende Reset-Prüfung bleibt erhalten und wird nach erneuter Aktivierung der Spezialansicht weiter genutzt.
+Der Branch ist sauber: `compare_status=ahead`, `ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner- und GitHub-Compare-Dateiliste.
 
-Der Branch-Zustand ist sauber: GitHub Compare zeigt einen Commit ahead, keinen behind-Stand und keine Abweichungen zwischen Runner- und GitHub-Dateiliste.
+## Fachliche Bewertung gegen das Arbeitspaket
+
+### ISO-Tageslogik für Termine
+
+Die relevanten Upcoming-Abfragen in `overview_counts()` und `list_termine(unassigned_upcoming=True)` verwenden weiterhin die fachlich richtige Tagesableitung über `SUBSTR(beginnt_am, 1, 10)`. Diese Logik wurde im Diff in `_termin_day_sql(column)` zentralisiert und an den drei relevanten Stellen eingesetzt:
+
+- `upcoming_termine` in `/api/overview`
+- `unassigned_termine` in `/api/overview`
+- Spezialfilter `unassigned_upcoming` in `/api/termine`
+
+Damit werden sowohl reine ISO-Daten wie `YYYY-MM-DD` als auch ISO-Zeitpunkte wie `YYYY-MM-DDTHH:MM:SS` nach ihrem Kalendertag verglichen. Die bestehende Speicherung und API-Ausgabe des Originalwerts bleibt unverändert.
+
+### Sortierung und API-Ausgabe
+
+Die bestehende Sortierung nach `t.beginnt_am`, `t.titel`, `t.termin_id` wurde nicht verändert. Auch `_termin_result()` bleibt unverändert und gibt `starts_at` weiterhin als gespeicherten Originalstring aus. Das entspricht der Anforderung, Sortierung und API-Ausgabe stabil zu halten.
+
+### Datenbank/Schema
+
+`transaction_store/database.py` enthält Termin-Schema, Statuskonstanten und Indizes, aber keine terminbezogene Tagesfilterlogik, die für dieses Arbeitspaket angepasst werden müsste. Keine Schemaänderung ist daher fachlich plausibel.
+
+### Tests
+
+Der neue Regressionstest deckt ab:
+
+- einen heutigen Termin mit reinem ISO-Datum,
+- einen heutigen Termin mit ISO-Zeitpunkt,
+- einen vergangenen ISO-Zeitpunkt als Negativfall,
+- konsistente Counts für `upcoming_termine` und `unassigned_termine`,
+- die Ausgabe und Reihenfolge von `list_termine(unassigned_upcoming=True)`.
+
+Damit sind die Kernakzeptanzkriterien automatisiert abgesichert. Laut Implementierungsbericht lief `tests/test_dashboard.py` erfolgreich mit `77 passed, 4 skipped`.
 
 ## Blockierende Probleme
 
 Keine.
 
-## Nicht blockierende Hinweise
+## Nicht-blockierende Hinweise
 
-- Der bestehende Test wird durch den zusätzlichen Ablauf länger; bei weiterem Wachstum wäre eine Auslagerung in einen separaten Regressionstest sinnvoll.
-- Die URL-Prüfung auf `unassigned_upcoming=false` ist ausreichend für das Akzeptanzkriterium. Eine zusätzliche Negativprüfung gegen `unassigned_upcoming=true` wäre möglich, aber nicht erforderlich.
+- Ein zusätzlicher Zukunftsfall mit ISO-Zeitpunkt ungleich heute wäre als weitere Absicherung möglich, ist aber nicht erforderlich, da die SQL-Tagesableitung identisch wirkt.
+- Eine kurze Dokumentation an `_termin_day_sql()` könnte klarstellen, dass bewusst das gespeicherte Datumspräfix als fachlicher Kalendertag zählt und keine Zeitzonenumrechnung vorgenommen wird.
+
+## Gesamturteil
+
+Die Umsetzung ist klein, scope-treu und erfüllt die Anforderungen. Keine verbotenen externen Aktionen, keine unnötigen Schema- oder Architekturänderungen und keine blockierenden funktionalen Probleme erkennbar.
