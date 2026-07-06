@@ -563,21 +563,22 @@ class DashboardDataStore:
                 ),
                 "upcoming_termine": int(
                     connection.execute(
-                        """
+                        f"""
                         SELECT COUNT(*)
                         FROM termine
-                        WHERE status = ? AND SUBSTR(beginnt_am, 1, 10) >= ?
+                        WHERE status = ?
+                          AND {_termin_day_sql('beginnt_am')} >= ?
                         """,
                         (TERMIN_STATUS_PLANNED, today),
                     ).fetchone()[0]
                 ),
                 "unassigned_termine": int(
                     connection.execute(
-                        """
+                        f"""
                         SELECT COUNT(*)
                         FROM termine AS t
                         WHERE t.status = ?
-                          AND SUBSTR(t.beginnt_am, 1, 10) >= ?
+                          AND {_termin_day_sql('t.beginnt_am')} >= ?
                           AND NOT EXISTS (
                             SELECT 1
                             FROM vorgang_termine AS vt
@@ -2947,9 +2948,9 @@ class DashboardDataStore:
         parameters: list[str] = []
         if unassigned_upcoming:
             conditions.append(
-                """
+                f"""
                 t.status = ?
-                AND SUBSTR(t.beginnt_am, 1, 10) >= ?
+                AND {_termin_day_sql('t.beginnt_am')} >= ?
                 AND NOT EXISTS (
                     SELECT 1
                     FROM vorgang_termine AS vt
@@ -6757,6 +6758,10 @@ def _top_suggestions(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
             str(item.get("id") or ""),
         ),
     )[:8]
+
+
+def _termin_day_sql(column: str) -> str:
+    return f"SUBSTR({column}, 1, 10)"
 
 
 def _parse_datetime_like(
