@@ -31,3 +31,13 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Spezifischere Terminfilter für „anstehende Termine“ und „nicht zugewiesene Termine“ prüfen.
+
+## 4. Mapping-Lookups gegen ungewöhnliche Keys absichern
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierende Robustheitsverbesserung für die zentrale Overview-Routing-Tabelle.
+
+**Feedback:**
+
+- Die Mapping-Lookups optional mit `Object.hasOwn` oder prototype-losen Objekten absichern, damit ungewöhnliche unbekannte `card.key`-/`entity`-Werte garantiert nicht mit geerbten Objekt-Eigenschaften kollidieren.
