@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional später den Link-/Unlink-Refresh in der UI auf einen vollständigen `loadMailDetail()`-Reload umstellen, falls bewusst strikt dem Refresh-Hinweis gefolgt werden soll.
+- Optional einen nicht von Chromium abhängigen Frontend-/DOM-Test für Kandidatenfilterung und Submit-State ergänzen.
