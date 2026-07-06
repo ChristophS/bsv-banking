@@ -621,57 +621,76 @@ function renderOverview() {
   }
 }
 
+const overviewCardRoutes = {
+  byKey: {
+    open_vorgaenge: () => {
+      setVorgangHideCompleted(true);
+      state.vorgaengeLoaded = false;
+      activateTab("vorgaenge");
+    },
+    open_todos: () => {
+      setTodoHideCompleted(true);
+      state.todosLoaded = false;
+      activateTab("todos");
+    },
+    unassigned_transactions: () => {
+      setTransactionHideCompletedVorgaenge(true);
+      activateTab("transactions");
+      loadTransactions();
+    },
+    // Termine share one entity, so key routes keep the current card-specific filters.
+    upcoming_termine: () => {
+      setTerminHideCompleted(true);
+      state.termineLoaded = false;
+      activateTab("termine");
+    },
+    unassigned_termine: () => {
+      state.termineLoaded = false;
+      activateTab("termine");
+    },
+    unassigned_documents: () => {
+      state.vorgaengeLoaded = false;
+      activateTab("vorgaenge");
+    },
+  },
+  byEntity: {
+    documents: () => {
+      state.vorgaengeLoaded = false;
+      activateTab("vorgaenge");
+    },
+    mails: () => {
+      state.mailsLoaded = false;
+      activateTab("mail");
+    },
+    termine: () => {
+      state.termineLoaded = false;
+      activateTab("termine");
+    },
+    todos: () => {
+      state.todosLoaded = false;
+      activateTab("todos");
+    },
+    transactions: () => {
+      activateTab("transactions");
+      loadTransactions();
+    },
+    vorgaenge: () => {
+      state.vorgaengeLoaded = false;
+      activateTab("vorgaenge");
+    },
+  },
+  fallback: () => {
+    state.vorgaengeLoaded = false;
+    activateTab("vorgaenge");
+  },
+};
+
 function navigateFromOverviewCard(key, entity) {
-  if (key === "open_vorgaenge") {
-    setVorgangHideCompleted(true);
-    state.vorgaengeLoaded = false;
-    activateTab("vorgaenge");
-    return;
-  }
-  if (key === "open_todos") {
-    setTodoHideCompleted(true);
-    state.todosLoaded = false;
-    activateTab("todos");
-    return;
-  }
-  if (key === "unassigned_transactions") {
-    setTransactionHideCompletedVorgaenge(true);
-    activateTab("transactions");
-    loadTransactions();
-    return;
-  }
-  if (key === "upcoming_termine") {
-    setTerminHideCompleted(true);
-    state.termineLoaded = false;
-    activateTab("termine");
-    return;
-  }
-  if (key === "unassigned_termine") {
-    state.termineLoaded = false;
-    activateTab("termine");
-    return;
-  }
-  if (key === "unassigned_documents" || entity === "documents") {
-    state.vorgaengeLoaded = false;
-    activateTab("vorgaenge");
-    return;
-  }
-  if (entity === "transactions") {
-    activateTab("transactions");
-    loadTransactions();
-  } else if (entity === "mails") {
-    state.mailsLoaded = false;
-    activateTab("mail");
-  } else if (entity === "todos") {
-    state.todosLoaded = false;
-    activateTab("todos");
-  } else if (entity === "termine") {
-    state.termineLoaded = false;
-    activateTab("termine");
-  } else {
-    state.vorgaengeLoaded = false;
-    activateTab("vorgaenge");
-  }
+  const route =
+    overviewCardRoutes.byKey[key] ||
+    overviewCardRoutes.byEntity[entity] ||
+    overviewCardRoutes.fallback;
+  route();
 }
 
 function setTransactionHideCompletedVorgaenge(value) {
