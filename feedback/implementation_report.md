@@ -2,29 +2,32 @@
 
 ## Branchname
 
-agent2/codex-20260706-144138
+agent2/codex-20260706-145000
 
 ## Geaenderte Dateien
 
 - banking_dashboard/server.py
 - banking_dashboard/static/app.js
+- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Beim manuellen Abschliessen eines Vorgangs markiert `DashboardDataStore.update_vorgang_status()` alle ueber `inbox_vorgaenge` verknuepften, nicht geloeschten Mails in `inbox_messages` als gelesen.
-- Beim Speichern einer Transaktionsklassifikation ermittelt `DashboardDataStore.update_transaction_classification()` vor und nach `apply_completion_rules(...)` die abgeschlossenen Vorgange der Transaktion und markiert nur neu abgeschlossene Vorgange nach.
-- Der Mail-Nachzug ist in interne Store-Helfer gekapselt und nutzt direkte SQL-Updates innerhalb derselben Schreibtransaktion.
-- Beim Wiedereroeffnen eines Vorgangs werden Mails nicht auf ungelesen zurueckgesetzt.
-- Nach erfolgreichem Status- oder Klassifikations-PATCH laedt `app.js` die Transaktionsliste neu und behaelt dabei die aktuell gesetzten Filter bei.
-- Tests fuer manuellen Abschluss, regelbasierten Abschluss, Mail-`is_read`-Nachzug, geloeschte Mails und den unmittelbaren `hide_completed_vorgaenge`-Filtereffekt wurden ergaenzt.
+- Neuer read-only GET-Endpunkt `/api/belege/<beleg_id>/document` liefert das Originaldokument eines katalogisierten Belegs aus `dateipfad` aus.
+- Der Endpunkt akzeptiert keine freien Pfadparameter, sondern verwendet ausschliesslich den bestehenden Beleg-Lookup ueber `beleg_id`.
+- Fehlende Beleg-Datensaetze und nicht vorhandene Originaldateien liefern 404 mit klarer JSON-Fehlermeldung.
+- Content-Type wird aus dem katalogisierten `dateityp` verwendet und bei Bedarf aus dem Dateinamen abgeleitet.
+- Browser-taugliche Dateitypen wie PDF, Bilder und Text werden inline ausgeliefert; andere Typen erhalten `Content-Disposition: attachment`.
+- Die UI unterscheidet bei Dokumenten zwischen `Katalogeintrag oeffnen` und `Originaldokument oeffnen`.
+- Die zusaetzliche Originaldokument-Aktion ist in Dokumentvorschlaegen, Beleg-Katalogansicht und Vorgangsdetails verfuegbar.
+- Die bestehende Beleg-Verknuepfungslogik ueber Vorgaenge bleibt unveraendert.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung an der SQL-Semantik von `list_transactions()`, da der bestehende Filter in den Tests korrekt greift.
-- Kein Nachzug fuer bereits vor dem Request abgeschlossene Vorgaenge bei einer spaeteren Klassifikationsaenderung, weil das Paket nur neu abgeschlossene Vorgaenge fordert.
-- Keine Aenderungen an `transaction_store/database.py`, da keine Schema- oder Store-Aenderung dort erforderlich war.
+- Keine Aenderung an Dokumentenarchitektur, Speicherlogik oder Beleg-Synchronisierung.
+- Keine Browser-/Playwright-Pruefung der neuen UI-Links.
+- Keine Aenderung an `feedback/next_task.md`, `feedback/backlog.md`, `feedback/agent2_prompt.md` oder Review-Report-Dateien.
 
 ## Ausgefuehrte Tests
 
@@ -32,15 +35,16 @@ agent2/codex-20260706-144138
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 80 passed, 4 skipped
+- `tests/test_dashboard.py`: 83 passed, 4 skipped
 
 ## Bekannte Einschraenkungen
 
 - Vier bestehende Dashboard-Tests wurden vom vorhandenen Test-Setup uebersprungen.
-- Die Frontend-Refresh-Aenderung wurde nicht per Browser-Test verifiziert; sie nutzt die bestehende `loadTransactions()`-Funktion mit aktuellem UI-State.
+- Die UI-Aenderung wurde ueber Codepfad und bestehende DOM-Struktur umgesetzt, aber nicht in einem echten Browser manuell verifiziert.
 
 ## Hinweise fuer den Review-Agenten
 
 - Der Arbeitsbaum enthielt vor der Umsetzung bereits `feedback/Review-report.md` als geaendert und `feedback/agent2_prompt.md` als untracked; beide wurden nicht bearbeitet.
-- Der Nachzug ignoriert geloeschte Mails (`deleted_at IS NULL`) und setzt ausschliesslich `is_read = 1`.
-- Bei regelbasiertem Abschluss werden nur Statusuebergaenge von nicht abgeschlossen zu abgeschlossen betrachtet, indem die abgeschlossenen Vorgangs-IDs vor und nach `apply_completion_rules(...)` verglichen werden.
+- Der neue Dateiendpunkt liest nur den in `belege.dateipfad` katalogisierten Pfad fuer die angefragte `beleg_id`.
+- Bei einem stale `vorhanden = 0` wird nicht serverseitig synchronisiert, weil der Endpunkt read-only bleibt.
+- Testabdeckung umfasst erfolgreiche Auslieferung, unbekannte Beleg-ID und katalogisierten Beleg mit fehlender Datei.

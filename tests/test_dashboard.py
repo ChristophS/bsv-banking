@@ -3011,6 +3011,61 @@ class DashboardHTTPTests(unittest.TestCase):
                 json.load(response)["beleg"]["vorgangs_ids"],
             )
 
+    def test_beleg_original_document_is_served_over_http(self):
+        document_path = (
+            self.server.data_store.database_path.parent
+            / "belege"
+            / "beleg_1.pdf"
+        )
+        document_path.parent.mkdir(exist_ok=True)
+        document_path.write_bytes(b"%PDF-1.4\nTestbeleg\n")
+        with closing(connect_database(self.server.data_store.database_path)) as connection:
+            connection.execute(
+                """
+                UPDATE belege
+                SET vorhanden = 1, dateigroesse = ?
+                WHERE beleg_id = 'beleg_1'
+                """,
+                (document_path.stat().st_size,),
+            )
+            connection.commit()
+
+        with urlopen(
+            self.base_url + "/api/belege/beleg_1/document",
+            timeout=5,
+        ) as response:
+            content = response.read()
+
+        self.assertEqual(b"%PDF-1.4\nTestbeleg\n", content)
+        self.assertEqual("application/pdf", response.headers["Content-Type"])
+        self.assertIn(
+            'inline; filename="beleg_1.pdf"',
+            response.headers["Content-Disposition"],
+        )
+
+    def test_beleg_original_document_returns_404_for_unknown_beleg(self):
+        with self.assertRaises(HTTPError) as context:
+            urlopen(
+                self.base_url + "/api/belege/beleg_missing/document",
+                timeout=5,
+            )
+        self.assertEqual(404, context.exception.code)
+        payload = json.load(context.exception)
+        self.assertIn("Beleg wurde nicht gefunden", payload["error"])
+
+    def test_beleg_original_document_returns_404_for_missing_file(self):
+        with self.assertRaises(HTTPError) as context:
+            urlopen(
+                self.base_url + "/api/belege/beleg_1/document",
+                timeout=5,
+            )
+        self.assertEqual(404, context.exception.code)
+        payload = json.load(context.exception)
+        self.assertIn(
+            "Originaldokument wurde nicht gefunden",
+            payload["error"],
+        )
+
     def test_rule_creation_and_refresh_are_available_over_http(self):
         rule_request = Request(
             self.base_url + "/api/rules",

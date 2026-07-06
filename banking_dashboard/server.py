@@ -4858,6 +4858,12 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 )
                 return
             beleg_parts = _beleg_path_parts(parsed.path)
+            if len(beleg_parts) == 2 and beleg_parts[1] == "document":
+                beleg = self.server.data_store.beleg_detail(beleg_parts[0])
+                if beleg is None:
+                    raise LookupError("Beleg wurde nicht gefunden.")
+                self._beleg_document_response(beleg)
+                return
             if len(beleg_parts) == 2 and beleg_parts[1] == "vorgaenge":
                 beleg = self.server.data_store.beleg_detail(beleg_parts[0])
                 if beleg is None:
@@ -5938,6 +5944,54 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         try:
             self.wfile.write(attachment.content)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            return
+
+    def _beleg_document_response(self, beleg: dict[str, Any]) -> None:
+        path = Path(str(beleg.get("dateipfad") or ""))
+        if not beleg.get("vorhanden") or not path.is_file():
+            raise LookupError("Originaldokument wurde nicht gefunden.")
+        filename = re.sub(
+            r"[\r\n\"]+",
+            "_",
+            str(beleg.get("dateiname") or path.name or "beleg"),
+        )
+        content_type = str(beleg.get("dateityp") or "").strip()
+        if not content_type:
+            content_type = (
+                mimetypes.guess_type(filename)[0]
+                or "application/octet-stream"
+            )
+        try:
+            content = path.read_bytes()
+        except OSError as exc:
+            raise LookupError("Originaldokument wurde nicht gefunden.") from exc
+        self.send_response(HTTPStatus.OK)
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'self'",
+        )
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Type", content_type)
+        disposition = (
+            "inline"
+            if (
+                content_type.startswith("image/")
+                or content_type == "application/pdf"
+                or content_type.startswith("text/")
+            )
+            else "attachment"
+        )
+        self.send_header(
+            "Content-Disposition",
+            f'{disposition}; filename="{filename}"',
+        )
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        try:
+            self.wfile.write(content)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             return
 

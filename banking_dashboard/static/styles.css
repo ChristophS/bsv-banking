@@ -2740,6 +2740,38 @@ th[aria-sort="descending"] .sort-indicator {
   background: var(--green-50);
 }
 
+.document-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.document-open-action {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--green-800);
+  background: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.document-open-action:hover,
+.document-open-action:focus-visible {
+  border-color: var(--green-700);
+  background: var(--green-50);
+}
+
+.document-open-action[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .entity-edit-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
