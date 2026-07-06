@@ -4,6 +4,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+from contextlib import closing
 from datetime import date, timedelta
 from pathlib import Path
 from urllib.error import HTTPError
@@ -370,6 +371,54 @@ class DashboardDataStoreTests(unittest.TestCase):
     def tearDown(self):
         self.temporary_directory.cleanup()
 
+    def _link_test_mail_to_vorgang(
+        self,
+        inbox_id: str,
+        vorgangs_id: str,
+        *,
+        is_read: bool = False,
+        deleted: bool = False,
+    ) -> None:
+        InboxMailStore(self.database_path)
+        now = "2026-06-11T08:00:00+00:00"
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute(
+                """
+                INSERT INTO inbox_messages (
+                    inbox_id, source, source_message_id, subject,
+                    is_read, deleted_at, created_at, updated_at,
+                    last_seen_at
+                ) VALUES (?, 'test', ?, 'Testmail', ?, ?, ?, ?, ?)
+                """,
+                (
+                    inbox_id,
+                    inbox_id,
+                    1 if is_read else 0,
+                    now if deleted else None,
+                    now,
+                    now,
+                    now,
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO inbox_vorgaenge (
+                    inbox_id, vorgangs_id, created_at
+                ) VALUES (?, ?, ?)
+                """,
+                (inbox_id, vorgangs_id, now),
+            )
+            connection.commit()
+
+    def _mail_is_read(self, inbox_id: str) -> bool:
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            row = connection.execute(
+                "SELECT is_read FROM inbox_messages WHERE inbox_id = ?",
+                (inbox_id,),
+            ).fetchone()
+        return bool(row[0])
+
     def test_transactions_default_to_date_descending(self):
         rows = self.store.list_transactions()
 
@@ -697,6 +746,41 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual(reopened["status"], "in_bearbeitung")
         self.assertTrue(reopened["status_manuell"])
 
+    def test_manual_vorgang_completion_marks_linked_mails_read(self):
+        self._link_test_mail_to_vorgang(
+            "mail_active",
+            "vorgang_tx_newer",
+        )
+        self._link_test_mail_to_vorgang(
+            "mail_deleted",
+            "vorgang_tx_newer",
+            deleted=True,
+        )
+
+        completed = self.store.update_vorgang_status(
+            "vorgang_tx_newer",
+            True,
+        )
+        filtered = self.store.list_transactions(
+            hide_completed_vorgaenge=True,
+        )
+
+        self.assertEqual(completed["status"], "abgeschlossen")
+        self.assertTrue(self._mail_is_read("mail_active"))
+        self.assertFalse(self._mail_is_read("mail_deleted"))
+        self.assertEqual(
+            [row["transaktions_id"] for row in filtered],
+            ["tx_older"],
+        )
+
+        reopened = self.store.update_vorgang_status(
+            "vorgang_tx_newer",
+            False,
+        )
+
+        self.assertEqual(reopened["status"], "in_bearbeitung")
+        self.assertTrue(self._mail_is_read("mail_active"))
+
     def test_vorgang_cannot_be_completed_with_incomplete_transaction(self):
         self.store.update_transaction_classification(
             "tx_newer",
@@ -1002,6 +1086,51 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual(
             reopened["vorgaenge"][0]["status"],
             "in_bearbeitung",
+        )
+
+    def test_manual_classification_completion_marks_linked_mails_read(self):
+        self.store.create_completion_rule(
+            {
+                "name": "Spielbetrieb abschlieÃŸen",
+                "enabled": True,
+                "conditions": [
+                    {
+                        "connector": "",
+                        "match_field": "top_category",
+                        "match_operator": "equals",
+                        "match_value": "Automatisch",
+                    },
+                    {
+                        "connector": "and",
+                        "match_field": "sphere",
+                        "match_operator": "equals",
+                        "match_value": "Zweckbetrieb",
+                    },
+                ],
+                "apply_now": False,
+            }
+        )
+        self._link_test_mail_to_vorgang(
+            "mail_rule",
+            "vorgang_tx_newer",
+        )
+
+        result = self.store.update_transaction_classification(
+            "tx_newer",
+            {"oberkategorie": "Automatisch"},
+        )
+        filtered = self.store.list_transactions(
+            hide_completed_vorgaenge=True,
+        )
+
+        self.assertEqual(
+            result["vorgaenge"][0]["status"],
+            "abgeschlossen",
+        )
+        self.assertTrue(self._mail_is_read("mail_rule"))
+        self.assertEqual(
+            [row["transaktions_id"] for row in filtered],
+            ["tx_older"],
         )
 
     def test_completion_rules_create_completed_standard_vorgang(self):

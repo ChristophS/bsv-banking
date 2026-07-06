@@ -7889,7 +7889,7 @@ function createVorgangStatusEditor(vorgang) {
       state.vorgaengeLoaded = false;
       state.todosLoaded = false;
       state.termineLoaded = false;
-      const refreshes = [loadOverview()];
+      const refreshes = [loadOverview(), loadTransactions()];
       if (!elements.vorgaengePanel.hidden) {
         refreshes.push(loadVorgaenge());
       }
@@ -8626,9 +8626,11 @@ function appendClassificationEditor(
       stateText.className = "save-state is-saved";
       stateText.textContent = "Gespeichert";
       state.vorgaengeLoaded = false;
+      const refreshes = [loadTransactions()];
       if (!elements.vorgaengePanel.hidden) {
-        loadVorgaenge();
+        refreshes.push(loadVorgaenge());
       }
+      await Promise.all(refreshes);
     } catch (error) {
       stateText.className = "save-state is-error";
       stateText.textContent = "Speichern fehlgeschlagen";
