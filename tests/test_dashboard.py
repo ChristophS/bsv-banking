@@ -1610,6 +1610,48 @@ class DashboardDataStoreTests(unittest.TestCase):
             unassigned_card["label"],
         )
 
+    def test_list_termine_filters_unassigned_upcoming_termine(self):
+        expected = self.store.create_termin(
+            {
+                "title": "Unzugewiesener Zukunftstermin",
+                "starts_at": "2999-01-15T18:00:00+01:00",
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Verknuepfter Zukunftstermin",
+                "starts_at": "2999-01-16T18:00:00+01:00",
+                "vorgangs_ids": ["vorgang_tx_newer"],
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Vergangener Termin",
+                "starts_at": "2000-01-15T18:00:00+01:00",
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Abgeschlossener Zukunftstermin",
+                "starts_at": "2999-01-17T18:00:00+01:00",
+                "status": TERMIN_STATUS_COMPLETED,
+            }
+        )
+        self.store.create_termin(
+            {
+                "title": "Abgesagter Zukunftstermin",
+                "starts_at": "2999-01-18T18:00:00+01:00",
+                "status": TERMIN_STATUS_CANCELLED,
+            }
+        )
+
+        termine = self.store.list_termine(unassigned_upcoming=True)
+
+        self.assertEqual(
+            [expected["termin_id"]],
+            [termin["termin_id"] for termin in termine],
+        )
+
     def test_vorgang_can_be_created_and_updated_with_many_entity_links(self):
         todo = self.store.create_todo({"title": "Beleg prüfen"})
         termin = self.store.create_termin(
@@ -2117,6 +2159,61 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual("local_token_overlap", suggestions["strategy"])
         self.assertIn("transactions", suggestions["suggestions"])
         self.assertIn("transactions", suggestions["candidates"])
+
+        def create_filter_test_termin(payload):
+            request = Request(
+                self.base_url + "/api/termine",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urlopen(request, timeout=5) as response:
+                self.assertEqual(201, response.status)
+                return json.load(response)["termin"]
+
+        expected_filter_termin = create_filter_test_termin(
+            {
+                "title": "Unzugewiesener API-Zukunftstermin",
+                "starts_at": "2999-01-15T18:00:00+01:00",
+            }
+        )
+        create_filter_test_termin(
+            {
+                "title": "Verknuepfter API-Zukunftstermin",
+                "starts_at": "2999-01-16T18:00:00+01:00",
+                "vorgangs_ids": ["vorgang_tx_newer"],
+            }
+        )
+        create_filter_test_termin(
+            {
+                "title": "Vergangener API-Termin",
+                "starts_at": "2000-01-15T18:00:00+01:00",
+            }
+        )
+        create_filter_test_termin(
+            {
+                "title": "Abgeschlossener API-Zukunftstermin",
+                "starts_at": "2999-01-17T18:00:00+01:00",
+                "status": TERMIN_STATUS_COMPLETED,
+            }
+        )
+        create_filter_test_termin(
+            {
+                "title": "Abgesagter API-Zukunftstermin",
+                "starts_at": "2999-01-18T18:00:00+01:00",
+                "status": TERMIN_STATUS_CANCELLED,
+            }
+        )
+        with urlopen(
+            self.base_url + "/api/termine?unassigned_upcoming=true",
+            timeout=5,
+        ) as response:
+            filtered_termine = json.load(response)
+        self.assertEqual(1, filtered_termine["count"])
+        self.assertEqual(
+            [expected_filter_termin["termin_id"]],
+            [termin["termin_id"] for termin in filtered_termine["termine"]],
+        )
 
         with urlopen(
             self.base_url + "/api/vorgaenge/link-candidates",
@@ -3168,6 +3265,20 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     page.locator(
                         "[data-overview-key='upcoming_termine']"
                     ).press("Enter")
+                    expect(page.locator("#termine-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    expect(
+                        page.locator("#termin-hide-completed")
+                    ).to_be_checked()
+
+                    with page.expect_response(
+                        lambda response: "/api/termine?" in response.url
+                        and "unassigned_upcoming=true" in response.url
+                    ):
+                        page.locator(
+                            "[data-overview-key='unassigned_termine']"
+                        ).click()
                     expect(page.locator("#termine-tab")).to_have_class(
                         re.compile("is-active")
                     )

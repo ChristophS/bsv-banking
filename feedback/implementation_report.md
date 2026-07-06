@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260706-101003
+agent2/codex-20260706-101614
 
 ## Geaenderte Dateien
 
@@ -13,17 +13,17 @@ agent2/codex-20260706-101003
 
 ## Umgesetzte Punkte
 
-- `unassigned_termine` in `DashboardDataStore.overview_counts()` zaehlt nur noch geplante Termine, deren Datum nicht in der Vergangenheit liegt und die keinen Eintrag in `vorgang_termine` haben.
-- `upcoming_termine` bleibt auf geplante, nicht vergangene Termine beschraenkt und wird durch einen neuen Regressionstest gegen abgeschlossene, abgesagte und vergangene Termine abgesichert.
-- Die Kartenbeschriftung fuer die unzugewiesenen Termine wurde auf "Nicht zugewiesene anstehende Termine" praezisiert.
-- Die Overview-Kartenroute fuer `unassigned_termine` aktiviert wie `upcoming_termine` den bestehenden Terminfilter fuer geplante Termine.
-- Der neue Test deckt ISO-Zeitpunkte und ISO-Datum-only-Werte ab.
+- `GET /api/termine` unterstuetzt den expliziten Query-Parameter `unassigned_upcoming=true`.
+- `DashboardDataStore.list_termine()` filtert damit auf dieselben fachlichen Kriterien wie die Overview-Kennzahl `unassigned_termine`: `status = geplant`, Datum ab heute und keine Zuordnung in `vorgang_termine`.
+- Der Klick auf die Overview-Karte `unassigned_termine` aktiviert im Frontend einen eigenen Terminlisten-Filterzustand und laedt die Terminansicht mit `unassigned_upcoming=true`.
+- Allgemeine Terminaufrufe und die Karte `upcoming_termine` setzen den Spezialfilter zurueck; bestehende Aufrufe ohne neuen Parameter bleiben unveraendert.
+- Automatisierte Tests fuer Store/API-Filter und den UI-nahen Kartenklick wurden ergaenzt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neue Terminfilter-UI fuer explizit unzugewiesene Termine.
+- Keine neue sichtbare Terminfilter-UI in `banking_dashboard/static/index.html`, da der neue Zustand minimal im bestehenden Frontend-State gefuehrt wird.
+- Keine Ueberarbeitung der bestehenden `beginnt_am`-Zeitlogik.
 - Keine Aenderungen am Datenbankschema oder an der Termin-Persistenz.
-- Keine Aenderungen an `banking_dashboard/static/index.html`, da die Overview-Kartenlabels aus der API kommen.
 
 ## Ausgefuehrte Tests
 
@@ -31,15 +31,16 @@ agent2/codex-20260706-101003
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 75 passed, 4 skipped
+- `tests/test_dashboard.py`: 76 passed, 4 skipped
 
 ## Bekannte Einschraenkungen
 
-- Die Datumsgrenze nutzt wie die bestehende Logik den Datumsteil von `beginnt_am`; bei Terminen am heutigen Datum wird nicht zusaetzlich die Uhrzeit innerhalb des Tages ausgewertet.
-- Die Terminansicht hat weiterhin keinen eigenen Filter fuer "nicht zugewiesen"; der Kartenklick zeigt die bestehenden geplanten Termine an.
+- Der neue Filter nutzt wie `overview_counts()` den Datumsteil von `beginnt_am` via `SUBSTR(..., 1, 10)` und wertet keine Uhrzeit innerhalb des heutigen Tages aus.
+- Der Spezialfilter ist nicht als eigenes UI-Control sichtbar; er wird ueber den Overview-Kartenpfad gesetzt und bei allgemeinen Terminrouten wieder entfernt.
 
 ## Hinweise fuer den Review-Agenten
 
-- Die fachliche SQL-Aenderung liegt in `banking_dashboard/server.py` in `DashboardDataStore.overview_counts()`.
-- Der relevante Regressionstest ist `DashboardDataStoreTests.test_overview_counts_only_relevant_open_upcoming_termine`.
-- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor dieser Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.
+- Die API-Erweiterung liegt in `banking_dashboard/server.py` bei `DashboardDataStore.list_termine()` und dem GET-Handler fuer `/api/termine`.
+- Die Frontend-Verdrahtung liegt in `banking_dashboard/static/app.js` im Overview-Card-Routing und in `loadTermine()`.
+- Die relevanten Tests sind `DashboardDataStoreTests.test_list_termine_filters_unassigned_upcoming_termine`, der HTTP-Filterabschnitt in `test_overview_vorgang_and_termine_are_available_over_http` und die Playwright-Pruefung fuer `unassigned_termine`.
+- `feedback/Review-report.md` und `feedback/agent2_prompt.md` waren bereits vor der Umsetzung im Arbeitsbaum sichtbar und wurden nicht bearbeitet.
