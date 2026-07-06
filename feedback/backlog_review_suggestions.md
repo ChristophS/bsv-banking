@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Browser-Ressourcen im neuen Playwright-Test optional per `try/finally` schließen.
+- Bei künftig vorhandenem stabilem Belege-/Dokumenten-Selektor den Zielbereich noch spezifischer absichern.
