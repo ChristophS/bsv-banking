@@ -8,66 +8,64 @@
 
 ## Begründung
 
-Der Diff ist ausreichend aussagekräftig; die Umsetzung erfüllt die Muss-Anforderungen ohne erkennbare blockierende fachliche oder technische Probleme.
+Der Diff ist für die fachliche Prüfung ausreichend aussagekräftig; die Umsetzung erfüllt die Muss-Anforderungen ohne erkennbare Blocker.
 
 ## Zusammenfassung
 
-Die Dashboard-Startseite wurde um KPI-Karten, Vorschau-Listen für offene Vorgänge, offene To-Dos und anstehende Termine sowie einen prominenten Button „Alles synchronisieren“ erweitert. Die Overview-API liefert dafür Preview-Daten aus bestehenden DataStore-Methoden, der bestehende Refresh-Flow wird wiederverwendet und Tests wurden ergänzt. Keine Blocker festgestellt.
+Die Umsetzung ergänzt eine minimale Tabelle `transaction_splits`, erhöht die Schema-Version, liefert Split-Daten in Transaktionsdetails read-only als `splits` aus und ergänzt passende Schema- und API-/Store-Tests. Unsplittete Transaktionen werden weiterhin mit leerer Split-Liste unterstützt. Daher akzeptiert.
 
 ## Review-Ergebnis
 
-**Accepted: ja**
+**Akzeptiert:** Ja
 
-Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch auf Basis des vorliegenden Diffs.
+## Prüfung gegen das Arbeitspaket
 
-## Prüfung gegen die Anforderungen
+### Persistenzstruktur
 
-### Dashboard-Startbereich
+Die SQLite-Schema-Version wurde von 13 auf 14 angehoben. Mit `transaction_splits` wurde eine nachvollziehbar benannte Split-Grundstruktur ergänzt. Die Tabelle enthält:
 
-Die `index.html` ergänzt im bestehenden Übersichtsbereich eine klare Startseite (`.dashboard-start`) mit Überschrift, KPI-Karten und drei Vorschau-Bereichen:
+- `split_id` als Primärschlüssel
+- `transaction_id` mit Foreign Key auf `transactions(transaction_id)` und `ON DELETE CASCADE`
+- `amount_minor`
+- optionale bzw. defaultbelegte Beschreibungs- und Klassifikationsfelder
+- optionale `vorgangs_id` mit Foreign Key auf `vorgaenge(vorgangs_id)` und `ON DELETE SET NULL`
+- `created_at` und `updated_at`
+- Indizes für `transaction_id` und `vorgangs_id`
 
-- Offene Vorgänge
-- Offene To-Dos
-- Anstehende Termine
+Das ist für das geforderte kleine technische Vorbereitungspaket passend und bleibt im Scope.
 
-Damit ist beim Öffnen des Dashboards ein klar erkennbarer Start-/Übersichtsbereich vorhanden.
+### Migration / Initialisierung
 
-### Datenbasis aus bestehenden APIs/DataStore-Methoden
+Die neue Migration `_migrate_v13_to_v14` erstellt die Vorgangstabelle sicherheitshalber und danach die Split-Tabelle. Die normale Schema-Initialisierung ruft ebenfalls `_create_transaction_split_table` auf. Damit werden neue Datenbanken und migrierte Datenbanken berücksichtigt.
 
-`DashboardDataStore.overview_counts()` liefert nun zusätzlich zu `counts` und `cards` ein `previews`-Objekt mit:
+### Read-only-Ausgabe in Transaktionsdetails
 
-- `open_vorgaenge`
-- `open_todos`
-- `upcoming_termine`
+`banking_dashboard/server.py` erweitert `transaction_detail()` um eine zusätzliche Query auf `transaction_splits` und gibt die Ergebnisse unter `detail["splits"]` zurück. Die Feldnamen sind konsistent zur bestehenden deutschsprachigen API-Ausgabe gewählt, während die Persistenz englische Spaltennamen nutzt.
 
-Die Daten werden aus bestehenden Methoden abgeleitet (`list_vorgaenge`, `list_todos`, `list_termine`) und auf `OVERVIEW_PREVIEW_LIMIT = 5` begrenzt. Es wird kein separates Schattenmodell im Frontend eingeführt.
+Transaktionen ohne Split liefern durch die Listenbildung eine leere Liste, was die bestehende Detailausgabe nicht bricht.
 
-### Synchronisieren-Aktion
+### Vorgangsdetails
 
-Die vorhandene Refresh-Funktion wird im UI als prominenter Button `Alles synchronisieren` auf der Startseite angeboten. Zusätzlich wurde die bestehende Transaktions-Schaltfläche entsprechend umbenannt. Beide Buttons verwenden denselben bestehenden `requestRefresh()`-/`/api/refresh`-Flow.
-
-Der Synchronisierungsstatus wird nun sowohl im Transaktionsbereich als auch auf der Startseite angezeigt. Die gemeinsame Hilfsfunktion `setRefreshButtonsDisabled()` deaktiviert beide Sync-Buttons bei laufendem Refresh oder fehlender Bankkonfiguration. Die bestehende serverseitige Refresh-Statuslogik bleibt unverändert und wird weiterverwendet, wodurch parallele Starts weiterhin abgefangen werden können.
-
-### Navigation
-
-Die Startseite bietet „Alle anzeigen“-Buttons sowie klickbare Preview-Einträge, die in die bestehenden Bereiche Vorgänge, To-Dos und Termine navigieren. Das entspricht der Soll-Anforderung.
+Laut Umsetzung und Test wird die Split-Information in Vorgangsdetails über die bereits enthaltenen Transaktionsdetails sichtbar. Das entspricht dem Soll-Kriterium, ohne Rückgabetypen grundlegend umzubauen.
 
 ### Tests
 
-`tests/test_dashboard.py` wurde erweitert:
+Es wurden Tests ergänzt für:
 
-- Prüfung des neuen `previews`-Payloads in `overview_counts()`
-- Prüfung der Preview-Begrenzung
-- HTTP-Overview-Test enthält Preview-Assertions
-- UI-Test prüft Sichtbarkeit der Startseite, den Text des Sync-Buttons und Dashboard-Inhalte
+- Existenz und Spalten der Tabelle `transaction_splits`
+- Foreign Keys auf `transactions` und `vorgaenge`
+- Transaktionsdetails mit Split-Daten
+- Transaktionsdetails ohne Split-Daten
+- Vorgangsdetails mit Split-Informationen in enthaltenen Transaktionen
+- HTTP-Ausgabe über `/api/transactions/<id>`
 
-Laut Implementation Report wurden die Dashboard-Tests erfolgreich ausgeführt: `96 passed, 5 skipped`.
+Die bestehenden Migrationserwartungen wurden auf Schema-Version 14 aktualisiert. Die im Implementation Report genannten Testläufe sind plausibel und passend.
 
-## Keine blockierenden Probleme
+## Blockierende Probleme
 
-Es sind keine blockierenden fachlichen oder technischen Probleme im Diff erkennbar. Der Scope bleibt auf Dashboard/Overview/Refresh-UI begrenzt, externe Dienste oder neue Sync-Logik wurden nicht eingeführt.
+Keine.
 
-## Nicht-blockierende Hinweise
+## Nicht blockierende Hinweise
 
-- Die leere Vorschau-Meldung ist für alle drei Blöcke gleich. Für Termine könnte eine spezifischere Meldung nutzerfreundlicher sein.
-- Zusätzliche UI-Tests für den deaktivierten Zustand beider Sync-Buttons während eines laufenden Refreshs wären hilfreich, sind aber nicht zwingend erforderlich, da die bestehende Refresh-Logik weiterverwendet wird.
+- Ein expliziter Migrationstest von Version 13 auf 14 mit Assertion auf `transaction_splits` wäre noch etwas stärker, ist aber nicht zwingend blockierend, da die Migrationslogik im Diff nachvollziehbar ist und Schemaexistenz getestet wird.
+- Der neue Datentyp `TransactionSplit` enthält aktuell nicht `created_at`/`updated_at`, obwohl diese in der Tabelle und API-Ausgabe vorhanden sind. Da der Typ im Diff nicht aktiv für die API-Ausgabe genutzt wird, ist das kein Blocker.
