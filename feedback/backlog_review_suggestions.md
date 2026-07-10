@@ -1,2 +1,3 @@
-- Expliziten API-Test für `GET /api/transactions/<id>/splits` bei leerer Split-Liste ergänzen.
-- UI-Leerzustand im Split-Editor noch sichtbarer als eigenen Hinweistext darstellen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
