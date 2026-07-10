@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die Umsetzung erfüllt die Muss-Anforderungen des Arbeitspakets auf Basis des maßgeblichen GitHub-Diffs; es wurden keine blockierenden fachlichen oder technischen Probleme gefunden.
+Die Umsetzung erfüllt die Anforderungen an Persistenz, Laden/Speichern, Summenvalidierung, unbekannte Transaktionen, API-Erweiterung und Tests; der Branch-Zustand ist sauber.
 
 ## Zusammenfassung
 
-Der Split-Editor in der Transaktionsdetailansicht wurde nutzbar erweitert: vorhandene Splits werden angezeigt, Zeilen können bearbeitet/hinzugefügt/entfernt werden, Beträge werden als EUR-Eingaben in Minor Units gesendet, Klassifikationsvorschläge werden eingebunden und Speichern nutzt die vorhandene Split-API. Die Tests wurden passend angepasst; der Branch-Zustand ist sauber. Daher accepted=true.
+Die bestehende Split-Grundlage wurde um eine explizite stabile Reihenfolge ergänzt und Schema, Migration, Modelle, Serialisierung, Persistenzlogik sowie API-/Persistenztests wurden passend angepasst. Die Akzeptanzkriterien sind fachlich erfüllt; es gibt keine blockierenden Probleme.
 
 # Review Report
 
@@ -20,69 +20,49 @@ Der Split-Editor in der Transaktionsdetailansicht wurde nutzbar erweitert: vorha
 
 **Accepted:** true
 
-## Geprüfter Umfang
+## Prüfung gegen das Arbeitspaket
 
-Geprüft wurden die Anforderungen aus dem Arbeitspaket gegen den maßgeblichen GitHub-Diff für:
+Die Umsetzung erfüllt die geforderte Split-Grundlage für Transaktionen.
 
-- `banking_dashboard/static/app.js`
-- `tests/test_dashboard.py`
-- `feedback/implementation_report.md`
+### Datenmodell und Migration
 
-Der Branch ist laut Compare sauber: `ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner- und GitHub-Compare-Dateiliste.
+- `transaction_splits` erhält mit `sort_order` eine explizite Reihenfolgespalte.
+- Die Schema-Version wird von 14 auf 15 angehoben.
+- Die Migration `v14 -> v15` ergänzt die Spalte für bestehende Tabellen und backfillt vorhandene Split-Zeilen aus der bisherigen SQLite-Reihenfolge.
+- Ein zusätzlicher Index auf `(transaction_id, sort_order)` unterstützt das stabile Laden pro Transaktion.
+- Die bestehende Kopplung an `transactions(transaction_id)` bleibt erhalten; es wird keine neue zentrale Fachentität neben Vorgängen/Transaktionen eingeführt.
 
-## Fachliche Bewertung
+### Persistenzlogik
 
-Die Umsetzung macht den vorhandenen Split-Workflow in der Transaktionsdetailansicht nutzbar:
+- `list_transaction_splits` lädt Splits stabil nach `sort_order, created_at, rowid`.
+- `replace_transaction_splits` ersetzt die Splits weiterhin atomar über einen Savepoint.
+- Beim Ersetzen wird die Reihenfolge aus der eingereichten Liste abgeleitet.
+- Die bestehende Validierung gegen unbekannte Transaktionen und gegen abweichende Split-Summen bleibt erhalten.
+- Leere Split-Listen bleiben möglich, wodurch Splits vollständig entfernt werden können; das ist mit dem Hinweis vereinbar, keine künstlichen Default-Splits anzulegen.
 
-- Vorhandene Splits werden im Detailbereich angezeigt.
-- Split-Zeilen können bearbeitet, hinzugefügt und entfernt werden.
-- Pro Split sind Betrag, Split-Beschreibung, Transaktionstyp, Oberkategorie, Unterkategorie, Sphäre, fachliche Beschreibung und weiterhin `vorgangs_id` pflegbar.
-- Neue Split-Zeilen erhalten sinnvolle Defaults: offener Restbetrag sowie Klassifikationswerte der Transaktion.
-- Beträge werden nutzerfreundlich als EUR-Beträge angezeigt und beim Speichern deterministisch in Minor Units umgerechnet.
-- Das Speichern nutzt weiterhin `PUT /api/transactions/<id>/splits` und ersetzt damit die komplette Split-Liste über die bestehende Schnittstelle.
-- Nach erfolgreichem Speichern wird die Split-Anzeige aus der Backend-Antwort neu gerendert, sodass gespeicherte Splits sichtbar bleiben.
-- Unpassende Split-Summen werden nicht stillschweigend persistiert: Die UI zeigt Gesamtbetrag, Split-Summe und Differenz; die bestehende Backend-Validierung liefert den verständlichen Fehler im Split-Bereich.
+### API und Serialisierung
 
-Die bestehende Transaktionsklassifikation außerhalb des Split-Editors wird nicht umgebaut. Die neuen Datalists nutzen die vorhandenen `classificationOptions` und bleiben damit im bestehenden Frontend-Konzept.
+- Die Split-Serialisierung liefert nun `sort_order` sowie das deutsche Aliasfeld `reihenfolge` aus.
+- Der Payload-Parser setzt die Reihenfolge aus der Listensequenz.
+- Die bestehende kleine Read/Write-API für `/api/transactions/<id>/splits` bleibt passend zum Arbeitspaket.
 
-## Technische Bewertung
+### Tests
 
-Die Änderungen sind klein und auf den bestehenden dynamischen Detailbereich begrenzt. Es wurde keine neue Architektur eingeführt und keine geschützten Bereiche oder externen Dienste berührt.
+- Die Tests wurden um Schema-/Migrationsprüfung für `sort_order`, stabile Reihenfolge beim Speichern/Laden und API-Antworten ergänzt.
+- Laut Implementation Report wurden `tests/test_transactions.py` und `tests/test_dashboard.py` erfolgreich ausgeführt.
 
-Positiv hervorzuheben:
+### Branch-/Compare-Zustand
 
-- Die EUR-zu-Minor-Unit-Umrechnung vermeidet Float-Arithmetik und akzeptiert maximal zwei Nachkommastellen.
-- Die vorhandenen Klassifikationsvorschläge werden für Split-Felder wiederverwendet.
-- Das Backend bleibt die verbindliche Instanz für die Summenvalidierung.
-- Der erfolgreiche Save-Pfad rendert die vom Server zurückgelieferten Split-Daten erneut.
+- `compare_status`: `ahead`
+- `ahead_by`: 1
+- `behind_by`: 0
+- `total_commits`: 1
+- Keine Abweichungen zwischen Runner- und GitHub-Compare-Dateien.
 
-Hinweis: Der nachgeladene vollständige Dateiinhalt wirkte wie ein Basisstand vor Anwendung des Diffs. Da der GitHub-Diff laut Aufgabenregeln maßgeblich ist und die Hunks konsistent auf diesen Kontext anwendbar sind, verhindert dies die Review-Entscheidung nicht.
+## Hinweise
 
-## Tests
-
-Der Diff erweitert den bestehenden Browser-Test für den Split-Editor:
-
-- Anzeige vorhandener Splits
-- EUR-Anzeige der Beträge
-- Datalist-Anbindung für Klassifikationsfelder
-- Hinzufügen einer Zeile mit Restbetrag-Default
-- Speichern über PUT
-- Persistenzprüfung über API-Fetch
-- lokale Betragsvalidierung
-- Backend-400 bei unpassender Summe
-
-Laut Implementation Report wurden außerdem ausgeführt:
-
-- `pytest tests/test_dashboard.py`
-- `pytest tests/test_transactions.py -k split`
-
-Das ist für dieses Arbeitspaket plausibel und ausreichend.
+Die nachgeladene `additional_repo_context` wirkte an einzelnen Stellen wie ein Stand vor Anwendung des Diffs. Da der GitHub-Diff laut Review-Regeln maßgeblich ist und die Änderungen dort konsistent sowie ausreichend prüfbar sind, blockiert das die Entscheidung nicht.
 
 ## Blockierende Probleme
 
 Keine.
-
-## Nicht blockierende Hinweise
-
-- Ein zusätzlicher Browser-Schritt „Dialog schließen und dieselbe Transaktion erneut öffnen“ wäre eine gute Ergänzung, ist aber nicht zwingend, da Persistenz bereits per API-/Store-Tests und API-Fetch geprüft wird.
-- Die UI könnte optional bei unpassender Split-Summe schon vor dem PUT aktiv blockieren; die aktuelle Lösung erfüllt aber die Anforderung, weil Serverfehler sichtbar im Split-Bereich angezeigt werden.
