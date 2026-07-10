@@ -3114,9 +3114,28 @@ function renderMailVorgangReview(
   );
   layout.append(preview, fields);
 
-  const actions = mailElement("div", "vorgang-form-actions");
-  const submit = mailElement("button", "primary-action", "Bestätigt importieren");
+  const topActions = createMailVorgangImportActions(true);
+  const actions = createMailVorgangImportActions(false);
+  form.append(topActions, layout, actions);
+  updateMailVorgangImportActions(form);
+  form.addEventListener("click", handleMailVorgangReviewClick);
+  form.addEventListener("submit", submitMailVorgangImport);
+  section.append(form);
+  return section;
+}
+
+function createMailVorgangImportActions(isTop = false) {
+  const actions = mailElement(
+    "div",
+    [
+      "vorgang-form-actions",
+      "mail-vorgang-import-actions",
+      isTop ? "is-top" : "",
+    ].filter(Boolean).join(" "),
+  );
+  const submit = mailElement("button", "primary-action");
   submit.type = "submit";
+  submit.dataset.mailVorgangImportSubmit = "";
   const cancel = mailElement("button", "secondary-action", "Verwerfen");
   cancel.type = "button";
   cancel.addEventListener("click", () => {
@@ -3126,12 +3145,23 @@ function renderMailVorgangReview(
     }
     renderMailDetail();
   });
-  actions.append(submit, cancel, mailElement("span", "save-state"));
-  form.append(layout, actions);
-  form.addEventListener("click", handleMailVorgangReviewClick);
-  form.addEventListener("submit", submitMailVorgangImport);
-  section.append(form);
-  return section;
+  const status = mailElement("span", "save-state");
+  status.dataset.mailVorgangImportStatus = "";
+  actions.append(submit, cancel, status);
+  return actions;
+}
+
+function mailVorgangImportSubmitLabel(form) {
+  return form.elements.vorgang_completed?.checked
+    ? "Vorgang abschließen"
+    : "Vorgang anlegen";
+}
+
+function updateMailVorgangImportActions(form) {
+  const label = mailVorgangImportSubmitLabel(form);
+  for (const submit of form.querySelectorAll("[data-mail-vorgang-import-submit]")) {
+    submit.textContent = label;
+  }
 }
 
 function createMailReviewVorgangFields(vorgang) {
@@ -3528,11 +3558,15 @@ async function submitMailVorgangImport(event) {
     return;
   }
   event.preventDefault();
-  const submit = form.querySelector("button[type='submit']");
-  const status = form.querySelector(".save-state");
-  submit.disabled = true;
-  status.className = "save-state is-saving";
-  status.textContent = "Import läuft";
+  const submitButtons = form.querySelectorAll("[data-mail-vorgang-import-submit]");
+  const statuses = form.querySelectorAll("[data-mail-vorgang-import-status]");
+  for (const submit of submitButtons) {
+    submit.disabled = true;
+  }
+  for (const status of statuses) {
+    status.className = "save-state is-saving";
+    status.textContent = "Import läuft";
+  }
   try {
     const response = await fetch(
       `/api/mail/${encodeURIComponent(form.dataset.mailVorgangReview)}/vorgang-import`,
@@ -3566,9 +3600,13 @@ async function submitMailVorgangImport(event) {
       message,
     );
   } catch (error) {
-    submit.disabled = false;
-    status.className = "save-state is-error";
-    status.textContent = "Import fehlgeschlagen";
+    for (const submit of submitButtons) {
+      submit.disabled = false;
+    }
+    for (const status of statuses) {
+      status.className = "save-state is-error";
+      status.textContent = "Import fehlgeschlagen";
+    }
     showError(error.message);
   }
 }
@@ -3835,6 +3873,13 @@ function handleMailDetailInput(event) {
     state.mailVorgangHideCompleted = mailVorgangHideCompleted.checked;
     clearTimeout(mailVorgangSearchTimer);
     mailVorgangSearchTimer = setTimeout(loadMailVorgangCandidates, 150);
+    return;
+  }
+  if (event.target.matches('input[name="vorgang_completed"]')) {
+    const form = event.target.closest("[data-mail-vorgang-review]");
+    if (form) {
+      updateMailVorgangImportActions(form);
+    }
     return;
   }
   if (event.target.matches('input[name="vorgangs_id"]')) {

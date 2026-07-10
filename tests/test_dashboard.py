@@ -4198,6 +4198,107 @@ class DashboardTodoBrowserTests(unittest.TestCase):
             sorted(result["payload"]["transaction_ids"]),
         )
 
+    def test_mail_vorgang_import_actions_follow_completion_state(self):
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            self.skipTest("Playwright ist nicht installiert.")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            server = create_server(database_path, port=0)
+            thread = threading.Thread(
+                target=server.serve_forever,
+                daemon=True,
+            )
+            thread.start()
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+            try:
+                with sync_playwright() as playwright:
+                    try:
+                        browser = playwright.chromium.launch(headless=True)
+                    except Exception as exc:
+                        self.skipTest(
+                            f"Chromium ist nicht installiert: {exc}"
+                        )
+                    page = browser.new_page(
+                        viewport={"width": 1500, "height": 1000}
+                    )
+                    page.goto(base_url, wait_until="networkidle")
+
+                    result = page.evaluate(
+                        """
+                        () => {
+                          const section = renderMailVorgangReview(
+                            {id: "mail-1", attachments: []},
+                            {
+                              vorgang: {
+                                title: "Mail-Vorgang",
+                                description: "",
+                                vorgangstyp: "sonstiges",
+                              },
+                              documents: [],
+                              todos: [],
+                              termine: [],
+                            },
+                            {suggestions: {}, candidates: {}},
+                            "mail-1",
+                            {transactions: []},
+                          );
+                          document.querySelector("#mail-detail").append(section);
+                          const form = section.querySelector(
+                            "[data-mail-vorgang-review]"
+                          );
+                          const checkbox = form.elements.vorgang_completed;
+                          const labelsBefore = [
+                            ...form.querySelectorAll(
+                              "[data-mail-vorgang-import-submit]"
+                            ),
+                          ].map((button) => button.textContent);
+                          checkbox.checked = true;
+                          checkbox.dispatchEvent(
+                            new Event("input", {bubbles: true})
+                          );
+                          const labelsAfter = [
+                            ...form.querySelectorAll(
+                              "[data-mail-vorgang-import-submit]"
+                            ),
+                          ].map((button) => button.textContent);
+                          return {
+                            actionBars: form.querySelectorAll(
+                              ".mail-vorgang-import-actions"
+                            ).length,
+                            labelsBefore,
+                            labelsAfter,
+                            completed: readMailVorgangReviewForm(
+                              form
+                            ).vorgang.completed,
+                            legacyLabel: form.textContent.includes(
+                              "Bestätigt importieren"
+                            ),
+                          };
+                        }
+                        """
+                    )
+                    browser.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+        self.assertEqual(2, result["actionBars"])
+        self.assertEqual(
+            ["Vorgang anlegen", "Vorgang anlegen"],
+            result["labelsBefore"],
+        )
+        self.assertEqual(
+            ["Vorgang abschließen", "Vorgang abschließen"],
+            result["labelsAfter"],
+        )
+        self.assertTrue(result["completed"])
+        self.assertFalse(result["legacyLabel"])
+
     def test_todo_can_be_managed_in_browser(self):
         try:
             from playwright.sync_api import expect, sync_playwright
