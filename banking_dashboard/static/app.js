@@ -2998,16 +2998,18 @@ function renderMailVorgangReview(
   zoom.append(zoomOut, range, zoomIn, zoomValue);
   previewHeading.append(zoom);
   const previewFrame = mailElement("div", "mail-attachment-preview");
+  previewFrame.dataset.mailReviewAttachmentPreview = "";
   renderSelectedMailAttachment(previewFrame, {...detail, id: entryId});
   preview.append(previewHeading, previewFrame);
 
   const fields = mailElement("div", "mail-vorgang-review-fields");
+  const reviewDocuments = mailReviewDocuments(detail, analysis.documents || []);
   fields.append(createMailReviewVorgangFields(analysis.vorgang || {}));
   fields.append(
     createMailReviewEntityList(
       "Dokumente",
       "document",
-      analysis.documents || [],
+      reviewDocuments,
       createDocumentReviewRow,
     ),
     createMailReviewEntityList(
@@ -3096,6 +3098,7 @@ function renderMailVorgangReview(
   });
   actions.append(submit, cancel, mailElement("span", "save-state"));
   form.append(layout, actions);
+  form.addEventListener("click", handleMailVorgangReviewClick);
   form.addEventListener("submit", submitMailVorgangImport);
   section.append(form);
   return section;
@@ -3258,7 +3261,66 @@ function createMailReviewEntityList(title, type, items, rowFactory) {
   return section;
 }
 
-function createReviewRow(type, index, title) {
+function mailReviewDocuments(detail, documents) {
+  const byAttachmentIndex = new Map();
+  for (const document of documents || []) {
+    const attachmentIndex = Number(document?.attachment_index || 0);
+    if (attachmentIndex > 0 && !byAttachmentIndex.has(attachmentIndex)) {
+      byAttachmentIndex.set(attachmentIndex, document);
+    }
+  }
+  const attachments = Array.isArray(detail?.attachments) ? detail.attachments : [];
+  const result = [];
+  const used = new Set();
+  attachments.forEach((attachment, index) => {
+    if (!attachment || typeof attachment !== "object") {
+      return;
+    }
+    const attachmentIndex = Number(attachment.attachmentIndex || index + 1);
+    if (attachmentIndex <= 0) {
+      return;
+    }
+    const document = byAttachmentIndex.get(attachmentIndex) || {};
+    used.add(attachmentIndex);
+    result.push({
+      enabled: document.enabled !== false,
+      attachment_index: attachmentIndex,
+      category: document.category || "sonstige_dokumente",
+      filename: document.filename || attachment.filename || `anhang-${attachmentIndex}`,
+      document_date: document.document_date || "",
+      amount: document.amount || "",
+      issuer: document.issuer || "",
+      recipient: document.recipient || "",
+      description: document.description || attachment.text || attachment.filename || "",
+    });
+  });
+  for (const [attachmentIndex, document] of byAttachmentIndex) {
+    if (!used.has(attachmentIndex)) {
+      result.push({...document, attachment_index: attachmentIndex});
+    }
+  }
+  return result;
+}
+
+function handleMailVorgangReviewClick(event) {
+  const button = event.target.closest("[data-mail-review-attachment]");
+  if (!button) {
+    return;
+  }
+  state.selectedMailAttachment = Number(button.dataset.mailReviewAttachment);
+  state.mailZoom = 1;
+  const form = button.closest("[data-mail-vorgang-review]");
+  const preview = form?.querySelector("[data-mail-review-attachment-preview]");
+  if (preview) {
+    renderSelectedMailAttachment(preview, {
+      ...state.selectedMailDetail,
+      id: form.dataset.mailVorgangReview,
+    });
+    applyMailZoom();
+  }
+}
+
+function createReviewRow(type, index, title, enabledValue = true) {
   const row = mailElement("fieldset", "mail-review-row");
   row.dataset.reviewType = type;
   row.dataset.reviewIndex = String(index);
@@ -3266,15 +3328,25 @@ function createReviewRow(type, index, title) {
   const enabled = document.createElement("input");
   enabled.type = "checkbox";
   enabled.name = "enabled";
-  enabled.checked = true;
+  enabled.checked = enabledValue !== false;
   legend.append(enabled, mailElement("span", "", title));
   row.append(legend);
   return row;
 }
 
 function createDocumentReviewRow(item, index) {
-  const row = createReviewRow("document", index, item.filename || "Dokument");
+  const attachmentIndex = Number(item.attachment_index || 0);
+  const title = attachmentIndex > 0
+    ? `Anhang ${attachmentIndex}: ${item.filename || "Dokument"}`
+    : item.filename || "Dokument";
+  const row = createReviewRow("document", index, title, item.enabled);
   row.dataset.attachmentIndex = String(item.attachment_index || "");
+  if (attachmentIndex > 0) {
+    const previewButton = mailElement("button", "secondary-action", "Vorschau");
+    previewButton.type = "button";
+    previewButton.dataset.mailReviewAttachment = String(attachmentIndex);
+    row.querySelector("legend").append(previewButton);
+  }
   row.append(
     selectField("Kategorie", "category", {
       rechnungen: "Rechnungen",
