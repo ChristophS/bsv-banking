@@ -201,8 +201,8 @@ class FakeMailBackend:
     def delete_message(self, entry_id):
         self.deleted.append(entry_id)
 
-    def send_reply(self, entry_id, body):
-        self.replies.append((entry_id, body))
+    def send_reply(self, entry_id, body, to_recipients=None):
+        self.replies.append((entry_id, body, to_recipients))
 
 
 class PagedFakeMailBackend(FakeMailBackend):
@@ -250,6 +250,75 @@ class MailIntegrationUnitTests(unittest.TestCase):
         self.assertIn("&lt;Danke&gt;<br>Zeile 2", reply.HTMLBody)
         self.assertTrue(reply.HTMLBody.endswith("<div>Original</div>"))
         reply.Send.assert_called_once_with()
+
+    def test_reply_can_override_outlook_recipients(self):
+        reply = Mock()
+        reply.HTMLBody = "<div>Original</div>"
+        item = Mock()
+        item.Reply.return_value = reply
+
+        _prepare_and_send_reply(
+            item,
+            "Absatz 1\n\nAbsatz 2",
+            ["first@example.org", "second@example.org"],
+        )
+
+        self.assertEqual("first@example.org; second@example.org", reply.To)
+        self.assertIn("Absatz 1<br><br>Absatz 2", reply.HTMLBody)
+        reply.Send.assert_called_once_with()
+
+    def test_manager_reply_preserves_newlines_and_forwards_recipients(self):
+        backend = FakeMailBackend()
+        manager = DashboardMailManager(
+            backend,
+            scorer=FakeSpamScorer(),
+            summarizer=FakeMailSummarizer(),
+        )
+        manager.list_messages()
+
+        result = manager.reply(
+            "mail-1",
+            {
+                "body": "Hallo\n\nDanke.",
+                "to_recipients": "Max <max@example.org>, info@example.org",
+            },
+        )
+
+        self.assertTrue(result["sent"])
+        self.assertEqual(
+            [("mail-1", "Hallo\n\nDanke.", ["max@example.org", "info@example.org"])],
+            backend.replies,
+        )
+
+    def test_graph_reply_uses_draft_with_html_body_and_recipients(self):
+        backend = MicrosoftGraphMailBackend(Mock())
+
+        def request_json(method, path, **kwargs):
+            if method == "POST" and path == "/me/messages/graph-mail/createReply":
+                return {"id": "draft-mail"}
+            if method == "PATCH" and path == "/me/messages/draft-mail":
+                payload = kwargs["payload"]
+                self.assertEqual("HTML", payload["body"]["contentType"])
+                self.assertIn("Hallo<br><br>Danke.", payload["body"]["content"])
+                self.assertEqual(
+                    [
+                        {"emailAddress": {"address": "max@example.org"}},
+                        {"emailAddress": {"address": "info@example.org"}},
+                    ],
+                    payload["toRecipients"],
+                )
+                return {}
+            if method == "POST" and path == "/me/messages/draft-mail/send":
+                return {}
+            raise AssertionError(f"Unexpected request: {method} {path}")
+
+        backend._request_json = Mock(side_effect=request_json)
+
+        backend.send_reply(
+            "graph-mail",
+            "Hallo\n\nDanke.",
+            ["max@example.org", "info@example.org"],
+        )
 
     def test_html_mail_body_omits_css_comments_and_invisible_padding(self):
         body = """
@@ -1237,7 +1306,7 @@ class MailIntegrationHTTPTests(unittest.TestCase):
         )
         with urlopen(reply_request, timeout=5) as response:
             self.assertTrue(json.load(response)["sent"])
-        self.assertEqual([("mail-1", "Danke.")], self.backend.replies)
+        self.assertEqual([("mail-1", "Danke.", None)], self.backend.replies)
 
         threshold_request = Request(
             self.base_url + "/api/mail/settings",
@@ -1492,7 +1561,10 @@ class MailIntegrationBrowserTests(unittest.TestCase):
                     page.get_by_text(
                         "Antwort wurde gesendet."
                     ).wait_for()
-                    self.assertEqual([("mail-1", "Danke.")], backend.replies)
+                    self.assertEqual(
+                        [("mail-1", "Danke.", ["max@example.org"])],
+                        backend.replies,
+                    )
 
                     page.locator(
                         f"#mail-detail [data-mark-mail-read='{mail_one_id}']"
