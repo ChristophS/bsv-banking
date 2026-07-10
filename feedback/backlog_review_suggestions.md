@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Einen expliziten Test für den unbekannten `transaktions_id`-Fall auf Store- oder API-Ebene ergänzen, falls dieser nicht bereits indirekt abgedeckt ist.
+- Kurz dokumentieren, dass die API-Reihenfolge durch die Reihenfolge der übergebenen Split-Liste bestimmt wird und nicht durch ein optional gesendetes `sort_order`.
