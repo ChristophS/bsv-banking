@@ -105,7 +105,54 @@
     </nav>
 
     <section class="overview-strip" aria-label="Vorgangsübersicht">
-      <div class="overview-cards" id="overview-cards"></div>
+      <div class="dashboard-start">
+        <div class="dashboard-start-heading">
+          <div>
+            <p class="eyebrow">Startseite</p>
+            <h2>Offene Arbeit</h2>
+          </div>
+          <div class="dashboard-sync">
+            <button
+              class="primary-action"
+              id="dashboard-refresh"
+              type="button"
+            >
+              Alles synchronisieren
+            </button>
+            <span id="dashboard-refresh-status" aria-live="polite"></span>
+          </div>
+        </div>
+        <div class="overview-cards" id="overview-cards"></div>
+        <div class="dashboard-preview-grid">
+          <section class="dashboard-preview">
+            <div class="dashboard-preview-heading">
+              <h3>Offene Vorgänge</h3>
+              <button type="button" data-dashboard-route="vorgaenge">
+                Alle anzeigen
+              </button>
+            </div>
+            <div id="dashboard-open-vorgaenge"></div>
+          </section>
+          <section class="dashboard-preview">
+            <div class="dashboard-preview-heading">
+              <h3>Offene To-Dos</h3>
+              <button type="button" data-dashboard-route="todos">
+                Alle anzeigen
+              </button>
+            </div>
+            <div id="dashboard-open-todos"></div>
+          </section>
+          <section class="dashboard-preview">
+            <div class="dashboard-preview-heading">
+              <h3>Anstehende Termine</h3>
+              <button type="button" data-dashboard-route="termine">
+                Alle anzeigen
+              </button>
+            </div>
+            <div id="dashboard-upcoming-termine"></div>
+          </section>
+        </div>
+      </div>
     </section>
 
     <section
@@ -136,7 +183,7 @@
           Regeln verwalten
         </button>
         <button class="primary-action" id="refresh-transactions" type="button">
-          Aktuelle Kontobewegungen anfordern
+          Alles synchronisieren
         </button>
         <span id="refresh-status" aria-live="polite"></span>
       </div>

@@ -1992,6 +1992,19 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual(1, overview["counts"]["open_todos"])
         self.assertEqual(1, overview["counts"]["upcoming_termine"])
         self.assertEqual(1, overview["counts"]["unassigned_termine"])
+        self.assertEqual(
+            {"open_vorgaenge", "open_todos", "upcoming_termine"},
+            set(overview["previews"]),
+        )
+        self.assertEqual(
+            "Offene Aufgabe",
+            overview["previews"]["open_todos"][0]["title"],
+        )
+        self.assertEqual(
+            "Mitgliederversammlung",
+            overview["previews"]["upcoming_termine"][0]["title"],
+        )
+        self.assertLessEqual(len(overview["previews"]["open_vorgaenge"]), 5)
         document_card = next(
             card
             for card in overview["cards"]
@@ -2647,6 +2660,8 @@ class DashboardHTTPTests(unittest.TestCase):
             overview = json.load(response)
         self.assertEqual(2, overview["counts"]["open_vorgaenge"])
         self.assertIn("unassigned_transactions", overview["counts"])
+        self.assertIn("open_vorgaenge", overview["previews"])
+        self.assertLessEqual(len(overview["previews"]["open_vorgaenge"]), 5)
 
         termin_request = Request(
             self.base_url + "/api/termine",
@@ -4003,6 +4018,14 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         lambda error: page_errors.append(str(error)),
                     )
                     page.goto(base_url, wait_until="networkidle")
+
+                    expect(page.locator(".dashboard-start")).to_be_visible()
+                    expect(page.locator("#dashboard-refresh")).to_have_text(
+                        "Alles synchronisieren"
+                    )
+                    expect(page.locator("#dashboard-open-vorgaenge")).to_contain_text(
+                        "Neuer Verein"
+                    )
 
                     page.locator(
                         "[data-overview-key='open_vorgaenge']"

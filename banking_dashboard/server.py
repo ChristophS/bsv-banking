@@ -207,6 +207,7 @@ SPHERE_OPTIONS = (
     "Wirtschaftlicher Geschäftsbetrieb",
     "Vermögensverwaltung",
 )
+OVERVIEW_PREVIEW_LIMIT = 5
 
 
 class DashboardDataStore:
@@ -725,7 +726,20 @@ class DashboardDataStore:
                 "entity": "termine",
             },
         ]
-        return {"counts": counts, "cards": cards}
+        previews = {
+            "open_vorgaenge": self.list_vorgaenge(
+                hide_completed=True,
+            )[:OVERVIEW_PREVIEW_LIMIT],
+            "open_todos": self.list_todos(
+                hide_completed=True,
+            )[:OVERVIEW_PREVIEW_LIMIT],
+            "upcoming_termine": [
+                termin
+                for termin in self.list_termine(hide_completed=True)
+                if str(termin.get("starts_at") or "")[:10] >= today
+            ][:OVERVIEW_PREVIEW_LIMIT],
+        }
+        return {"counts": counts, "cards": cards, "previews": previews}
 
     def suggest_related_entities(
         self,
