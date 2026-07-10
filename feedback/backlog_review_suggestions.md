@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional defensive Prüfung ergänzen, dass `_completion_transactions(...)` genau die erwarteten Transaktionen lädt.
+- Optional Mehrfachtransaktions-Test ergänzen: Abschluss nur erlauben, wenn wirklich alle verknüpften Transaktionen dem Fehlbuchungs-Sonderfall entsprechen.
