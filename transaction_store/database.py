@@ -465,6 +465,14 @@ def replace_transaction_splits(
         )
         for index, split in enumerate(splits, start=1)
     ]
+    seen_split_ids: set[str] = set()
+    for split in normalized:
+        if split.split_id in seen_split_ids:
+            raise ValueError(
+                "Split-IDs duerfen innerhalb einer Transaktion nicht "
+                "mehrfach vorkommen."
+            )
+        seen_split_ids.add(split.split_id)
     if normalized:
         expected_amount = int(transaction["amount_minor"])
         actual_amount = sum(split.amount_minor for split in normalized)

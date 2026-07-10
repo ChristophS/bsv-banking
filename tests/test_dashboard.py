@@ -2686,6 +2686,38 @@ class DashboardHTTPTests(unittest.TestCase):
                 [1000, 1500],
             )
 
+        duplicate_id_request = Request(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            data=json.dumps(
+                {
+                    "splits": [
+                        {
+                            "split_id": "split_api_duplicate",
+                            "betrag_cent": 1000,
+                        },
+                        {
+                            "split_id": "split_api_duplicate",
+                            "betrag_cent": 1500,
+                        },
+                    ]
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with self.assertRaises(HTTPError) as duplicate_id_error:
+            urlopen(duplicate_id_request, timeout=5)
+        self.assertEqual(duplicate_id_error.exception.code, 400)
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [split["betrag_cent"] for split in payload["splits"]],
+                [1000, 1500],
+            )
+
         missing_request = Request(
             self.base_url + "/api/transactions/tx_missing/splits",
             data=json.dumps({"splits": []}).encode("utf-8"),

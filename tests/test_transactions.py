@@ -371,6 +371,33 @@ class DatabaseConnectionTests(unittest.TestCase):
                     ],
                     [(1, 1000), (2, 1500)],
                 )
+                with self.assertRaises(ValueError):
+                    replace_transaction_splits(
+                        connection,
+                        "tx_split",
+                        [
+                            TransactionSplit(
+                                "split_duplicate",
+                                "tx_split",
+                                1000,
+                            ),
+                            TransactionSplit(
+                                "split_duplicate",
+                                "tx_split",
+                                1500,
+                            ),
+                        ],
+                    )
+                self.assertEqual(
+                    [
+                        (split.sort_order, split.amount_minor)
+                        for split in list_transaction_splits(
+                            connection,
+                            "tx_split",
+                        )
+                    ],
+                    [(1, 1000), (2, 1500)],
+                )
             finally:
                 connection.close()
 

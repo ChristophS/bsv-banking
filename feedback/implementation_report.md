@@ -2,14 +2,11 @@
 
 ## Branchname
 
-agent2/rework-20260710-214139
+agent2/rework-20260710-214409
 
 ## Geaenderte Dateien
 
-- transaction_store/models.py
 - transaction_store/database.py
-- transaction_store/classification.py
-- banking_dashboard/server.py
 - tests/test_transactions.py
 - tests/test_dashboard.py
 - feedback/implementation_report.md
@@ -27,6 +24,9 @@ agent2/rework-20260710-214139
   Ursprungsbetrag der Transaktion entspricht.
 - Split-Ersetzung nutzt einen Savepoint, damit fehlerhafte Speicherungen keine
   partiell geaenderten Split-Zeilen hinterlassen.
+- Doppelte `split_id`s innerhalb eines Speicherpayloads werden vor der
+  Persistenz als Validierungsfehler abgelehnt, damit daraus kein generischer
+  Datenbankfehler und keine Teilpersistenz entstehen.
 - Schlanke API fuer Lesen und vollstaendiges Speichern unter
   `/api/transactions/{id}/splits` bereitgestellt.
 - Split-Zeilen werden mit derselben Klassifikationslogik bewertet wie
@@ -85,5 +85,11 @@ agent2/rework-20260710-214139
 - Die Atomaritaet fehlerhafter Speicherungen ist durch einen Store-Test
   abgesichert: Eine falsche Split-Summe loest `ValueError` aus und laesst
   bestehende Split-Zeilen unveraendert.
+- Die Nachbesserung ergaenzt eine reale Code- und Testaenderung:
+  `replace_transaction_splits` validiert doppelte Split-IDs vor dem
+  Datenbank-Savepoint. Store- und API-Tests sichern ab, dass solche Requests
+  mit `ValueError` beziehungsweise HTTP `400` abgelehnt werden und bestehende
+  Split-Zeilen unveraendert bleiben.
 - Die API-Fehlerfaelle sind durch Dashboard-Tests abgesichert: Ein PUT mit
-  falscher Split-Summe liefert `400` und bestehende Splits bleiben erhalten.
+  falscher Split-Summe oder doppelten Split-IDs liefert `400` und bestehende
+  Splits bleiben erhalten.
