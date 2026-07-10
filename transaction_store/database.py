@@ -19,7 +19,7 @@ from .classification import SQL_CLASSIFICATION_STATUS_EXPRESSION
 from .models import ParsedFile, ParsedTransaction
 
 
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 BELEGE_DIRECTORY_ENV = "BSV_BELEGE_DIR"
 VORGANG_STATUS_IN_PROGRESS = "in_bearbeitung"
 VORGANG_STATUS_COMPLETED = "abgeschlossen"
@@ -744,6 +744,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
                 10: _migrate_v10_to_v11,
                 11: _migrate_v11_to_v12,
                 12: _migrate_v12_to_v13,
+                13: _migrate_v13_to_v14,
             }
             while version < SCHEMA_VERSION:
                 migration = migrations.get(version)
@@ -762,6 +763,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
         _create_transaction_link_tables(connection)
         _create_document_tables(connection)
         _create_termin_tables(connection)
+        _create_transaction_split_table(connection)
         _create_vorgang_triggers(connection)
         _enforce_vorgang_completion_invariant(connection)
         _recreate_normalized_view(connection)
@@ -1085,6 +1087,55 @@ def _migrate_v12_to_v13(connection: sqlite3.Connection) -> None:
     )
     connection.execute("DROP TABLE auto_open_vorgaenge_v13")
     connection.execute("UPDATE schema_info SET version = 13")
+
+
+def _migrate_v13_to_v14(connection: sqlite3.Connection) -> None:
+    _create_vorgaenge_table(connection)
+    _create_transaction_split_table(connection)
+    connection.execute("UPDATE schema_info SET version = 14")
+
+
+def _create_transaction_split_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transaction_splits (
+            split_id TEXT PRIMARY KEY
+                CHECK (TRIM(split_id) <> ''),
+            transaction_id TEXT NOT NULL
+                REFERENCES transactions(transaction_id)
+                ON DELETE CASCADE,
+            amount_minor INTEGER NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            transaction_type TEXT NOT NULL DEFAULT '',
+            top_category TEXT NOT NULL DEFAULT '',
+            sub_category TEXT NOT NULL DEFAULT '',
+            sphere TEXT NOT NULL DEFAULT '',
+            professional_description TEXT NOT NULL DEFAULT '',
+            vorgangs_id TEXT
+                REFERENCES vorgaenge(vorgangs_id)
+                ON DELETE SET NULL,
+            created_at TEXT NOT NULL DEFAULT (
+                STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+            ),
+            updated_at TEXT NOT NULL DEFAULT (
+                STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+            )
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_transaction_splits_transaction_id
+            ON transaction_splits(transaction_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_transaction_splits_vorgangs_id
+            ON transaction_splits(vorgangs_id)
+            WHERE vorgangs_id IS NOT NULL
+        """
+    )
 
 
 def _create_budgets_table(connection: sqlite3.Connection) -> None:

@@ -77,6 +77,52 @@ class DatabaseConnectionTests(unittest.TestCase):
             self.assertTrue(wal_path.exists())
             self.assertTrue(shm_path.exists())
 
+    def test_schema_contains_transaction_split_table(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                columns = [
+                    item["name"]
+                    for item in connection.execute(
+                        "PRAGMA table_info(transaction_splits)"
+                    )
+                ]
+                foreign_keys = [
+                    (item["from"], item["table"], item["to"])
+                    for item in connection.execute(
+                        "PRAGMA foreign_key_list(transaction_splits)"
+                    )
+                ]
+            finally:
+                connection.close()
+
+        self.assertEqual(
+            columns,
+            [
+                "split_id",
+                "transaction_id",
+                "amount_minor",
+                "description",
+                "transaction_type",
+                "top_category",
+                "sub_category",
+                "sphere",
+                "professional_description",
+                "vorgangs_id",
+                "created_at",
+                "updated_at",
+            ],
+        )
+        self.assertIn(
+            ("transaction_id", "transactions", "transaction_id"),
+            foreign_keys,
+        )
+        self.assertIn(
+            ("vorgangs_id", "vorgaenge", "vorgangs_id"),
+            foreign_keys,
+        )
+
 
 def write_csv(path: Path, headers, rows, encoding="utf-8-sig"):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1330,7 +1376,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    13,
+                    14,
                 )
                 row = migrated.execute(
                     "SELECT * FROM normalized_transactions"
@@ -1511,7 +1557,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    13,
+                    14,
                 )
                 self.assertEqual(
                     [
