@@ -91,3 +91,13 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
+
+## 10. Unbekannte Transaktions-ID per HTTP zusätzlich testen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierende Absicherung für den neuen Link-Endpoint.
+
+**Feedback:**
+
+- Optional zusätzlichen HTTP-Test für unbekannte Transaktions-ID ergänzen.
