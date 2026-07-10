@@ -1013,6 +1013,66 @@ class DashboardDataStoreTests(unittest.TestCase):
             ["tx_newer"],
         )
 
+    def test_fehlbuchung_vorgang_can_be_completed_with_empty_sphere(self):
+        self.store.update_vorgang(
+            "vorgang_tx_newer",
+            {
+                "vorgangstyp": "Sonstige",
+                "completed": False,
+            },
+        )
+        self.store.update_transaction_classification(
+            "tx_newer",
+            {
+                "oberkategorie": "Sonstige",
+                "unterkategorie": "Fehlbuchung",
+                "sphaere": "",
+            },
+        )
+
+        detail = self.store.vorgang_detail("vorgang_tx_newer")
+        self.assertTrue(detail["abschluss_moeglich"])
+        self.assertEqual(detail["unvollstaendige_transaktionen"], [])
+
+        completed = self.store.update_vorgang_status(
+            "vorgang_tx_newer",
+            True,
+        )
+
+        self.assertEqual(completed["status"], "abgeschlossen")
+        self.assertEqual(completed["transaktionen"][0]["sphaere"], "")
+
+    def test_non_fehlbuchung_vorgang_still_requires_sphere(self):
+        self.store.update_vorgang(
+            "vorgang_tx_newer",
+            {
+                "vorgangstyp": "Sonstige",
+                "completed": False,
+            },
+        )
+        self.store.update_transaction_classification(
+            "tx_newer",
+            {
+                "oberkategorie": "Sonstige",
+                "unterkategorie": "Ausgleich",
+                "sphaere": "",
+            },
+        )
+
+        with self.assertRaisesRegex(ValueError, "Sph"):
+            self.store.update_vorgang_status(
+                "vorgang_tx_newer",
+                True,
+            )
+
+        detail = self.store.vorgang_detail("vorgang_tx_newer")
+        self.assertEqual(detail["status"], "in_bearbeitung")
+        self.assertFalse(detail["abschluss_moeglich"])
+        self.assertEqual(
+            detail["unvollstaendige_transaktionen"],
+            ["tx_newer"],
+        )
+
     def test_rechnung_vorgang_requires_document_and_transaction_to_complete(self):
         updated = self.store.update_vorgang(
             "vorgang_tx_older",
