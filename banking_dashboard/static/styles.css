@@ -2449,6 +2449,15 @@ th[aria-sort="descending"] .sort-indicator {
   font-size: 13px;
 }
 
+.dialog-status {
+  min-height: 0;
+  margin: 0;
+  padding: 0 28px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .close-button {
   display: grid;
   width: 38px;
@@ -2693,6 +2702,9 @@ th[aria-sort="descending"] .sort-indicator {
 }
 
 .split-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2702,14 +2714,36 @@ th[aria-sort="descending"] .sort-indicator {
   font-weight: 700;
 }
 
+.split-summary-item {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.split-summary-item strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .split-summary.is-balanced {
   color: var(--positive);
   background: var(--positive-bg);
 }
 
+.split-summary.is-balanced .split-summary-item strong {
+  color: var(--positive);
+}
+
 .split-summary.is-unbalanced {
   color: var(--negative);
   background: #fff3f3;
+}
+
+.split-summary.is-unbalanced .split-summary-item strong {
+  color: var(--negative);
 }
 
 .split-form > .primary-action,
@@ -4806,6 +4840,10 @@ th[aria-sort="descending"] .sort-indicator {
   }
 
   .split-row {
+    grid-template-columns: 1fr;
+  }
+
+  .split-summary {
     grid-template-columns: 1fr;
   }
 

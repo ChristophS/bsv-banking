@@ -272,6 +272,7 @@ const elements = {
   detailEyebrow: document.querySelector("#detail-eyebrow"),
   detailTitle: document.querySelector("#detail-title"),
   detailSubtitle: document.querySelector("#detail-subtitle"),
+  detailDialogStatus: document.querySelector("#detail-dialog-status"),
   detailContent: document.querySelector("#detail-content"),
   detailClose: document.querySelector("#detail-close"),
   entityDialog: document.querySelector("#entity-preview-dialog"),
@@ -7791,6 +7792,7 @@ async function openTransaction(transaktionsId) {
   elements.detailEyebrow.textContent = "Transaktionsdetails";
   elements.detailTitle.textContent = "Transaktion wird geladen";
   elements.detailSubtitle.textContent = "";
+  elements.detailDialogStatus.textContent = "";
   elements.detailContent.replaceChildren(createLoadingBlock());
   elements.dialog.showModal();
   try {
@@ -7846,6 +7848,7 @@ function renderDetail(
     transaction.zahlungsbeteiligter || transaction.kontoname;
   elements.detailSubtitle.textContent =
     `${formatDate(transaction.datum)} · ${transaction.kontoname}`;
+  elements.detailDialogStatus.textContent = "";
   elements.detailContent.replaceChildren();
   const layout = document.createElement("div");
   layout.className = "vorgang-workspace";
@@ -7891,6 +7894,7 @@ function renderVorgangWorkspace(
   elements.detailSubtitle.textContent =
     `${formatStatus(vorgang.status)} \u00b7 ` +
     entityCountSummary(vorgang);
+  elements.detailDialogStatus.textContent = "";
   elements.detailContent.replaceChildren();
 
   const layout = document.createElement("div");
@@ -9258,10 +9262,12 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
   const formError = document.createElement("p");
   formError.className = "form-error";
   formError.hidden = true;
+  formError.setAttribute("aria-live", "polite");
   const rows = document.createElement("div");
   rows.className = "split-rows";
   const summary = document.createElement("div");
   summary.className = "split-summary";
+  summary.setAttribute("aria-live", "polite");
   const addButton = document.createElement("button");
   addButton.type = "button";
   addButton.className = "secondary-action";
@@ -9301,10 +9307,23 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       0,
     );
     const difference = originalAmount - sum;
-    summary.textContent =
-      `Original ${formatMinorAmount(originalAmount)} · ` +
-      `Splits ${formatMinorAmount(sum)} · ` +
-      `Differenz ${formatMinorAmount(difference)}`;
+    summary.replaceChildren(
+      splitSummaryItem(
+        "Originalbetrag",
+        formatMinorAmount(originalAmount),
+        "original",
+      ),
+      splitSummaryItem(
+        "Split-Summe",
+        formatMinorAmount(sum),
+        "sum",
+      ),
+      splitSummaryItem(
+        "Differenz",
+        formatMinorAmount(difference),
+        "difference",
+      ),
+    );
     const valid = current.length === 0 || difference === 0;
     summary.classList.toggle("is-balanced", valid);
     summary.classList.toggle("is-unbalanced", !valid);
@@ -9313,15 +9332,19 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       formError.textContent = amountError.amount_error;
       formError.hidden = false;
       status.textContent = amountError.amount_error;
+      elements.detailDialogStatus.textContent = amountError.amount_error;
     } else if (!current.length) {
       formError.hidden = true;
       status.textContent = "Speichern entfernt alle Splits";
+      elements.detailDialogStatus.textContent = status.textContent;
     } else if (valid) {
       formError.hidden = true;
       status.textContent = "Split-Summe ausgeglichen";
+      elements.detailDialogStatus.textContent = "";
     } else {
       formError.hidden = true;
       status.textContent = "Split-Summe nicht ausgeglichen";
+      elements.detailDialogStatus.textContent = status.textContent;
     }
   };
 
@@ -9446,12 +9469,14 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       updateSummary();
       status.className = "save-state is-saved";
       status.textContent = "Gespeichert";
+      elements.detailDialogStatus.textContent = "Splits gespeichert";
     } catch (error) {
       updateSummary();
       formError.textContent = error.message;
       formError.hidden = false;
       status.className = "save-state is-error";
       status.textContent = "Speichern fehlgeschlagen";
+      elements.detailDialogStatus.textContent = error.message;
       showError(error.message);
     }
   });
@@ -9463,6 +9488,19 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
   }
   updateSummary();
   target.append(section);
+}
+
+function splitSummaryItem(label, value, key) {
+  const item = document.createElement("span");
+  item.className = "split-summary-item";
+  item.dataset.splitSummary = key;
+  const itemLabel = document.createElement("span");
+  itemLabel.className = "detail-label";
+  itemLabel.textContent = label;
+  const itemValue = document.createElement("strong");
+  itemValue.textContent = value;
+  item.append(itemLabel, itemValue);
+  return item;
 }
 
 function splitInput(label, value, key) {

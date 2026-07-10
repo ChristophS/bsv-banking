@@ -2,46 +2,46 @@
 
 ## Branchname
 
-agent2/rework-20260710-215924
+agent2/rework-20260710-220256
 
 ## Geaenderte Dateien
 
-- banking_dashboard/server.py
+- banking_dashboard/static/app.js
+- banking_dashboard/static/index.html
+- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Split-Payloads fuer die Dashboard-API werden vor der Persistenz strenger
-  validiert.
-- Unbekannte Felder in einzelnen Split-Zeilen fuehren zu HTTP 400 statt
-  stillschweigend ignoriert zu werden.
-- Mitgesendete `transaction_id` oder `transaktions_id` muessen zur
-  URL-Transaktion passen; widerspruechliche IDs werden als ungueltiger Request
-  abgelehnt.
-- Die vorhandene Split-Persistenz (`replace_transaction_splits`) und die
-  bestehende Detail-/Split-API bleiben erhalten.
-- Tests sichern ab, dass ungueltige Split-Payloads keine bestehenden Splits
-  veraendern.
+- Der Split-Editor in der Transaktionsdetailansicht zeigt die Summenlogik nun
+  explizit als getrennte UI-Werte fuer Originalbetrag, Split-Summe und
+  Differenz.
+- Die bestehende Split-Editor-Interaktion nutzt weiter die vorhandene
+  Detail-API und den bestehenden `PUT /api/transactions/<id>/splits`-Pfad.
+- Ein Dialog-Status mit `aria-live` wurde ergaenzt, damit Split-Fehler und
+  Speicherstatus im Detaildialog eindeutig angebunden sind.
+- Die Darstellung der Split-Summe wurde responsiv gestylt und bleibt in der
+  bestehenden Detailansicht abgegrenzt.
+- Der Browser-nahe Dashboard-Test prueft jetzt zusaetzlich die sichtbaren
+  Summenfelder und das Entfernen einer Split-Zeile mit anschliessender
+  Persistenz.
 
 ## Nicht umgesetzte Punkte
 
 - Keine neue Persistenzarchitektur angelegt.
 - Keine fachliche Klassifikation einzelner Split-Zeilen erweitert.
-- Keine UI-Struktur neu gebaut; die bestehende Split-Editor-Umsetzung wurde
-  beibehalten.
+- Keine Vorschlagslisten oder neuen Zuordnungsfluesse fuer Splits eingefuehrt.
 - Keine externen Dienste, echten Logins, Banking-Aktionen oder produktiven
   Daten verwendet.
 
 ## Ausgefuehrte Tests
 
 - `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
 
 ## Testergebnis
 
 - `tests/test_dashboard.py`: 104 bestanden, 6 uebersprungen.
-- `tests/test_transactions.py`: 33 bestanden.
 
 ## Bekannte Einschraenkungen
 
@@ -50,6 +50,8 @@ agent2/rework-20260710-215924
 - Leere Split-Listen sind weiterhin erlaubt und entfernen alle Splits.
 - Die Split-Summe muss bei nicht leerer Split-Liste exakt dem
   Transaktionsbetrag entsprechen.
+- Die Browser-Interaktion ist im Test an Playwright gekoppelt; wenn Playwright
+  oder Chromium lokal fehlen, wird dieser Teil wie bisher uebersprungen.
 
 ## Hinweise fuer den Review-Agenten
 
@@ -64,12 +66,15 @@ agent2/rework-20260710-215924
 
 ## Nachbesserung nach Review
 
-- Der blockierende Review-Punkt war, dass im Branch keine fachlichen Code- oder
-  Testaenderungen sichtbar waren. Diese Nachbesserung enthaelt nun konkrete
-  Aenderungen in `banking_dashboard/server.py` und `tests/test_dashboard.py`.
-- Die bestehende fachliche Split-Funktion wurde erhalten und gezielt
-  abgesichert: ungueltige Split-Requests werden bereits beim Payload-Parsing
-  abgelehnt, bevor die Store-Methode Persistenz aendern kann.
-- Zusaetzliche Tests pruefen sowohl den direkten Store-/Server-Pfad als auch
-  den HTTP-API-Flow fuer ungueltige Payloads und bestaetigen, dass vorhandene
-  Split-Zeilen nach HTTP 400 beziehungsweise `ValueError` unveraendert bleiben.
+- Der blockierende Review-Punkt zu fehlenden UI-Aenderungen wurde adressiert:
+  diese Nachbesserung enthaelt konkrete Aenderungen an
+  `banking_dashboard/static/app.js`, `banking_dashboard/static/index.html` und
+  `banking_dashboard/static/styles.css`.
+- Die Akzeptanzkriterien zur sichtbaren Summenlogik sind nun im DOM
+  nachvollziehbar: Originalbetrag, Split-Summe und Differenz werden separat
+  gerendert und im Browser-Test geprueft.
+- Die geforderten Dashboard-Aktionen bleiben ueber den bestehenden Editor
+  verfuegbar; der Test weist Anlegen, Bearbeiten, Backend-Fehleranzeige und
+  Loeschen einer Split-Zeile nach.
+- Die vorhandene serverseitige Validierung aus der vorherigen Nachbesserung
+  wurde beibehalten und nicht durch neue Parallelstrukturen ersetzt.

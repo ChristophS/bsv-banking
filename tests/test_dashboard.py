@@ -4335,6 +4335,15 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     expect(editor).to_be_visible()
                     expect(editor).to_contain_text("Teilbetrag Eintritt")
                     expect(
+                        editor.locator("[data-split-summary='original']")
+                    ).to_contain_text("Originalbetrag")
+                    expect(
+                        editor.locator("[data-split-summary='sum']")
+                    ).to_contain_text("Split-Summe")
+                    expect(
+                        editor.locator("[data-split-summary='difference']")
+                    ).to_contain_text("Differenz")
+                    expect(
                         editor.locator("[data-split-amount]").first()
                     ).to_have_value("15,00")
                     expect(editor).to_contain_text("Spielbetrieb")
@@ -4447,6 +4456,46 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         [
                             split["amount_minor"]
                             for split in persisted_after_error
+                        ],
+                    )
+
+                    second_row.locator(
+                        "button",
+                        has_text="Entfernen",
+                    ).click()
+                    editor.locator("[data-split-amount]").first().fill("25,00")
+                    with page.expect_response(
+                        lambda response: (
+                            response.request.method == "PUT"
+                            and response.url.endswith(
+                                "/api/transactions/tx_newer/splits"
+                            )
+                        )
+                    ):
+                        editor.locator(
+                            "button",
+                            has_text="Splits speichern",
+                        ).click()
+                    expect(editor.locator(".split-row")).to_have_count(1)
+                    expect(
+                        editor.locator("[data-split-summary='difference']")
+                    ).to_contain_text("0,00")
+
+                    persisted_after_remove = page.evaluate(
+                        """
+                        async () => {
+                          const response = await fetch(
+                            "/api/transactions/tx_newer"
+                          );
+                          return (await response.json()).transaction.splits;
+                        }
+                        """
+                    )
+                    self.assertEqual(
+                        [2500],
+                        [
+                            split["amount_minor"]
+                            for split in persisted_after_remove
                         ],
                     )
                     self.assertEqual([], page_errors)
