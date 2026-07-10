@@ -31,3 +31,23 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
+
+## 4. Split-Klassifikationsfelder an bestehende Datalist-Quellen anbinden
+
+**Priorität:** mittel
+
+**Grund:** Nicht-blockierende Verbesserung der Split-UI; laut Review sinnvoll, aber nicht zwingend für die akzeptierte Funktion.
+
+**Feedback:**
+
+- Split-Klassifikationsfelder an die bestehenden Datalist-/Vorschlagsquellen der normalen Klassifikationsbearbeitung anbinden.
+
+## 5. Split-Status nach erneut ausgeglichener Summe zurücksetzen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierende UI-Verbesserung; nur die Fehleroptik nach Korrektur der Summe bereinigen.
+
+**Feedback:**
+
+- Status-CSS-Zustand des Split-Editors bei erneut ausgeglichener Summe explizit zurücksetzen.
