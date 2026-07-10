@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional langfristig eine dedizierte historische v13-Schema-Fixture ergänzen, statt den Altzustand aus dem aktuellen Schema abzuleiten.
