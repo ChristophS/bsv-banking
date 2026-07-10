@@ -2,11 +2,11 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Transaktionen splitten und Teilbeträge mehreren Kategorien oder Rechnungen zuordnen
+## 1. Vollständigen Bearbeitungsworkflow für Transaktions-Splitting im Dashboard ergänzen
 
 **Priorität:** hoch
 
-**Grund:** Eigenes, deutlich größeres Fach- und Datenmodellthema mit Auswirkungen auf Zuordnungen, UI und Auswertungen; nicht Teil des kleinen Dashboard-Pakets.
+**Grund:** Der vollständige Split-Workflow ist der große fachliche Hauptteil und geht deutlich über das kleine Vorbereitungspaket hinaus.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Separates Mail-/Dokumenten-/Vorgangszuordnungsthema mit eigenem Analyse- und Implementierungsbedarf.
+**Grund:** Eigenständiges Mail-/Dokumenten-/Vorgangszuordnungsthema mit separatem Workflow und eigener Komplexität.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Neues fachliches Modul mit erheblichem Konzeptions- und Integrationsaufwand, klar außerhalb des aktuellen Kontrollpakets.
+**Grund:** Neues Modul mit erheblichem Konzeptions- und Integrationsaufwand, klar außerhalb des aktuellen Split-Vorbereitungspakets.
 
 **Feedback:**
 
