@@ -4117,6 +4117,154 @@ class DashboardHTTPTests(unittest.TestCase):
         )
 
 
+class DashboardTransactionBrowserTests(unittest.TestCase):
+    def test_transaction_split_editor_updates_and_shows_errors(self):
+        try:
+            from playwright.sync_api import expect, sync_playwright
+        except ImportError:
+            self.skipTest("Playwright ist nicht installiert.")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            server = create_server(database_path, port=0)
+            thread = threading.Thread(
+                target=server.serve_forever,
+                daemon=True,
+            )
+            thread.start()
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+            try:
+                with sync_playwright() as playwright:
+                    try:
+                        browser = playwright.chromium.launch(headless=True)
+                    except Exception as exc:
+                        self.skipTest(
+                            f"Chromium ist nicht installiert: {exc}"
+                        )
+                    page = browser.new_page(
+                        viewport={"width": 1500, "height": 1000}
+                    )
+                    page_errors = []
+                    page.on(
+                        "pageerror",
+                        lambda error: page_errors.append(str(error)),
+                    )
+                    page.goto(base_url, wait_until="networkidle")
+                    page.locator("tr[data-id='tx_newer']").click()
+                    editor = page.locator(".split-editor")
+                    expect(editor).to_be_visible()
+                    expect(editor).to_contain_text("Teilbetrag Eintritt")
+                    expect(
+                        editor.locator("[data-split-amount]").first()
+                    ).to_have_value("1500")
+                    expect(editor).to_contain_text("Spielbetrieb")
+
+                    editor.locator("[data-split-amount]").first().fill("1000")
+                    editor.locator("button", has_text="Zeile hinzufuegen").click()
+                    second_row = editor.locator(".split-row").last()
+                    second_row.locator("[data-split-amount]").fill("1500")
+                    second_row.locator(
+                        "[data-split-description]"
+                    ).fill("API Teil 2")
+                    second_row.locator("[data-split-type]").fill("Einnahme")
+                    second_row.locator("[data-split-top]").fill("Spielbetrieb")
+                    second_row.locator("[data-split-sub]").fill("Eintritt")
+                    second_row.locator(
+                        "[data-split-professional]"
+                    ).fill("Browser-Test")
+
+                    with page.expect_response(
+                        lambda response: (
+                            response.request.method == "PUT"
+                            and response.url.endswith(
+                                "/api/transactions/tx_newer/splits"
+                            )
+                        )
+                    ):
+                        editor.locator(
+                            "button",
+                            has_text="Splits speichern",
+                        ).click()
+                    expect(editor.locator(".save-state")).to_contain_text(
+                        "Gespeichert"
+                    )
+
+                    persisted = page.evaluate(
+                        """
+                        async () => {
+                          const response = await fetch(
+                            "/api/transactions/tx_newer"
+                          );
+                          return (await response.json()).transaction.splits;
+                        }
+                        """
+                    )
+                    self.assertEqual(
+                        [1000, 1500],
+                        [split["amount_minor"] for split in persisted],
+                    )
+                    self.assertEqual(
+                        ["Teilbetrag Eintritt", "API Teil 2"],
+                        [split["description"] for split in persisted],
+                    )
+
+                    editor.locator("[data-split-amount]").first().fill("")
+                    expect(editor.locator(".form-error")).to_contain_text(
+                        "Split 1 braucht einen Betrag in Cent."
+                    )
+                    expect(
+                        editor.locator(
+                            "button",
+                            has_text="Splits speichern",
+                        )
+                    ).to_be_disabled()
+
+                    editor.locator("[data-split-amount]").first().fill("1000")
+                    second_row = editor.locator(".split-row").last()
+                    second_row.locator("[data-split-amount]").fill("1000")
+                    with page.expect_response(
+                        lambda response: (
+                            response.request.method == "PUT"
+                            and response.url.endswith(
+                                "/api/transactions/tx_newer/splits"
+                            )
+                        )
+                    ) as invalid_response:
+                        editor.locator(
+                            "button",
+                            has_text="Splits speichern",
+                        ).click()
+                    self.assertEqual(400, invalid_response.value.status)
+                    expect(editor.locator(".form-error")).to_contain_text(
+                        "Summe der Splits"
+                    )
+
+                    persisted_after_error = page.evaluate(
+                        """
+                        async () => {
+                          const response = await fetch(
+                            "/api/transactions/tx_newer"
+                          );
+                          return (await response.json()).transaction.splits;
+                        }
+                        """
+                    )
+                    self.assertEqual(
+                        [1000, 1500],
+                        [
+                            split["amount_minor"]
+                            for split in persisted_after_error
+                        ],
+                    )
+                    self.assertEqual([], page_errors)
+                    browser.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+
 class DashboardTodoBrowserTests(unittest.TestCase):
     def test_unassigned_documents_overview_card_click_opens_document_context(self):
         try:
