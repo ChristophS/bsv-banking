@@ -79,6 +79,16 @@ const state = {
 const elements = {
   tabs: [...document.querySelectorAll("[data-tab]")],
   overviewCards: document.querySelector("#overview-cards"),
+  dashboardRefresh: document.querySelector("#dashboard-refresh"),
+  dashboardRefreshStatus: document.querySelector("#dashboard-refresh-status"),
+  dashboardOpenVorgaenge: document.querySelector("#dashboard-open-vorgaenge"),
+  dashboardOpenTodos: document.querySelector("#dashboard-open-todos"),
+  dashboardUpcomingTermine: document.querySelector(
+    "#dashboard-upcoming-termine",
+  ),
+  dashboardRouteButtons: [
+    ...document.querySelectorAll("[data-dashboard-route]"),
+  ],
   transactionPanel: document.querySelector("#transactions-panel"),
   vorgaengePanel: document.querySelector("#vorgaenge-panel"),
   terminePanel: document.querySelector("#termine-panel"),
@@ -324,6 +334,24 @@ elements.overviewCards.addEventListener("click", (event) => {
     button.dataset.overviewEntity,
   );
 });
+elements.dashboardRouteButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    navigateFromOverviewCard("", button.dataset.dashboardRoute);
+  });
+});
+[
+  elements.dashboardOpenVorgaenge,
+  elements.dashboardOpenTodos,
+  elements.dashboardUpcomingTermine,
+].forEach((container) => {
+  container.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-overview-entity]");
+    if (!button) {
+      return;
+    }
+    navigateFromOverviewCard("", button.dataset.overviewEntity);
+  });
+});
 
 elements.sortButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -473,6 +501,7 @@ elements.completionRuleSearch.addEventListener("input", () => {
     loadRules();
   }, 220);
 });
+elements.dashboardRefresh.addEventListener("click", requestRefresh);
 elements.refreshTransactions.addEventListener("click", requestRefresh);
 elements.mailRefresh.addEventListener("click", () => loadMails(true));
 elements.mailDeleteSpam.addEventListener("click", deleteSpamMails);
@@ -635,6 +664,74 @@ function renderOverview() {
       ),
     );
     elements.overviewCards.append(button);
+  }
+  renderDashboardPreviews();
+}
+
+function renderDashboardPreviews() {
+  const previews = state.overview?.previews || {};
+  renderDashboardPreviewList(
+    elements.dashboardOpenVorgaenge,
+    previews.open_vorgaenge || [],
+    "vorgaenge",
+    (item) => ({
+      title: item.titel || item.bezug || "Vorgang ohne Titel",
+      meta: [
+        item.vorgangstyp,
+        formatStatus(item.status),
+        item.letztes_datum ? formatDate(item.letztes_datum) : "",
+      ],
+    }),
+  );
+  renderDashboardPreviewList(
+    elements.dashboardOpenTodos,
+    previews.open_todos || [],
+    "todos",
+    (item) => ({
+      title: item.title || "To-Do ohne Titel",
+      meta: [
+        todoPriorityLabel(item.priority),
+        item.due_date ? `Fällig: ${formatDate(item.due_date)}` : "",
+      ],
+    }),
+  );
+  renderDashboardPreviewList(
+    elements.dashboardUpcomingTermine,
+    previews.upcoming_termine || [],
+    "termine",
+    (item) => ({
+      title: item.title || "Termin ohne Titel",
+      meta: [
+        item.starts_at ? formatDateTimeOrDate(item.starts_at) : "",
+        item.location,
+        terminStatusLabel(item.status),
+      ],
+    }),
+  );
+}
+
+function renderDashboardPreviewList(target, items, entity, mapItem) {
+  target.replaceChildren();
+  if (!items.length) {
+    target.append(
+      mailElement("p", "dashboard-preview-empty", "Keine offenen Einträge."),
+    );
+    return;
+  }
+  for (const item of items) {
+    const data = mapItem(item);
+    const button = mailElement("button", "dashboard-preview-item");
+    button.type = "button";
+    button.dataset.overviewEntity = entity;
+    button.append(
+      mailElement("strong", "", data.title),
+      mailElement(
+        "span",
+        "",
+        data.meta.filter(Boolean).join(" · "),
+      ),
+    );
+    target.append(button);
   }
 }
 
@@ -5365,7 +5462,7 @@ function resetCompletionRuleForm() {
 }
 
 async function requestRefresh() {
-  elements.refreshTransactions.disabled = true;
+  setRefreshButtonsDisabled(true);
   setRefreshStatus("Aktualisierung wird gestartet");
   try {
     const response = await fetch("/api/refresh", {
@@ -5377,7 +5474,7 @@ async function requestRefresh() {
     renderRefreshStatus(payload);
     scheduleRefreshPoll();
   } catch (error) {
-    elements.refreshTransactions.disabled = false;
+    setRefreshButtonsDisabled(false);
     setRefreshStatus(error.message, "error");
     showError(error.message);
   }
@@ -5397,29 +5494,30 @@ async function loadRefreshStatus() {
       scheduleRefreshPoll();
     }
   } catch (error) {
-    elements.refreshTransactions.disabled = false;
+    setRefreshButtonsDisabled(false);
     setRefreshStatus(error.message, "error");
   }
 }
 
 function renderRefreshStatus(payload) {
   if (!payload.available) {
-    elements.refreshTransactions.disabled = true;
+    setRefreshButtonsDisabled(true);
     setRefreshStatus("Keine Bankkonfiguration für Aktualisierungen gefunden.");
     return;
   }
   if (payload.status === "running") {
-    elements.refreshTransactions.disabled = true;
+    setRefreshButtonsDisabled(true);
     setRefreshStatus(payload.message);
     return;
   }
-  elements.refreshTransactions.disabled = false;
+  setRefreshButtonsDisabled(false);
   if (payload.status === "completed") {
     const newCount = payload.result?.new_transactions ?? 0;
     setRefreshStatus(
       `${payload.message} ${newCount} neue Transaktionen.`,
       "success",
     );
+    loadOverview();
     loadTransactions();
     state.vorgaengeLoaded = false;
     if (!elements.vorgaengePanel.hidden) {
@@ -5440,9 +5538,18 @@ function renderRefreshStatus(payload) {
 }
 
 function setRefreshStatus(message, type = "") {
-  elements.refreshStatus.textContent = message;
-  elements.refreshStatus.className =
-    type ? `is-${type}` : "";
+  for (const target of [
+    elements.refreshStatus,
+    elements.dashboardRefreshStatus,
+  ]) {
+    target.textContent = message;
+    target.className = type ? `is-${type}` : "";
+  }
+}
+
+function setRefreshButtonsDisabled(disabled) {
+  elements.refreshTransactions.disabled = disabled;
+  elements.dashboardRefresh.disabled = disabled;
 }
 
 async function loadPlayerPremiumStatus() {
