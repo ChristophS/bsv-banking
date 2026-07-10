@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Das nächste Paket deckt nur den kleinen UI-Workflow für vorhandene Transaktions-Splits ab. Die größere fachliche Modellierung von Rechnungen, Teilrechnungen und mehrstufigen Zuordnungen ist ein separates Vorhaben.
+**Grund:** Der größere fachliche Ausbau zu mehreren Rechnungen, Teilrechnungen und mehrstufigen Zuordnungen bleibt bewusst separat. Das aktuelle Paket deckt nur den kleinen bestehenden Split-Workflow für eine einzelne Transaktion ab.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiger Mail- und Dokumentenworkflow mit separatem Import- und Verknüpfungsfluss; nicht Teil des kleinen Split-UI-Pakets.
+**Grund:** Eigenständiger Mail-/Dokumenten-/Vorgangsfluss mit separatem UI- und Zuordnungsworkflow; nicht Teil des kleinen Split-Pakets.
 
 **Feedback:**
 
