@@ -8,64 +8,43 @@
 
 ## Begründung
 
-Der Diff ist für die fachliche Prüfung ausreichend aussagekräftig; die Umsetzung erfüllt die Muss-Anforderungen ohne erkennbare Blocker.
+Der Diff ist ausreichend aussagekräftig und erfüllt die fachlichen Muss-Anforderungen ohne erkennbare blockierende Probleme.
 
 ## Zusammenfassung
 
-Die Umsetzung ergänzt eine minimale Tabelle `transaction_splits`, erhöht die Schema-Version, liefert Split-Daten in Transaktionsdetails read-only als `splits` aus und ergänzt passende Schema- und API-/Store-Tests. Unsplittete Transaktionen werden weiterhin mit leerer Split-Liste unterstützt. Daher akzeptiert.
+Die Umsetzung ergänzt zentrale Datenbankfunktionen zum Lesen und atomaren Ersetzen von Transaktionssplits, erweitert die Detail-API und stellt einen PUT-Endpunkt sowie einen einfachen Split-Editor im Dashboard bereit. Serverseitige Summenvalidierung, positive und negative Beträge, Entfernen leerer Split-Listen und Tests sind abgedeckt; der Branch-Zustand ist sauber.
 
 ## Review-Ergebnis
 
-**Akzeptiert:** Ja
+**Accepted: true**
 
-## Prüfung gegen das Arbeitspaket
+Die Umsetzung erfüllt das Arbeitspaket „Split-Grundlagen im Dashboard sichtbar und validierbar machen“ fachlich und technisch.
 
-### Persistenzstruktur
+## Geprüfte Anforderungen
 
-Die SQLite-Schema-Version wurde von 13 auf 14 angehoben. Mit `transaction_splits` wurde eine nachvollziehbar benannte Split-Grundstruktur ergänzt. Die Tabelle enthält:
+- `transaction_store.database.list_transaction_splits()` lädt Splits einer Transaktion in stabiler Reihenfolge über `ORDER BY created_at, rowid`.
+- `transaction_store.database.replace_transaction_splits()` ersetzt Split-Listen zentral und atomar per SQLite-Savepoint.
+- Nicht-leere Split-Listen werden vor dem Löschen/Ersetzen exakt gegen `transactions.amount_minor` validiert. Dadurch funktionieren positive und negative Transaktionsbeträge korrekt, solange die Split-Beträge entsprechend vorzeichenrichtig summieren.
+- Leere Split-Listen sind erlaubt und entfernen vorhandene Splits vollständig.
+- Die Transaktionsdetail-API serialisiert vorhandene Splits inklusive Betrag, Beschreibung, Klassifikationsfeldern, optionaler `vorgangs_id` sowie Zeitstempeln.
+- Der neue Endpunkt `PUT /api/transactions/<id>/splits` speichert Split-Listen und liefert für Summenfehler `400` sowie für unbekannte Transaktionen `404`.
+- Das Frontend ergänzt in der Detailansicht einen einfachen bearbeitbaren Split-Bereich mit Hinzufügen, Entfernen, Bearbeiten und Speichern von Split-Zeilen.
+- Die Differenz zur Originaltransaktion wird sichtbar gemacht und der Speichern-Button bei nicht ausgeglichener nicht-leerer Split-Liste deaktiviert.
+- Es wurden keine neuen Tabellen eingeführt; die bestehende Tabelle `transaction_splits` wird genutzt.
+- Bestehende Ansichten für Transaktionen ohne Splits bleiben durch leere Split-Listen kompatibel.
 
-- `split_id` als Primärschlüssel
-- `transaction_id` mit Foreign Key auf `transactions(transaction_id)` und `ON DELETE CASCADE`
-- `amount_minor`
-- optionale bzw. defaultbelegte Beschreibungs- und Klassifikationsfelder
-- optionale `vorgangs_id` mit Foreign Key auf `vorgaenge(vorgangs_id)` und `ON DELETE SET NULL`
-- `created_at` und `updated_at`
-- Indizes für `transaction_id` und `vorgangs_id`
+## Tests und Branch-Zustand
 
-Das ist für das geforderte kleine technische Vorbereitungspaket passend und bleibt im Scope.
+Der Implementation Report dokumentiert erfolgreiche Läufe von:
 
-### Migration / Initialisierung
+- `pytest tests/test_dashboard.py`
+- `pytest tests/test_transactions.py`
+- `node --check banking_dashboard/static/app.js`
 
-Die neue Migration `_migrate_v13_to_v14` erstellt die Vorgangstabelle sicherheitshalber und danach die Split-Tabelle. Die normale Schema-Initialisierung ruft ebenfalls `_create_transaction_split_table` auf. Damit werden neue Datenbanken und migrierte Datenbanken berücksichtigt.
+Der GitHub-Compare ist sauber: `ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner- und GitHub-Dateiliste.
 
-### Read-only-Ausgabe in Transaktionsdetails
+## Nicht-blockierende Hinweise
 
-`banking_dashboard/server.py` erweitert `transaction_detail()` um eine zusätzliche Query auf `transaction_splits` und gibt die Ergebnisse unter `detail["splits"]` zurück. Die Feldnamen sind konsistent zur bestehenden deutschsprachigen API-Ausgabe gewählt, während die Persistenz englische Spaltennamen nutzt.
-
-Transaktionen ohne Split liefern durch die Listenbildung eine leere Liste, was die bestehende Detailausgabe nicht bricht.
-
-### Vorgangsdetails
-
-Laut Umsetzung und Test wird die Split-Information in Vorgangsdetails über die bereits enthaltenen Transaktionsdetails sichtbar. Das entspricht dem Soll-Kriterium, ohne Rückgabetypen grundlegend umzubauen.
-
-### Tests
-
-Es wurden Tests ergänzt für:
-
-- Existenz und Spalten der Tabelle `transaction_splits`
-- Foreign Keys auf `transactions` und `vorgaenge`
-- Transaktionsdetails mit Split-Daten
-- Transaktionsdetails ohne Split-Daten
-- Vorgangsdetails mit Split-Informationen in enthaltenen Transaktionen
-- HTTP-Ausgabe über `/api/transactions/<id>`
-
-Die bestehenden Migrationserwartungen wurden auf Schema-Version 14 aktualisiert. Die im Implementation Report genannten Testläufe sind plausibel und passend.
-
-## Blockierende Probleme
-
-Keine.
-
-## Nicht blockierende Hinweise
-
-- Ein expliziter Migrationstest von Version 13 auf 14 mit Assertion auf `transaction_splits` wäre noch etwas stärker, ist aber nicht zwingend blockierend, da die Migrationslogik im Diff nachvollziehbar ist und Schemaexistenz getestet wird.
-- Der neue Datentyp `TransactionSplit` enthält aktuell nicht `created_at`/`updated_at`, obwohl diese in der Tabelle und API-Ausgabe vorhanden sind. Da der Typ im Diff nicht aktiv für die API-Ausgabe genutzt wird, ist das kein Blocker.
+- Der Payload-Parser erwartet exakt `{ "splits": [...] }`. Das ist für den implementierten Client ausreichend, könnte aber bei nicht-Objekt-Payloads oder zusätzlichen Feldern klarer mit `400 Bad Request` reagieren.
+- Wenn ein Client fremde oder doppelte `split_id`-Werte mitsendet, kann das aktuell in einen Datenbankfehler laufen. Langfristig wäre eine explizite Validierung oder serverseitige ID-Neuvergabe robuster.
+- Die Frontend-Betragsparser-Logik behandelt nicht parsebare Eingaben als `0`. Eine direkte Feldvalidierung wäre nutzerfreundlicher, ist aber durch die serverseitige Summenprüfung nicht kritisch.
