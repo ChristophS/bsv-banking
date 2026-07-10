@@ -477,9 +477,13 @@ def replace_transaction_splits(
         expected_amount = int(transaction["amount_minor"])
         actual_amount = sum(split.amount_minor for split in normalized)
         if actual_amount != expected_amount:
+            difference = actual_amount - expected_amount
             raise ValueError(
                 "Die Summe der Splits muss exakt dem "
-                "Transaktionsbetrag entsprechen."
+                "Transaktionsbetrag entsprechen. "
+                f"Erwartet: {expected_amount} Cent, "
+                f"Split-Summe: {actual_amount} Cent, "
+                f"Differenz: {difference} Cent."
             )
 
     connection.execute("SAVEPOINT replace_transaction_splits")

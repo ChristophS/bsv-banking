@@ -2708,6 +2708,12 @@ class DashboardHTTPTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as invalid_error:
             urlopen(invalid_request, timeout=5)
         self.assertEqual(invalid_error.exception.code, 400)
+        error_payload = json.loads(
+            invalid_error.exception.read().decode("utf-8")
+        )
+        self.assertIn("Erwartet: 2500 Cent", error_payload["error"])
+        self.assertIn("Split-Summe: 2499 Cent", error_payload["error"])
+        self.assertIn("Differenz: -1 Cent", error_payload["error"])
         with urlopen(
             self.base_url + "/api/transactions/tx_newer",
             timeout=5,
