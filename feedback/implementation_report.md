@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260710-213916
+agent2/rework-20260710-214139
 
 ## Geaenderte Dateien
 
@@ -66,14 +66,24 @@ agent2/codex-20260710-213916
 
 ## Hinweise fuer den Review-Agenten
 
-- `feedback/agent2_review_request.md` war nicht vorhanden; es handelt sich um
-  eine Erstumsetzung.
-- Vor Arbeitsbeginn waren bereits `feedback/Review-report.md` geaendert und
-  `feedback/agent2_prompt.md` untracked; beide Dateien wurden nicht
-  bearbeitet.
+- `feedback/agent2_review_request.md` wurde gelesen und nicht bearbeitet.
+- Vor Arbeitsbeginn waren bereits `feedback/Review-report.md` geaendert sowie
+  `feedback/agent2_prompt.md` und `feedback/agent2_review_request.md`
+  untracked; diese Dateien wurden nicht bearbeitet.
 - In diesem Durchlauf wurden keine `.env`-Dateien, Secrets, externen Dienste
   oder echten Login-/Banking-Aktionen verwendet.
 
 ## Nachbesserung nach Review
 
-- Nicht zutreffend.
+- Die blockierende Review-Beanstandung war, dass im abgelehnten Branch nur
+  dieser Implementation Report sichtbar war und die behaupteten Code- und
+  Testaenderungen nicht im Diff enthalten waren.
+- Im aktuellen Rework-Stand sind die fachlichen Aenderungen fuer
+  Transaktions-Splits in den relevanten Code- und Testdateien vorhanden:
+  Datenmodell, Tabelle/Migration, Lade- und Speicherlogik, Summenvalidierung,
+  API-Endpunkte sowie Persistenz- und API-Tests.
+- Die Atomaritaet fehlerhafter Speicherungen ist durch einen Store-Test
+  abgesichert: Eine falsche Split-Summe loest `ValueError` aus und laesst
+  bestehende Split-Zeilen unveraendert.
+- Die API-Fehlerfaelle sind durch Dashboard-Tests abgesichert: Ein PUT mit
+  falscher Split-Summe liefert `400` und bestehende Splits bleiben erhalten.
