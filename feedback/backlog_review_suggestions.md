@@ -1,2 +1,3 @@
-- Optional den Browser-Test um ein echtes Schließen und erneutes Öffnen der Transaktion erweitern.
-- Optional bei unpassender Split-Summe den Speichern-Button deaktivieren oder eine explizite lokale Warnmeldung anzeigen, statt erst die Backend-Validierung auszulösen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
