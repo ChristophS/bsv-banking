@@ -4146,9 +4146,21 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         viewport={"width": 1500, "height": 1000}
                     )
                     page_errors = []
+                    split_put_requests = []
                     page.on(
                         "pageerror",
                         lambda error: page_errors.append(str(error)),
+                    )
+                    page.on(
+                        "request",
+                        lambda request: (
+                            split_put_requests.append(request.method)
+                            if request.method == "PUT"
+                            and request.url.endswith(
+                                "/api/transactions/tx_newer/splits"
+                            )
+                            else None
+                        ),
                     )
                     page.goto(base_url, wait_until="networkidle")
                     page.locator("tr[data-id='tx_newer']").click()
@@ -4208,6 +4220,7 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         ["Teilbetrag Eintritt", "API Teil 2"],
                         [split["description"] for split in persisted],
                     )
+                    self.assertEqual(["PUT"], split_put_requests)
 
                     editor.locator("[data-split-amount]").first().fill("")
                     expect(editor.locator(".form-error")).to_contain_text(
@@ -4223,22 +4236,14 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     editor.locator("[data-split-amount]").first().fill("1000")
                     second_row = editor.locator(".split-row").last()
                     second_row.locator("[data-split-amount]").fill("1000")
-                    with page.expect_response(
-                        lambda response: (
-                            response.request.method == "PUT"
-                            and response.url.endswith(
-                                "/api/transactions/tx_newer/splits"
-                            )
-                        )
-                    ) as invalid_response:
-                        editor.locator(
-                            "button",
-                            has_text="Splits speichern",
-                        ).click()
-                    self.assertEqual(400, invalid_response.value.status)
+                    editor.locator(
+                        "button",
+                        has_text="Splits speichern",
+                    ).click()
                     expect(editor.locator(".form-error")).to_contain_text(
                         "Summe der Splits"
                     )
+                    self.assertEqual(["PUT"], split_put_requests)
 
                     persisted_after_error = page.evaluate(
                         """

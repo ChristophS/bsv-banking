@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260710-154925
+agent2/codex-20260710-200239
 
 ## Geaenderte Dateien
 
@@ -12,22 +12,22 @@ agent2/codex-20260710-154925
 
 ## Umgesetzte Punkte
 
-- Vorhandene Transaktions-Splits werden in der bestehenden Transaktionsdetailansicht angezeigt und der vorhandene dynamische Split-Editor ist dort angebunden.
+- Vorhandene Transaktions-Splits werden in der bestehenden Transaktionsdetailansicht angezeigt und ueber den vorhandenen dynamischen Split-Editor bearbeitbar gemacht.
 - Split-Zeilen koennen bearbeitet, hinzugefuegt und entfernt werden.
-- Das Speichern nutzt `PUT /api/transactions/<id>/splits` und rendert nach erfolgreichem Speichern die vom Backend zurueckgegebenen Split-Daten neu.
-- Split-Betraege werden im UI als ganzzahlige Cent-Werte gelesen und gesendet; die bisherige Float-/Dezimal-Umrechnung wurde entfernt.
+- Das Speichern gueltiger Split-Listen nutzt `PUT /api/transactions/<id>/splits` und rendert nach erfolgreichem Speichern die vom Backend zurueckgegebenen Split-Daten neu.
+- Split-Betraege werden im UI als ganzzahlige Cent-Werte gelesen und gesendet.
 - Leere oder nicht ganzzahlige Split-Betraege werden im Split-Bereich sichtbar gemeldet.
-- Backend-Validierungsfehler, zum Beispiel eine nicht passende Split-Summe, bleiben im Split-Bereich sichtbar und werden nicht durch die Summenaktualisierung ausgeblendet.
-- Die Summenanzeige fuer Originalbetrag, Split-Summe und Differenz bleibt erhalten.
+- Nicht ausgeglichene Split-Summen werden bereits vor dem Speichern im Split-Bereich als Fehler angezeigt und der PUT-Request wird in diesem Fall nicht ausgefuehrt.
+- Die Summenanzeige fuer Originalbetrag, Split-Summe und Differenz bleibt sichtbar.
 - Neue Split-Zeilen werden mit leeren Klassifikationsfeldern angelegt.
-- Ein Browser-Test deckt Anzeigen, Bearbeiten, Hinzufuegen, Speichern, lokale Betragsvalidierung, Backend-Fehleranzeige und unveraenderte Persistenz nach einem 400-Fehler ab.
+- Ein Browser-Test deckt Anzeigen, Bearbeiten, Hinzufuegen, Speichern, lokale Betragsvalidierung, lokale Summenvalidierung ohne PUT und unveraenderte Persistenz nach dem Fehler ab.
+- Bestehende API-Tests decken weiterhin Laden, Speichern, Entfernen und serverseitige Validierungsfehler der Split-Schnittstelle ab.
 
 ## Nicht umgesetzte Punkte
 
 - Keine Aenderung an `banking_dashboard/static/index.html`, weil die Detailansicht bereits dynamisch gerendert wird und kein statischer Container erforderlich war.
 - Keine Backend-Aenderung an `banking_dashboard/server.py`, `transaction_store/database.py` oder `transaction_store/models.py`, weil der vorhandene Split-Endpunkt und die Persistenzlogik ausreichten.
 - Keine Bearbeitung von `vorgangs_id` ueber Auswahlfelder; vorhandene Werte werden als Textfeld angezeigt und erhalten beziehungsweise mitsendbar gemacht.
-- Keine strikte UI-Erzwingung des Summengleichgewichts vor dem Speichern; die Abweichung wird angezeigt und die bestehende Backend-Validierung liefert die sichtbare Fehlermeldung.
 - Keine echten Banking-, Mail-, Microsoft-Graph-, DFBnet- oder externen Login-Aktionen.
 
 ## Ausgefuehrte Tests
@@ -47,7 +47,8 @@ agent2/codex-20260710-154925
 
 - Vor Beginn waren bereits Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md` im Arbeitsbaum vorhanden; diese Dateien wurden nicht bearbeitet.
 - Der zentrale Frontend-Test ist `DashboardTransactionBrowserTests.test_transaction_split_editor_updates_and_shows_errors`.
-- Der Test prueft auch, dass ein Backend-400 wegen unpassender Split-Summe die zuvor gespeicherten Splits nicht veraendert.
+- Der Test prueft jetzt auch, dass eine nicht passende Split-Summe lokal abgefangen wird und keinen weiteren `PUT /api/transactions/<id>/splits` ausloest.
+- Die serverseitige Atomaritaet bei unpassender Split-Summe bleibt in den bestehenden Store- und HTTP-Tests abgesichert.
 
 ## Nachbesserung nach Review
 

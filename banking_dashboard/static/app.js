@@ -9320,7 +9320,10 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       formError.hidden = true;
       status.textContent = "Split-Summe ausgeglichen";
     } else {
-      formError.hidden = true;
+      formError.textContent =
+        "Die Summe der Splits muss exakt dem Transaktionsbetrag " +
+        "entsprechen.";
+      formError.hidden = false;
       status.textContent = "Split-Summe nicht ausgeglichen";
     }
   };
@@ -9400,6 +9403,19 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       status.className = "save-state is-error";
       status.textContent = "Eingabe pruefen";
       updateSummary();
+      return;
+    }
+    const sum = current.reduce(
+      (total, split) => total + (split.amount_minor ?? 0),
+      0,
+    );
+    if (current.length && sum !== originalAmount) {
+      formError.textContent =
+        "Die Summe der Splits muss exakt dem Transaktionsbetrag " +
+        `entsprechen. Differenz: ${formatMinorAmount(originalAmount - sum)}`;
+      formError.hidden = false;
+      status.className = "save-state is-error";
+      status.textContent = "Split-Summe nicht ausgeglichen";
       return;
     }
     const payload = {
