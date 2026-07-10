@@ -2,33 +2,26 @@
 
 ## Branchname
 
-agent2/codex-20260710-082614
+agent2/codex-20260710-084637
 
 ## Geaenderte Dateien
 
-- banking_dashboard/server.py
 - banking_dashboard/static/app.js
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Dedizierte Backend-Methode `link_transaction_vorgang` ergaenzt, um eine bestehende Transaktion idempotent mit einem bestehenden Vorgang zu verknuepfen.
-- Neuer HTTP-Endpunkt `POST /api/transactions/{transaktions_id}/vorgaenge` ergaenzt.
-- Existenz von Transaktion und Vorgang wird vor der Persistenz geprueft; unbekannte Vorgangs-IDs liefern einen sauberen 404-Fehler.
-- Die Zuordnung nutzt weiterhin `transaktion_vorgaenge` und ersetzt keine bestehenden Link-Listen eines Vorgangs.
-- `suggest_related_entities` liefert fuer `source_type: transaction` jetzt auch `vorgaenge` in `suggestions` und `candidates`.
-- Vorgangsvorschlaege nutzen Vorgangsdaten sowie Texte verknuepfter Transaktionen.
-- Die Transaktionsdetailansicht zeigt verknuepfte Vorgaenge und erlaubt die Auswahl eines weiteren bestehenden Vorgangs.
-- Bereits verknuepfte Vorgaenge werden in der UI angezeigt und aus der neuen Auswahl herausgefiltert.
-- Nach erfolgreicher Zuordnung wird die Transaktionsdetailansicht neu geladen und zeigt die neue Verknuepfung direkt an.
-- Tests fuer Erfolgsfall, idempotente Wiederholung, Fehlerfall und Vorgangsvorschlaege ergaenzt.
+- Der mailbasierte Vorgangsanlage-Flow laedt Link-Kandidaten jetzt beim Start der Vorgangspruefung mit `loadLinkCandidates(true)` frisch aus `/api/vorgaenge/link-candidates`.
+- Nach einem erfolgreichen `/api/refresh` wird der globale Link-Kandidaten-Cache invalidiert, damit spaetere Auswahldialoge nicht mit einer alten Kandidatenliste arbeiten.
+- Die bestehende Kandidatenlogik und der bestehende API-Endpunkt werden weiterverwendet; es wurde kein Mail-Sonderweg eingefuehrt.
+- Ein Regressionstest prueft, dass `DashboardDataStore.link_candidate_catalog()` nach einer nachtraeglich eingefuegten Transaktion den aktuellen Datenbankstand liefert.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neue Zuordnungstabelle und kein neues Datenmodell angelegt.
-- Keine automatische finale Vorgangsauswahl oder komplexe Matching-Logik implementiert.
-- Keine Aenderung an Transaktionensplitting, Teilbetraegen oder Vorgang-Zusammenfuehrung.
+- Keine neue API-Route und keine neue Persistenzstruktur angelegt.
+- Keine UI-Aenderung an Button-Texten, Layout oder Dialogstruktur vorgenommen.
+- Keine Aenderung an Mail-Anhaengen, Fehlbuchungsflows, Splitting oder Mailversand.
 - Keine Aenderung an `feedback/next_task.md`, `feedback/backlog.md`, `feedback/agent2_prompt.md`, `feedback/agent2_review_request.md` oder Review-Report-Dateien.
 
 ## Ausgefuehrte Tests
@@ -37,15 +30,15 @@ agent2/codex-20260710-082614
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 92 passed, 4 skipped
+- `tests/test_dashboard.py`: 93 passed, 4 skipped
 
 ## Bekannte Einschraenkungen
 
 - Keine manuellen Browsertests ausgefuehrt.
 - Keine externen Dienste, echten Logins oder produktiven Daten verwendet.
+- `tests/test_mail_integration.py` wurde nicht separat ausgefuehrt, da die Aenderung den bestehenden Dashboard-Kandidatenpfad und den Frontend-Cache betrifft.
 
 ## Hinweise fuer den Review-Agenten
 
 - Der Arbeitsbaum enthielt vor beziehungsweise unabhaengig von dieser Umsetzung bereits Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md`; diese Dateien wurden nicht bearbeitet.
-- Der neue Link-Flow verwendet bewusst nicht `update_vorgang`, damit bestehende Link-Listen eines Vorgangs nicht versehentlich ersetzt werden.
-- Doppelte Zuordnungen werden durch `INSERT OR IGNORE` und den bestehenden Primary Key auf `transaktion_vorgaenge` idempotent behandelt.
+- Der Backend-Katalog liest bereits direkt aus der Datenbank. Die Korrektur liegt deshalb bewusst im Frontend-Nachladen und in der Cache-Invalidierung nach erfolgreichem Refresh.

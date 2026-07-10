@@ -617,6 +617,46 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual([], transaction["classification_missing"])
         self.assertIn("classification", transaction)
 
+    def test_link_candidate_catalog_reflects_later_transactions(self):
+        initial = self.store.link_candidate_catalog()
+        self.assertNotIn(
+            "tx_later",
+            [item["id"] for item in initial["transactions"]],
+        )
+
+        with closing(connect_database(self.database_path)) as connection:
+            connection.execute(
+                """
+                INSERT INTO transactions (
+                    transaction_id, fingerprint, occurrence, provider,
+                    account_id, account_name, account_number, booking_date,
+                    value_date, counterparty, amount, currency, booking_text,
+                    purpose, amount_minor, counterparty_account, creditor_id,
+                    mandate_reference, source_info, raw_fields_json,
+                    first_seen_at, transaction_type, top_category,
+                    sub_category, sphere, professional_description,
+                    account_balance_minor
+                ) VALUES (
+                    'tx_later', 'fp_later', 1, 'testbank', 'acct_test',
+                    'Hauptkonto', 'DE001', '2026-06-20', '2026-06-20',
+                    'Nachtraeglicher Verein', '42.00', 'EUR',
+                    'Ueberweisung', 'Nachtraeglicher Zweck', 4200, 'DE003',
+                    'creditor_2', 'mandate_2', 'Nachtraegliche Testquelle',
+                    '{"Originalfeld": "Spaeterer Wert"}',
+                    '2026-06-20T08:00:00+00:00', 'Ausgabe',
+                    'Spielbetrieb', 'Eintritt', 'Zweckbetrieb',
+                    'Nachtraegliche Testbeschreibung', 6700
+                )
+                """
+            )
+            connection.commit()
+
+        refreshed = self.store.link_candidate_catalog()
+        self.assertIn(
+            "tx_later",
+            [item["id"] for item in refreshed["transactions"]],
+        )
+
     def test_balance_summary_reports_complete_total(self):
         summary = self.store.balance_summary()
 
