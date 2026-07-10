@@ -855,6 +855,40 @@ class DashboardDataStoreTests(unittest.TestCase):
             ["split_tx_newer_1"],
         )
 
+    def test_invalid_transaction_split_payload_keeps_existing_splits(self):
+        with self.assertRaises(ValueError):
+            self.store.replace_transaction_splits(
+                "tx_newer",
+                {
+                    "splits": [
+                        {
+                            "betrag_cent": 2500,
+                            "transaction_id": "tx_older",
+                        }
+                    ]
+                },
+            )
+
+        self.assertEqual(
+            [split["split_id"] for split in self.store.transaction_detail(
+                "tx_newer"
+            )["splits"]],
+            ["split_tx_newer_1"],
+        )
+
+        with self.assertRaises(ValueError):
+            self.store.replace_transaction_splits(
+                "tx_newer",
+                {"splits": [{"betrag_cent": 2500, "unexpected": "x"}]},
+            )
+
+        self.assertEqual(
+            [split["split_id"] for split in self.store.transaction_detail(
+                "tx_newer"
+            )["splits"]],
+            ["split_tx_newer_1"],
+        )
+
     def test_transaction_splits_can_be_removed(self):
         result = self.store.replace_transaction_splits(
             "tx_newer",
@@ -2718,6 +2752,55 @@ class DashboardHTTPTests(unittest.TestCase):
                 [1000, 1500],
             )
 
+        mismatched_transaction_request = Request(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            data=json.dumps(
+                {
+                    "splits": [
+                        {
+                            "transaction_id": "tx_older",
+                            "betrag_cent": 2500,
+                        },
+                    ]
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with self.assertRaises(HTTPError) as mismatched_error:
+            urlopen(mismatched_transaction_request, timeout=5)
+        self.assertEqual(mismatched_error.exception.code, 400)
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [split["betrag_cent"] for split in payload["splits"]],
+                [1000, 1500],
+            )
+
+        unknown_field_request = Request(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            data=json.dumps(
+                {"splits": [{"betrag_cent": 2500, "unexpected": "x"}]}
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with self.assertRaises(HTTPError) as unknown_field_error:
+            urlopen(unknown_field_request, timeout=5)
+        self.assertEqual(unknown_field_error.exception.code, 400)
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [split["betrag_cent"] for split in payload["splits"]],
+                [1000, 1500],
+            )
+
         missing_request = Request(
             self.base_url + "/api/transactions/tx_missing/splits",
             data=json.dumps({"splits": []}).encode("utf-8"),
@@ -4252,6 +4335,15 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     expect(editor).to_be_visible()
                     expect(editor).to_contain_text("Teilbetrag Eintritt")
                     expect(
+                        editor.locator("[data-split-summary='original']")
+                    ).to_contain_text("Originalbetrag")
+                    expect(
+                        editor.locator("[data-split-summary='sum']")
+                    ).to_contain_text("Split-Summe")
+                    expect(
+                        editor.locator("[data-split-summary='difference']")
+                    ).to_contain_text("Differenz")
+                    expect(
                         editor.locator("[data-split-amount]").first()
                     ).to_have_value("15,00")
                     expect(editor).to_contain_text("Spielbetrieb")
@@ -4364,6 +4456,46 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         [
                             split["amount_minor"]
                             for split in persisted_after_error
+                        ],
+                    )
+
+                    second_row.locator(
+                        "button",
+                        has_text="Entfernen",
+                    ).click()
+                    editor.locator("[data-split-amount]").first().fill("25,00")
+                    with page.expect_response(
+                        lambda response: (
+                            response.request.method == "PUT"
+                            and response.url.endswith(
+                                "/api/transactions/tx_newer/splits"
+                            )
+                        )
+                    ):
+                        editor.locator(
+                            "button",
+                            has_text="Splits speichern",
+                        ).click()
+                    expect(editor.locator(".split-row")).to_have_count(1)
+                    expect(
+                        editor.locator("[data-split-summary='difference']")
+                    ).to_contain_text("0,00")
+
+                    persisted_after_remove = page.evaluate(
+                        """
+                        async () => {
+                          const response = await fetch(
+                            "/api/transactions/tx_newer"
+                          );
+                          return (await response.json()).transaction.splits;
+                        }
+                        """
+                    )
+                    self.assertEqual(
+                        [2500],
+                        [
+                            split["amount_minor"]
+                            for split in persisted_after_remove
                         ],
                     )
                     self.assertEqual([], page_errors)

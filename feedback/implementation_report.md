@@ -2,94 +2,79 @@
 
 ## Branchname
 
-agent2/rework-20260710-214409
+agent2/rework-20260710-220256
 
 ## Geaenderte Dateien
 
-- transaction_store/database.py
-- tests/test_transactions.py
+- banking_dashboard/static/app.js
+- banking_dashboard/static/index.html
+- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Datenmodell `TransactionSplit` fuer Split-Zeilen mit Transaktionsbezug,
-  stabiler ID, Reihenfolge, Betrag in Cent und vorhandenen
-  Klassifikationsfeldern angelegt.
-- Tabelle `transaction_splits` inklusive Fremdschluesseln zu Transaktionen und
-  Vorgaengen, Sortierung und Indizes in die bestehende SQLite-Struktur
-  integriert.
-- Lade- und Ersetzungslogik fuer Splits einer einzelnen Transaktion ergaenzt.
-- Speichern validiert serverseitig, dass die Split-Summe exakt dem
-  Ursprungsbetrag der Transaktion entspricht.
-- Split-Ersetzung nutzt einen Savepoint, damit fehlerhafte Speicherungen keine
-  partiell geaenderten Split-Zeilen hinterlassen.
-- Doppelte `split_id`s innerhalb eines Speicherpayloads werden vor der
-  Persistenz als Validierungsfehler abgelehnt, damit daraus kein generischer
-  Datenbankfehler und keine Teilpersistenz entstehen.
-- Schlanke API fuer Lesen und vollstaendiges Speichern unter
-  `/api/transactions/{id}/splits` bereitgestellt.
-- Split-Zeilen werden mit derselben Klassifikationslogik bewertet wie
-  Transaktionen; aggregierte Split-Klassifikationsstatus werden in Detail- und
-  Split-Antworten ausgegeben.
-- Tests fuer Schema/Migration, Persistenz, Atomaritaet, Summenvalidierung,
-  Klassifikationsstatus und API-Verhalten ergaenzt.
+- Der Split-Editor in der Transaktionsdetailansicht zeigt die Summenlogik nun
+  explizit als getrennte UI-Werte fuer Originalbetrag, Split-Summe und
+  Differenz.
+- Die bestehende Split-Editor-Interaktion nutzt weiter die vorhandene
+  Detail-API und den bestehenden `PUT /api/transactions/<id>/splits`-Pfad.
+- Ein Dialog-Status mit `aria-live` wurde ergaenzt, damit Split-Fehler und
+  Speicherstatus im Detaildialog eindeutig angebunden sind.
+- Die Darstellung der Split-Summe wurde responsiv gestylt und bleibt in der
+  bestehenden Detailansicht abgegrenzt.
+- Der Browser-nahe Dashboard-Test prueft jetzt zusaetzlich die sichtbaren
+  Summenfelder und das Entfernen einer Split-Zeile mit anschliessender
+  Persistenz.
 
 ## Nicht umgesetzte Punkte
 
-- Kein neuer Split-Editor als fachlicher Bestandteil dieses Arbeitspakets.
-- Keine Zuordnung einzelner Splits zu mehreren Rechnungen oder Teilrechnungen.
-- Keine neue Persistenzgrundarchitektur ausserhalb der bestehenden
-  Transaktions-/Vorgangsstruktur.
-- Keine externen Dienste, echten Logins oder produktiven Datenzugriffe.
+- Keine neue Persistenzarchitektur angelegt.
+- Keine fachliche Klassifikation einzelner Split-Zeilen erweitert.
+- Keine Vorschlagslisten oder neuen Zuordnungsfluesse fuer Splits eingefuehrt.
+- Keine externen Dienste, echten Logins, Banking-Aktionen oder produktiven
+  Daten verwendet.
 
 ## Ausgefuehrte Tests
 
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
+- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 103 bestanden, 6 uebersprungen.
-- `tests/test_transactions.py`: 33 bestanden.
+- `tests/test_dashboard.py`: 104 bestanden, 6 uebersprungen.
 
 ## Bekannte Einschraenkungen
 
-- Das Speichern ist bewusst als vollstaendiges Ersetzen aller Splits einer
-  Transaktion umgesetzt.
-- `klassifikationsstatus` bleibt die bestehende Transaktionsklassifikation.
-  Der aus Splits abgeleitete Status wird separat als
-  `split_klassifikationsstatus` beziehungsweise
-  `gesamt_klassifikationsstatus` transportiert.
-- Leere Split-Listen liefern im Split-Endpunkt keinen aggregierten
-  Split-Status, weil keine Split-Zeilen vorhanden sind.
+- Das Speichern der Splits erfolgt weiterhin gesammelt als vollstaendiges
+  Ersetzen aller Split-Zeilen einer Transaktion.
+- Leere Split-Listen sind weiterhin erlaubt und entfernen alle Splits.
+- Die Split-Summe muss bei nicht leerer Split-Liste exakt dem
+  Transaktionsbetrag entsprechen.
+- Die Browser-Interaktion ist im Test an Playwright gekoppelt; wenn Playwright
+  oder Chromium lokal fehlen, wird dieser Teil wie bisher uebersprungen.
 
 ## Hinweise fuer den Review-Agenten
 
+- `feedback/next_task.md` wurde gelesen und nicht bearbeitet.
 - `feedback/agent2_review_request.md` wurde gelesen und nicht bearbeitet.
-- Vor Arbeitsbeginn waren bereits `feedback/Review-report.md` geaendert sowie
+- Vor Arbeitsbeginn waren `feedback/Review-report.md` geaendert sowie
   `feedback/agent2_prompt.md` und `feedback/agent2_review_request.md`
   untracked; diese Dateien wurden nicht bearbeitet.
-- In diesem Durchlauf wurden keine `.env`-Dateien, Secrets, externen Dienste
-  oder echten Login-/Banking-Aktionen verwendet.
+- Es wurden keine `.env`-Dateien, Secrets, Datenbanken ausserhalb der
+  temporaeren Testdatenbanken, externen Dienste oder echte Login-/Banking-
+  Aktionen verwendet.
 
 ## Nachbesserung nach Review
 
-- Die blockierende Review-Beanstandung war, dass im abgelehnten Branch nur
-  dieser Implementation Report sichtbar war und die behaupteten Code- und
-  Testaenderungen nicht im Diff enthalten waren.
-- Im aktuellen Rework-Stand sind die fachlichen Aenderungen fuer
-  Transaktions-Splits in den relevanten Code- und Testdateien vorhanden:
-  Datenmodell, Tabelle/Migration, Lade- und Speicherlogik, Summenvalidierung,
-  API-Endpunkte sowie Persistenz- und API-Tests.
-- Die Atomaritaet fehlerhafter Speicherungen ist durch einen Store-Test
-  abgesichert: Eine falsche Split-Summe loest `ValueError` aus und laesst
-  bestehende Split-Zeilen unveraendert.
-- Die Nachbesserung ergaenzt eine reale Code- und Testaenderung:
-  `replace_transaction_splits` validiert doppelte Split-IDs vor dem
-  Datenbank-Savepoint. Store- und API-Tests sichern ab, dass solche Requests
-  mit `ValueError` beziehungsweise HTTP `400` abgelehnt werden und bestehende
-  Split-Zeilen unveraendert bleiben.
-- Die API-Fehlerfaelle sind durch Dashboard-Tests abgesichert: Ein PUT mit
-  falscher Split-Summe oder doppelten Split-IDs liefert `400` und bestehende
-  Splits bleiben erhalten.
+- Der blockierende Review-Punkt zu fehlenden UI-Aenderungen wurde adressiert:
+  diese Nachbesserung enthaelt konkrete Aenderungen an
+  `banking_dashboard/static/app.js`, `banking_dashboard/static/index.html` und
+  `banking_dashboard/static/styles.css`.
+- Die Akzeptanzkriterien zur sichtbaren Summenlogik sind nun im DOM
+  nachvollziehbar: Originalbetrag, Split-Summe und Differenz werden separat
+  gerendert und im Browser-Test geprueft.
+- Die geforderten Dashboard-Aktionen bleiben ueber den bestehenden Editor
+  verfuegbar; der Test weist Anlegen, Bearbeiten, Backend-Fehleranzeige und
+  Loeschen einer Split-Zeile nach.
+- Die vorhandene serverseitige Validierung aus der vorherigen Nachbesserung
+  wurde beibehalten und nicht durch neue Parallelstrukturen ersetzt.
