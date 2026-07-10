@@ -8,37 +8,124 @@
 
 ## Begründung
 
-Die wesentlichen Anforderungen sind im Diff nachvollziehbar umgesetzt; es gibt keine blockierenden fachlichen oder technischen Abweichungen.
+Die Nachbesserung ist fachlich stimmig, der Diff belegt nun den geforderten Dashboard-API-/UI-Flow, und der nachgeladene Kontext zeigt, dass der Split-Editor bereits vorhanden war und nun seriös um Laden, explizites Neuladen, Summenbezug zur Originaltransaktion und passende Tests ergänzt wurde.
 
 ## Zusammenfassung
 
-Der Split-Editor der Transaktionsdetailansicht wurde sichtbar ergänzt bzw. nachgebessert: Summenlogik ist im UI klar dargestellt, Status-/Fehlermeldungen wurden verbessert, bestehende Split-API wird weiterverwendet und Server-/Dashboard-Tests decken Laden, Validierungsfehler und Entfernen ab.
+Der bestehende Dashboard-Split-Editor wurde korrekt an einen expliziten Lese-/Speicher-API-Flow für bestehende Splits angebunden, serverseitige Summenvalidierung verbessert und durch API- sowie browsernahe Tests abgesichert. Keine Architekturverletzung erkennbar.
 
-## Review-Ergebnis
+# Review Report
 
-Die Umsetzung kann akzeptiert werden.
+## Ergebnis
 
-## Geprüft gegen Auftrag
+**Accepted:** true
 
-Das Arbeitspaket verlangt einen nutzbaren Split-Editor in der Transaktionsdetailansicht mit sichtbarer Summenlogik, Nutzung der bestehenden Split-Backend-Struktur, verständlicher Fehleranzeige und automatisierten Tests für den Server-Flow.
+**Needs more context:** false
 
-## Positiv bewertet
+## Kurzfazit
 
-- **UI-Summenlogik sichtbar umgesetzt**: In `banking_dashboard/static/app.js` wird die bisher textuelle Summenzeile in drei klar getrennte Werte überführt: `Originalbetrag`, `Split-Summe` und `Differenz`. Das erfüllt das zentrale Akzeptanzkriterium zur nachvollziehbaren Summenanzeige.
-- **Transaktionsdetailansicht erweitert statt umgebaut**: In `index.html` und `styles.css` wurde der Split-Bereich nur gezielt ergänzt. Das bleibt im geforderten Scope und ist anschlussfähig für spätere Erweiterungen.
-- **Verständliche Status-/Fehlerkommunikation**: Der neue `detail-dialog-status` mit `aria-live` verbessert die Rückmeldung bei Validierungsfehlern und Speicherstatus. Zusätzlich werden Backend-Fehler weiterhin im Formular sichtbar gemacht.
-- **Bestehende Split-Architektur wird weiter genutzt**: Laut Diff wird kein neuer Persistenzpfad eingeführt. Die UI arbeitet weiter mit dem bestehenden Split-Endpunkt.
-- **Serverseitige Absicherung verbessert**: In `banking_dashboard/server.py` werden unbekannte Felder im Split-Payload sowie transaktionsfremde `transaction_id`/`transaktions_id` als `400`-würdige Validierungsfehler abgefangen. Das schützt die bestehende Architektur vor inkonsistenten oder versehentlich falschen Payloads.
-- **Automatisierte Tests ergänzt**:
-  - Serverseitig werden ungültige Split-Payloads und Erhalt bestehender Daten bei Fehlern geprüft.
-  - API-nah wird geprüft, dass solche Requests mit `400` scheitern und keine Teilpersistenz verursachen.
-  - Browser-nah wird die sichtbare Summenlogik sowie das Entfernen einer Split-Zeile mit anschließender Persistenz validiert.
+Die Umsetzung kann akzeptiert werden. Der vorliegende Compare belegt jetzt nachvollziehbar den geforderten Dashboard-Split-Flow für bestehende Transaktions-Splits: Laden über einen dedizierten GET-Endpunkt, Bearbeiten im bestehenden Detailbereich, Speichern über den PUT-Endpunkt, serverseitige Summenvalidierung und ergänzte Tests für API- und UI-nahes Verhalten.
 
-## Auffälligkeiten
+## Prüfung gegen das Arbeitspaket
 
-- Der `implementation_report_markdown` erwähnt `banking_dashboard/server.py` nicht in den geänderten Dateien, obwohl dort tatsächlich relevante Validierungslogik geändert wurde. Das ist ein Berichtsfehler, aber kein fachlicher oder technischer Blocker.
-- `github_changed_files` enthält `banking_dashboard/server.py`, während der Runner diese Datei nicht als validierten/staged Pfad aufgeführt hat. Da die Datei aber im maßgeblichen GitHub-Diff sauber enthalten ist und die Branch-Situation `ahead` bei `behind_by=0` zeigt, ist das hier kein Ablehnungsgrund.
+### 1. Nutzung bestehender Split-Persistenz / Architektur
 
-## Fazit
+Erfüllt.
 
-Die Umsetzung erfüllt die Anforderungen dieses Arbeitspakets inhaltlich: vorhandene Splits werden in der Detailansicht bearbeitbar gemacht, Summen werden verständlich visualisiert, Fehlerfälle bleiben bedienbar und die bestehenden Backend-Strukturen werden weiterverwendet. Die ergänzten Tests decken die wesentlichen Flows sinnvoll ab.
+- Im nachgeladenen Kontext ist der Split-Editor bereits als Teil des bestehenden Transaktions-Detailflows in `banking_dashboard/static/app.js` vorhanden.
+- Gespeichert wird weiterhin über `replace_transaction_splits(...)` und damit über bestehende `transaction_store`-Strukturen.
+- Es wurde keine neue Parallelarchitektur für Splits eingeführt.
+- Es wurden keine neuen Grundbeziehungen zu Belegen, Rechnungen oder anderen Entitäten eingeführt.
+
+Das entspricht den Architekturvorgaben des Arbeitspakets.
+
+### 2. Kleiner API-Flow in `server.py` zum Lesen und Speichern
+
+Erfüllt.
+
+- Der bestehende GET-Endpunkt `/api/transactions/{id}/splits` wird im Diff sinnvoll erweitert:
+  - `amount_minor`
+  - `betrag_cent`
+  - `betrag`
+- Der PUT-Endpunkt `/api/transactions/{id}/splits` war bereits vorhanden und bleibt die Speicherschnittstelle.
+- Im Kontext ist klar sichtbar, dass beide Endpunkte im Dashboard-Server korrekt verdrahtet sind.
+
+Wichtig: Durch die GET-Erweiterung ist der Soll-Zustand „vorhandene Split-Zeilen einer Transaktion laden“ im Dashboard-API-Flow jetzt explizit belegbar.
+
+### 3. Split-Editor im Transaktions-Detailbereich
+
+Erfüllt.
+
+Der Kontext zeigt, dass der Editor bereits im Transaktionsdetail existierte. Die jetzt eingecheckte Nachbesserung macht den geforderten Flow explizit und überprüfbar:
+
+- Anzeige und Bearbeitung mehrerer Split-Zeilen ist vorhanden.
+- Hinzufügen und Entfernen von Zeilen ist vorhanden.
+- Neu hinzugefügt wurde ein expliziter Button **„Splits neu laden“**, der den GET-Endpunkt aufruft.
+- Das bleibt innerhalb des bestehenden Detaildialogs; es wurde kein neuer Navigationsflow gebaut.
+- `index.html` enthält nun einen klaren statischen Host-Marker am bestehenden Detail-Content-Container.
+
+Damit sind die UI-bezogenen Akzeptanzkriterien erfüllt.
+
+### 4. Summenvalidierung gegen den Originalbetrag
+
+Erfüllt.
+
+- Clientseitig existiert im Kontext bereits eine Summenprüfung im Editor (`updateSummary`, Differenz zum Originalbetrag, Disabled-State bei Betragsformatfehlern).
+- Serverseitig validiert weiterhin `replace_transaction_splits(...)` gegen `transaction.amount_minor`.
+- Der Diff verbessert die serverseitige Fehlermeldung deutlich um:
+  - Erwartungswert
+  - tatsächliche Split-Summe
+  - Differenz
+
+Das erfüllt die Forderung, ungültige Split-Summen zu verhindern oder klar abzuweisen. Die serverseitige Prüfung ist hier besonders wichtig und vorhanden.
+
+### 5. Tests für Laden, Speichern und Validierungsfehler
+
+Erfüllt.
+
+Im Diff und im nachgeladenen Testkontext sind die geforderten Nachweise vorhanden:
+
+- API-Test prüft den GET-/splits-Endpunkt und die zusätzlichen Betragsfelder.
+- API-Test prüft weiterhin PUT-Speichern.
+- API-Test prüft den 400-Fehler bei falscher Split-Summe.
+- API-Test prüft, dass nach Fehler keine Teilpersistenz entstanden ist.
+- Browsernaher Test prüft den Split-Editor inklusive:
+  - Sichtbarkeit im Detaildialog
+  - Bearbeiten
+  - Hinzufügen
+  - Entfernen
+  - Speichern
+  - Validierungsfehler
+  - explizites Neuladen über GET `/api/transactions/tx_newer/splits`
+
+Damit sind die Test-Akzeptanzkriterien ausreichend abgedeckt.
+
+## Abgleich mit dem Implementation Report
+
+Der Report ist im Wesentlichen konsistent mit dem Diff und dem nachgeladenen Kontext:
+
+- Explizites Neuladen über GET-Endpunkt: belegt.
+- Zusätzliche Originalbetragsfelder im Split-GET: belegt.
+- Konkretisierte Fehlermeldung bei falscher Split-Summe: belegt.
+- API- und UI-nahe Tests: belegt.
+
+Es gibt keinen wesentlichen Widerspruch zwischen Report und tatsächlicher Änderung.
+
+## Auffälligkeiten / Hinweise
+
+### Zusätzliche Änderung in `transaction_store/database.py`
+
+Im GitHub-Compare ist zusätzlich `transaction_store/database.py` enthalten und verbessert die Fehlermeldung der Summenvalidierung. Das ist fachlich passend und kein Scope-Creep-Problem, obwohl es gegenüber den Runner-Daten als Zusatz auffällt.
+
+### Bereits vorhandener Split-Editor im Kontext
+
+Der nachgeladene Kontext zeigt, dass ein großer Teil des Split-Editors schon vor dieser Nachbesserung vorhanden war. Für dieses Arbeitspaket ist das okay: Bewertet wird die tatsächlich eingecheckte Nachbesserung gegen das Soll. Diese Nachbesserung schließt genau die im vorherigen Review fehlende Belegbarkeit des Dashboard-API-/UI-Flows.
+
+## Nicht-blockierende Vorschläge
+
+- Die GET-Antwort für Splits enthält mit `amount_minor` und `betrag_cent` zwei semantisch gleiche Cent-Felder; mittelfristig wäre eine API-Vereinheitlichung sinnvoll.
+- Der Prozess um Runner/GitHub-Compare sollte künftig sauberer sein, damit zusätzliche Dateien wie `transaction_store/database.py` nicht als Compare-Abweichung auftauchen.
+
+## Schlussentscheidung
+
+Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch. Insbesondere sind jetzt alle wesentlichen Akzeptanzkriterien im maßgeblichen Diff und im Kontext nachvollziehbar belegt.
