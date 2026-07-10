@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Split-Klassifikationsfelder an die bestehenden Datalist-/Vorschlagsquellen der normalen Klassifikationsbearbeitung anbinden.
+- Status-CSS-Zustand des Split-Editors bei erneut ausgeglichener Summe explizit zurücksetzen.
