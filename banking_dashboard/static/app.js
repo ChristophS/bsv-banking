@@ -9332,7 +9332,7 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     row.dataset.splitId = split.split_id || "";
     row.append(
       splitInput(
-        "Betrag (Cent)",
+        "Betrag (EUR)",
         formatMinorInput(split.amount_minor ?? split.betrag_cent),
         "amount",
       ),
@@ -9364,6 +9364,7 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       ),
       splitInput("Vorgangs-ID", split.vorgangs_id || "", "vorgang"),
     );
+    configureSplitClassificationFields(row);
     const meta = document.createElement("div");
     meta.className = "split-meta";
     meta.textContent = split.split_id
@@ -9388,7 +9389,22 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     updateSummary();
   };
 
-  addButton.addEventListener("click", () => addRow());
+  addButton.addEventListener("click", () => {
+    const current = readRows();
+    const sum = current.reduce(
+      (total, split) => total + (split.amount_minor ?? 0),
+      0,
+    );
+    addRow({
+      amount_minor: originalAmount - sum,
+      description: "",
+      transaction_type: transaction.transaktionstyp || "",
+      top_category: transaction.oberkategorie || "",
+      sub_category: transaction.unterkategorie || "",
+      sphere: transaction.sphaere || "",
+      professional_description: transaction.fachliche_beschreibung || "",
+    });
+  });
   rows.addEventListener("input", updateSummary);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -9489,28 +9505,134 @@ function splitSphereField(value) {
   return field;
 }
 
+function configureSplitClassificationFields(row) {
+  const transactionType = row.querySelector("[data-split-type]");
+  const topCategory = row.querySelector("[data-split-top]");
+  const subCategory = row.querySelector("[data-split-sub]");
+  const sphere = row.querySelector("[data-split-sphere]");
+  if (!transactionType || !topCategory || !subCategory || !sphere) {
+    return;
+  }
+
+  const createDatalist = (input, name, values) => {
+    const datalist = document.createElement("datalist");
+    datalist.dataset.classificationOptions = name;
+    datalist.id = `split-${name}-${ruleDatalistCounter += 1}`;
+    for (const value of values) {
+      const option = document.createElement("option");
+      option.value = value;
+      datalist.append(option);
+    }
+    row.append(datalist);
+    input.setAttribute("list", datalist.id);
+    return datalist;
+  };
+
+  createDatalist(
+    transactionType,
+    "transaction-types",
+    state.classificationOptions.transaction_types || [],
+  );
+  createDatalist(
+    topCategory,
+    "top-categories",
+    state.classificationOptions.top_categories || [],
+  );
+  const subcategoryDatalist = createDatalist(
+    subCategory,
+    "sub-categories",
+    [],
+  );
+
+  const subcategories = new Map(
+    (state.classificationOptions.sub_categories || []).map((entry) => [
+      entry.top_category.toLocaleLowerCase("de-DE"),
+      entry.values,
+    ]),
+  );
+  const sphereDefaults = new Map(
+    (state.classificationOptions.sphere_defaults || []).map((entry) => [
+      [
+        entry.top_category.toLocaleLowerCase("de-DE"),
+        entry.sub_category.toLocaleLowerCase("de-DE"),
+      ].join("\u0000"),
+      entry.sphere,
+    ]),
+  );
+
+  const refreshSubcategories = () => {
+    const topValue = topCategory.value.trim();
+    subcategoryDatalist.replaceChildren();
+    const values = subcategories.get(
+      topValue.toLocaleLowerCase("de-DE"),
+    ) || [];
+    for (const value of values) {
+      const option = document.createElement("option");
+      option.value = value;
+      subcategoryDatalist.append(option);
+    }
+  };
+
+  const applySphereDefault = () => {
+    const topValue = topCategory.value.trim();
+    const subValue = subCategory.value.trim();
+    if (!topValue || !subValue) {
+      return;
+    }
+    const preferred = sphereDefaults.get(
+      [
+        topValue.toLocaleLowerCase("de-DE"),
+        subValue.toLocaleLowerCase("de-DE"),
+      ].join("\u0000"),
+    );
+    if (preferred) {
+      sphere.value = preferred;
+    }
+  };
+
+  topCategory.addEventListener("input", () => {
+    refreshSubcategories();
+    applySphereDefault();
+  });
+  topCategory.addEventListener("change", () => {
+    refreshSubcategories();
+    applySphereDefault();
+  });
+  subCategory.addEventListener("input", applySphereDefault);
+  subCategory.addEventListener("change", applySphereDefault);
+  refreshSubcategories();
+}
+
 function parseSplitAmountMinor(value, index) {
   const raw = String(value ?? "").trim();
   if (!raw) {
     return {
       value: null,
-      error: `Split ${index} braucht einen Betrag in Cent.`,
+      error: `Split ${index} braucht einen Betrag in Euro.`,
     };
   }
-  if (!/^-?\d+$/.test(raw)) {
+  const match = raw.replace(",", ".").match(/^(-?)(\d+)(?:\.(\d{1,2}))?$/);
+  if (!match) {
     return {
       value: null,
-      error: `Split ${index} braucht einen ganzzahligen Betrag in Cent.`,
+      error: `Split ${index} braucht einen Euro-Betrag mit maximal zwei Nachkommastellen.`,
     };
   }
-  return {value: Number.parseInt(raw, 10), error: ""};
+  const sign = match[1] === "-" ? -1 : 1;
+  const euros = Number.parseInt(match[2], 10);
+  const cents = Number.parseInt((match[3] || "").padEnd(2, "0"), 10) || 0;
+  return {value: sign * ((euros * 100) + cents), error: ""};
 }
 
 function formatMinorInput(value) {
   if (value === null || value === undefined || value === "") {
     return "";
   }
-  return String(value);
+  const sign = Number(value) < 0 ? "-" : "";
+  const absolute = Math.abs(Number(value));
+  const euros = Math.trunc(absolute / 100);
+  const cents = String(absolute % 100).padStart(2, "0");
+  return `${sign}${euros},${cents}`;
 }
 
 function formatMinorAmount(value) {
