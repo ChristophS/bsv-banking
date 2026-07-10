@@ -9271,15 +9271,15 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
   const readRows = () => [...rows.querySelectorAll("[data-split-row]")].map(
     (row) => ({
       split_id: row.dataset.splitId || "",
-      betrag_cent: parseMinorAmount(
+      amount_minor: parseMinorAmount(
         row.querySelector("[data-split-amount]").value,
       ),
-      beschreibung: row.querySelector("[data-split-description]").value,
-      transaktionstyp: row.querySelector("[data-split-type]").value,
-      oberkategorie: row.querySelector("[data-split-top]").value,
-      unterkategorie: row.querySelector("[data-split-sub]").value,
-      sphaere: row.querySelector("[data-split-sphere]").value,
-      fachliche_beschreibung: row.querySelector(
+      description: row.querySelector("[data-split-description]").value,
+      transaction_type: row.querySelector("[data-split-type]").value,
+      top_category: row.querySelector("[data-split-top]").value,
+      sub_category: row.querySelector("[data-split-sub]").value,
+      sphere: row.querySelector("[data-split-sphere]").value,
+      professional_description: row.querySelector(
         "[data-split-professional]",
       ).value,
       vorgangs_id: row.querySelector("[data-split-vorgang]").value,
@@ -9289,7 +9289,7 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
   const updateSummary = () => {
     const current = readRows();
     const sum = current.reduce(
-      (total, split) => total + split.betrag_cent,
+      (total, split) => total + split.amount_minor,
       0,
     );
     const difference = originalAmount - sum;
@@ -9316,19 +9316,50 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     row.dataset.splitRow = "true";
     row.dataset.splitId = split.split_id || "";
     row.append(
-      splitInput("Betrag", formatMinorInput(split.betrag_cent), "amount"),
-      splitInput("Beschreibung", split.beschreibung || "", "description"),
-      splitInput("Transaktionstyp", split.transaktionstyp || "", "type"),
-      splitInput("Oberkategorie", split.oberkategorie || "", "top"),
-      splitInput("Unterkategorie", split.unterkategorie || "", "sub"),
-      splitSphereField(split.sphaere || ""),
+      splitInput(
+        "Betrag",
+        formatMinorInput(split.amount_minor ?? split.betrag_cent),
+        "amount",
+      ),
+      splitInput(
+        "Beschreibung",
+        split.description ?? split.beschreibung ?? "",
+        "description",
+      ),
+      splitInput(
+        "Transaktionstyp",
+        split.transaction_type ?? split.transaktionstyp ?? "",
+        "type",
+      ),
+      splitInput(
+        "Oberkategorie",
+        split.top_category ?? split.oberkategorie ?? "",
+        "top",
+      ),
+      splitInput(
+        "Unterkategorie",
+        split.sub_category ?? split.unterkategorie ?? "",
+        "sub",
+      ),
+      splitSphereField(split.sphere ?? split.sphaere ?? ""),
       splitInput(
         "Fachliche Beschreibung",
-        split.fachliche_beschreibung || "",
+        split.professional_description ?? split.fachliche_beschreibung ?? "",
         "professional",
       ),
       splitInput("Vorgangs-ID", split.vorgangs_id || "", "vorgang"),
     );
+    const meta = document.createElement("div");
+    meta.className = "split-meta";
+    meta.textContent = split.split_id
+      ? [
+          `ID ${split.split_id}`,
+          `erstellt ${formatDateTime(split.created_at || split.erstellt_am)}`,
+          `aktualisiert ${formatDateTime(
+            split.updated_at || split.aktualisiert_am,
+          )}`,
+        ].join(" · ")
+      : "Neue Split-Zeile";
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "secondary-action split-remove";
@@ -9337,7 +9368,7 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       row.remove();
       updateSummary();
     });
-    row.append(removeButton);
+    row.append(meta, removeButton);
     rows.append(row);
     updateSummary();
   };

@@ -2,44 +2,32 @@
 
 ## Branchname
 
-agent2/codex-20260710-152331
+agent2/codex-20260710-153120
 
 ## Geaenderte Dateien
 
-- feedback/implementation_report.md
-
-Keine Code-Dateien in diesem Lauf geaendert. Die im Arbeitspaket geforderte
-Split-Grundlage war im aktuellen Stand bereits in folgenden Dateien vorhanden
-und wurde geprueft:
-
-- transaction_store/database.py
-- transaction_store/models.py
 - banking_dashboard/server.py
 - banking_dashboard/static/app.js
 - banking_dashboard/static/styles.css
 - tests/test_dashboard.py
-- tests/test_transactions.py
+- feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Vorhandene Repository-Funktion `list_transaction_splits()` geprueft: Splits einer Transaktion werden stabil in Einfuegereihenfolge geladen.
-- Vorhandene Repository-Funktion `replace_transaction_splits()` geprueft: Split-Listen werden per Savepoint atomar ersetzt.
-- Nicht-leere Split-Listen werden vor dem Loeschen/Ersetzen exakt gegen `transactions.amount_minor` validiert, inklusive positiver und negativer Betraege.
-- Leere Split-Listen entfernen vorhandene Splits vollstaendig.
-- Transaktionsdetail-API nutzt die zentrale Split-Lesefunktion und liefert Split-Betraege, Klassifikationsfelder, Beschreibung, optionale `vorgangs_id` sowie Zeitstempel aus.
-- Endpunkt `PUT /api/transactions/<id>/splits` speichert Split-Listen und liefert bei Summenfehlern `400` sowie bei unbekannter Transaktion `404`.
-- Frontend-Detailansicht enthaelt einen einfachen Split-Editor mit Zeilen hinzufuegen, entfernen, Betrag/Klassifikation/Beschreibung/Vorgangs-ID bearbeiten und speichern.
-- Frontend zeigt Originalbetrag, Split-Summe und Differenz an und deaktiviert Speichern bei nicht ausgeglichener nicht-leerer Split-Liste.
-- Tests fuer API, Store-Verhalten, Atomaritaet, positive/negative Betraege und Entfernen von Splits sind vorhanden und erfolgreich ausgefuehrt.
+- Direkten Read-Endpunkt `GET /api/transactions/<id>/splits` ergaenzt.
+- Split-Serialisierung im Dashboard erweitert: neben bestehenden deutschen Alias-Feldern werden die geforderten Modellfeldnamen `transaction_id`, `amount_minor`, `description`, `transaction_type`, `top_category`, `sub_category`, `sphere`, `professional_description`, `created_at` und `updated_at` ausgeliefert.
+- Split-Speicherpayload akzeptiert die Modellfeldnamen und bleibt rueckwaertskompatibel zu den bisherigen deutschen Alias-Feldern.
+- Frontend-Split-Editor sendet beim Speichern kanonische Modellfeldnamen und liest weiterhin beide Feldfamilien.
+- Frontend zeigt gespeicherte Split-ID sowie Erstell- und Aktualisierungszeit pro Split-Zeile an.
+- Tests fuer Detail-Serialisierung, direkten Split-Read-Endpunkt und Write-Roundtrip mit Modellfeldnamen ergaenzt.
 
 ## Nicht umgesetzte Punkte
 
-- Kein vollstaendiger Rechnungs-/Mehrvorgangs-Workflow.
-- Keine automatische Vorgangserzeugung oder Neuverknuepfung aus Split-Daten.
-- Keine neuen Tabellen und keine Split-Historie.
-- Keine Komfortfunktionen zur Dokumentzuordnung pro Split.
-- Keine echten Banking-, Mail-, Microsoft-Graph-, DFBnet- oder externen Login-Aktionen ausgefuehrt.
-- Keine Aenderungen an `feedback/next_task.md`, `feedback/backlog.md`, `feedback/agent2_prompt.md`, `feedback/agent2_review_request.md` oder Review-Report-Dateien.
+- Kein vollstaendiger Komfort-Split-Editor ueber den vorhandenen minimalen Zeileneditor hinaus.
+- Keine automatische Vorgangserzeugung oder Neuorganisation von Vorgaengen aus Splits.
+- Keine Dokumenten- oder Mail-Zuordnung zu einzelnen Splits.
+- Keine Migrationstests 13->14.
+- Keine echten Banking-, Mail-, Microsoft-Graph-, DFBnet- oder externen Login-Aktionen.
 
 ## Ausgefuehrte Tests
 
@@ -56,15 +44,15 @@ und wurde geprueft:
 ## Bekannte Einschraenkungen
 
 - Kein manueller Browser-Test ausgefuehrt.
-- Der Split-Editor ist bewusst minimal und erzeugt keine automatische Root-Klassifikationsaenderung.
-- Betragserfassung im Frontend erfolgt als Euro-Wert und wird clientseitig in Cent umgerechnet; die verbindliche Summenvalidierung bleibt im Backend.
+- Betragserfassung im Frontend bleibt eine Euro-Anzeigeeingabe, die clientseitig nach Cent umgerechnet wird; die verbindliche Summenvalidierung bleibt im Backend bei `replace_transaction_splits`.
+- Leere Split-Listen entfernen weiterhin alle Splits einer Transaktion.
 
 ## Hinweise fuer den Review-Agenten
 
-- Der Arbeitsbaum enthielt bereits Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md`; diese Dateien wurden nicht bearbeitet.
-- Die zentrale Atomaritaet liegt in `transaction_store.database.replace_transaction_splits()` per SQLite-Savepoint.
-- Leere Split-Listen sind als explizites Entfernen erlaubt; alle nicht-leeren Listen muessen exakt auf den Transaktionsbetrag summieren.
-- API-Ausgabe verwendet analog zu bestehenden Detaildaten deutsche Feldnamen (`betrag_cent`, `beschreibung`, `vorgangs_id`, Klassifikationsfelder).
+- Der Arbeitsbaum enthielt vor Beginn bereits Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md`; diese Dateien wurden nicht bearbeitet.
+- Die Atomaritaet der Persistenz bleibt in `transaction_store.database.replace_transaction_splits()` per SQLite-Savepoint.
+- Der neue GET-Endpunkt nutzt dieselbe Serialisierung wie die Transaktionsdetailansicht.
+- Bestehende deutsche Feldnamen bleiben aus Kompatibilitaetsgruenden erhalten; die geforderten Modellfeldnamen sind zusaetzlich vorhanden.
 
 ## Nachbesserung nach Review
 
