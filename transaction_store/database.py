@@ -16,7 +16,7 @@ from uuid import uuid4
 from banking_readonly.security import ensure_private_directory, protect_file
 
 from .classification import SQL_CLASSIFICATION_STATUS_EXPRESSION
-from .models import ParsedFile, ParsedTransaction
+from .models import ParsedFile, ParsedTransaction, TransactionSplit
 
 
 SCHEMA_VERSION = 14
@@ -375,6 +375,141 @@ def transaction_rows_by_ids(
             row["transaktions_id"],
         ),
     )
+
+
+def list_transaction_splits(
+    connection: sqlite3.Connection,
+    transaction_id: str,
+) -> list[TransactionSplit]:
+    rows = connection.execute(
+        """
+        SELECT
+            split_id,
+            transaction_id,
+            amount_minor,
+            description,
+            transaction_type,
+            top_category,
+            sub_category,
+            sphere,
+            professional_description,
+            vorgangs_id,
+            created_at,
+            updated_at
+        FROM transaction_splits
+        WHERE transaction_id = ?
+        ORDER BY created_at, rowid
+        """,
+        (transaction_id,),
+    ).fetchall()
+    return [
+        TransactionSplit(
+            split_id=str(row["split_id"]),
+            transaction_id=str(row["transaction_id"]),
+            amount_minor=int(row["amount_minor"]),
+            description=str(row["description"] or ""),
+            transaction_type=str(row["transaction_type"] or ""),
+            top_category=str(row["top_category"] or ""),
+            sub_category=str(row["sub_category"] or ""),
+            sphere=str(row["sphere"] or ""),
+            professional_description=str(
+                row["professional_description"] or ""
+            ),
+            vorgangs_id=(
+                str(row["vorgangs_id"])
+                if row["vorgangs_id"] is not None
+                else None
+            ),
+            created_at=str(row["created_at"] or ""),
+            updated_at=str(row["updated_at"] or ""),
+        )
+        for row in rows
+    ]
+
+
+def replace_transaction_splits(
+    connection: sqlite3.Connection,
+    transaction_id: str,
+    splits: Sequence[TransactionSplit],
+) -> list[TransactionSplit]:
+    transaction = connection.execute(
+        """
+        SELECT amount_minor
+        FROM transactions
+        WHERE transaction_id = ?
+        """,
+        (transaction_id,),
+    ).fetchone()
+    if transaction is None:
+        raise LookupError("Transaktion nicht gefunden.")
+
+    normalized = [
+        TransactionSplit(
+            split_id=(split.split_id.strip() or f"split_{uuid4().hex}"),
+            transaction_id=transaction_id,
+            amount_minor=int(split.amount_minor),
+            description=split.description.strip(),
+            transaction_type=split.transaction_type.strip(),
+            top_category=split.top_category.strip(),
+            sub_category=split.sub_category.strip(),
+            sphere=split.sphere.strip(),
+            professional_description=split.professional_description.strip(),
+            vorgangs_id=(
+                split.vorgangs_id.strip()
+                if split.vorgangs_id and split.vorgangs_id.strip()
+                else None
+            ),
+        )
+        for split in splits
+    ]
+    if normalized:
+        expected_amount = int(transaction["amount_minor"])
+        actual_amount = sum(split.amount_minor for split in normalized)
+        if actual_amount != expected_amount:
+            raise ValueError(
+                "Die Summe der Splits muss exakt dem "
+                "Transaktionsbetrag entsprechen."
+            )
+
+    connection.execute("SAVEPOINT replace_transaction_splits")
+    try:
+        connection.execute(
+            "DELETE FROM transaction_splits WHERE transaction_id = ?",
+            (transaction_id,),
+        )
+        for split in normalized:
+            connection.execute(
+                """
+                INSERT INTO transaction_splits (
+                    split_id, transaction_id, amount_minor, description,
+                    transaction_type, top_category, sub_category, sphere,
+                    professional_description, vorgangs_id, created_at,
+                    updated_at
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                    STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+                )
+                """,
+                (
+                    split.split_id,
+                    split.transaction_id,
+                    split.amount_minor,
+                    split.description,
+                    split.transaction_type,
+                    split.top_category,
+                    split.sub_category,
+                    split.sphere,
+                    split.professional_description,
+                    split.vorgangs_id,
+                ),
+            )
+    except Exception:
+        connection.execute("ROLLBACK TO SAVEPOINT replace_transaction_splits")
+        connection.execute("RELEASE SAVEPOINT replace_transaction_splits")
+        raise
+    connection.execute("RELEASE SAVEPOINT replace_transaction_splits")
+    return list_transaction_splits(connection, transaction_id)
 
 
 def transaction_count(connection: sqlite3.Connection) -> int:

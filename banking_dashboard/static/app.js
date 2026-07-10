@@ -8830,6 +8830,7 @@ function renderTransactionContent(
   ], target);
 
   appendClassificationEditor(transaction, target);
+  appendSplitEditor(transaction, target);
   if (suggestionsPayload) {
     appendTransactionVorgangLinkSection(
       transaction,
@@ -9234,6 +9235,220 @@ function updateVorgangDisplays(vorgaenge) {
         `${count === 1 ? "Transaktion" : "Transaktionen"}`;
     }
   }
+}
+
+function appendSplitEditor(transaction, target = elements.detailContent) {
+  const originalAmount = Number(transaction.betrag_cent || 0);
+  let splits = (transaction.splits || []).map((split) => ({...split}));
+  const section = document.createElement("section");
+  section.className = "detail-section split-editor";
+  const headingRow = document.createElement("div");
+  headingRow.className = "classification-heading";
+  const heading = document.createElement("h3");
+  heading.textContent = "Splits";
+  const status = document.createElement("span");
+  status.className = "save-state";
+  status.textContent = splits.length
+    ? "Split-Summe pruefen"
+    : "Keine Splits erfasst";
+  headingRow.append(heading, status);
+
+  const form = document.createElement("form");
+  form.className = "split-form";
+  const rows = document.createElement("div");
+  rows.className = "split-rows";
+  const summary = document.createElement("div");
+  summary.className = "split-summary";
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.className = "secondary-action";
+  addButton.textContent = "Zeile hinzufuegen";
+  const saveButton = document.createElement("button");
+  saveButton.type = "submit";
+  saveButton.className = "primary-action";
+  saveButton.textContent = "Splits speichern";
+
+  const readRows = () => [...rows.querySelectorAll("[data-split-row]")].map(
+    (row) => ({
+      split_id: row.dataset.splitId || "",
+      betrag_cent: parseMinorAmount(
+        row.querySelector("[data-split-amount]").value,
+      ),
+      beschreibung: row.querySelector("[data-split-description]").value,
+      transaktionstyp: row.querySelector("[data-split-type]").value,
+      oberkategorie: row.querySelector("[data-split-top]").value,
+      unterkategorie: row.querySelector("[data-split-sub]").value,
+      sphaere: row.querySelector("[data-split-sphere]").value,
+      fachliche_beschreibung: row.querySelector(
+        "[data-split-professional]",
+      ).value,
+      vorgangs_id: row.querySelector("[data-split-vorgang]").value,
+    }),
+  );
+
+  const updateSummary = () => {
+    const current = readRows();
+    const sum = current.reduce(
+      (total, split) => total + split.betrag_cent,
+      0,
+    );
+    const difference = originalAmount - sum;
+    summary.textContent =
+      `Original ${formatMinorAmount(originalAmount)} · ` +
+      `Splits ${formatMinorAmount(sum)} · ` +
+      `Differenz ${formatMinorAmount(difference)}`;
+    const valid = current.length === 0 || difference === 0;
+    summary.classList.toggle("is-balanced", valid);
+    summary.classList.toggle("is-unbalanced", !valid);
+    saveButton.disabled = !valid;
+    if (!current.length) {
+      status.textContent = "Speichern entfernt alle Splits";
+    } else if (valid) {
+      status.textContent = "Split-Summe ausgeglichen";
+    } else {
+      status.textContent = "Split-Summe nicht ausgeglichen";
+    }
+  };
+
+  const addRow = (split = {}) => {
+    const row = document.createElement("div");
+    row.className = "split-row";
+    row.dataset.splitRow = "true";
+    row.dataset.splitId = split.split_id || "";
+    row.append(
+      splitInput("Betrag", formatMinorInput(split.betrag_cent), "amount"),
+      splitInput("Beschreibung", split.beschreibung || "", "description"),
+      splitInput("Transaktionstyp", split.transaktionstyp || "", "type"),
+      splitInput("Oberkategorie", split.oberkategorie || "", "top"),
+      splitInput("Unterkategorie", split.unterkategorie || "", "sub"),
+      splitSphereField(split.sphaere || ""),
+      splitInput(
+        "Fachliche Beschreibung",
+        split.fachliche_beschreibung || "",
+        "professional",
+      ),
+      splitInput("Vorgangs-ID", split.vorgangs_id || "", "vorgang"),
+    );
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "secondary-action split-remove";
+    removeButton.textContent = "Entfernen";
+    removeButton.addEventListener("click", () => {
+      row.remove();
+      updateSummary();
+    });
+    row.append(removeButton);
+    rows.append(row);
+    updateSummary();
+  };
+
+  addButton.addEventListener("click", () => addRow());
+  rows.addEventListener("input", updateSummary);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const payload = {splits: readRows()};
+    saveButton.disabled = true;
+    status.className = "save-state is-saving";
+    status.textContent = "Wird gespeichert";
+    try {
+      const response = await fetch(
+        `/api/transactions/${encodeURIComponent(
+          transaction.transaktions_id,
+        )}/splits`,
+        {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload),
+        },
+      );
+      const result = await readResponse(response);
+      Object.assign(transaction, result.transaction);
+      splits = (transaction.splits || []).map((split) => ({...split}));
+      rows.replaceChildren();
+      for (const split of splits) {
+        addRow(split);
+      }
+      updateSummary();
+      status.className = "save-state is-saved";
+      status.textContent = "Gespeichert";
+    } catch (error) {
+      status.className = "save-state is-error";
+      status.textContent = "Speichern fehlgeschlagen";
+      showError(error.message);
+      updateSummary();
+    }
+  });
+
+  form.append(rows, summary, addButton, saveButton);
+  section.append(headingRow, form);
+  for (const split of splits) {
+    addRow(split);
+  }
+  updateSummary();
+  target.append(section);
+}
+
+function splitInput(label, value, key) {
+  const field = document.createElement("label");
+  field.className = "split-field";
+  const fieldLabel = document.createElement("span");
+  fieldLabel.className = "detail-label";
+  fieldLabel.textContent = label;
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = value || "";
+  input.autocomplete = "off";
+  input.dataset[`split${key[0].toUpperCase()}${key.slice(1)}`] = "true";
+  field.append(fieldLabel, input);
+  return field;
+}
+
+function splitSphereField(value) {
+  const field = document.createElement("label");
+  field.className = "split-field";
+  const fieldLabel = document.createElement("span");
+  fieldLabel.className = "detail-label";
+  fieldLabel.textContent = "Sphaere";
+  const select = document.createElement("select");
+  select.dataset.splitSphere = "true";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "Nicht angegeben";
+  select.append(blank);
+  for (const sphere of state.classificationOptions.spheres || []) {
+    const option = document.createElement("option");
+    option.value = sphere;
+    option.textContent = sphere;
+    select.append(option);
+  }
+  select.value = [...select.options].some((option) => option.value === value)
+    ? value
+    : "";
+  field.append(fieldLabel, select);
+  return field;
+}
+
+function parseMinorAmount(value) {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount)) {
+    return 0;
+  }
+  return Math.round(amount * 100);
+}
+
+function formatMinorInput(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  return (Number(value) / 100).toFixed(2).replace(".", ",");
+}
+
+function formatMinorAmount(value) {
+  return currencyFormatter.format(Number(value || 0) / 100);
 }
 
 function appendDetailSection(
