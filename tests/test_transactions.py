@@ -106,6 +106,7 @@ class DatabaseConnectionTests(unittest.TestCase):
             [
                 "split_id",
                 "transaction_id",
+                "sort_order",
                 "amount_minor",
                 "description",
                 "transaction_type",
@@ -193,7 +194,7 @@ class DatabaseConnectionTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    14,
+                    15,
                 )
                 self.assertIsNotNone(
                     migrated.execute(
@@ -215,6 +216,7 @@ class DatabaseConnectionTests(unittest.TestCase):
                     [
                         "split_id",
                         "transaction_id",
+                        "sort_order",
                         "amount_minor",
                         "description",
                         "transaction_type",
@@ -248,6 +250,16 @@ class DatabaseConnectionTests(unittest.TestCase):
                         FROM sqlite_master
                         WHERE type = 'index'
                           AND name = 'idx_transaction_splits_transaction_id'
+                        """
+                    ).fetchone()
+                )
+                self.assertIsNotNone(
+                    migrated.execute(
+                        """
+                        SELECT 1
+                        FROM sqlite_master
+                        WHERE type = 'index'
+                          AND name = 'idx_transaction_splits_transaction_order'
                         """
                     ).fetchone()
                 )
@@ -334,13 +346,13 @@ class DatabaseConnectionTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     [
-                        split.amount_minor
+                        (split.sort_order, split.amount_minor)
                         for split in list_transaction_splits(
                             connection,
                             "tx_split",
                         )
                     ],
-                    [1000, 1500],
+                    [(1, 1000), (2, 1500)],
                 )
                 with self.assertRaises(ValueError):
                     replace_transaction_splits(
@@ -350,13 +362,13 @@ class DatabaseConnectionTests(unittest.TestCase):
                     )
                 self.assertEqual(
                     [
-                        split.amount_minor
+                        (split.sort_order, split.amount_minor)
                         for split in list_transaction_splits(
                             connection,
                             "tx_split",
                         )
                     ],
-                    [1000, 1500],
+                    [(1, 1000), (2, 1500)],
                 )
             finally:
                 connection.close()
@@ -1614,7 +1626,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    14,
+                    15,
                 )
                 row = migrated.execute(
                     "SELECT * FROM normalized_transactions"
@@ -1795,7 +1807,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    14,
+                    15,
                 )
                 self.assertEqual(
                     [

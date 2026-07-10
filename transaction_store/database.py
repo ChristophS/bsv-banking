@@ -19,7 +19,7 @@ from .classification import SQL_CLASSIFICATION_STATUS_EXPRESSION
 from .models import ParsedFile, ParsedTransaction, TransactionSplit
 
 
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 BELEGE_DIRECTORY_ENV = "BSV_BELEGE_DIR"
 VORGANG_STATUS_IN_PROGRESS = "in_bearbeitung"
 VORGANG_STATUS_COMPLETED = "abgeschlossen"
@@ -386,6 +386,7 @@ def list_transaction_splits(
         SELECT
             split_id,
             transaction_id,
+            sort_order,
             amount_minor,
             description,
             transaction_type,
@@ -398,7 +399,7 @@ def list_transaction_splits(
             updated_at
         FROM transaction_splits
         WHERE transaction_id = ?
-        ORDER BY created_at, rowid
+        ORDER BY sort_order, created_at, rowid
         """,
         (transaction_id,),
     ).fetchall()
@@ -406,6 +407,7 @@ def list_transaction_splits(
         TransactionSplit(
             split_id=str(row["split_id"]),
             transaction_id=str(row["transaction_id"]),
+            sort_order=int(row["sort_order"]),
             amount_minor=int(row["amount_minor"]),
             description=str(row["description"] or ""),
             transaction_type=str(row["transaction_type"] or ""),
@@ -447,6 +449,7 @@ def replace_transaction_splits(
         TransactionSplit(
             split_id=(split.split_id.strip() or f"split_{uuid4().hex}"),
             transaction_id=transaction_id,
+            sort_order=index,
             amount_minor=int(split.amount_minor),
             description=split.description.strip(),
             transaction_type=split.transaction_type.strip(),
@@ -460,7 +463,7 @@ def replace_transaction_splits(
                 else None
             ),
         )
-        for split in splits
+        for index, split in enumerate(splits, start=1)
     ]
     if normalized:
         expected_amount = int(transaction["amount_minor"])
@@ -482,11 +485,11 @@ def replace_transaction_splits(
                 """
                 INSERT INTO transaction_splits (
                     split_id, transaction_id, amount_minor, description,
-                    transaction_type, top_category, sub_category, sphere,
-                    professional_description, vorgangs_id, created_at,
-                    updated_at
+                    sort_order, transaction_type, top_category, sub_category,
+                    sphere, professional_description, vorgangs_id,
+                    created_at, updated_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'),
                     STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
                 )
@@ -496,6 +499,7 @@ def replace_transaction_splits(
                     split.transaction_id,
                     split.amount_minor,
                     split.description,
+                    split.sort_order,
                     split.transaction_type,
                     split.top_category,
                     split.sub_category,
@@ -880,6 +884,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
                 11: _migrate_v11_to_v12,
                 12: _migrate_v12_to_v13,
                 13: _migrate_v13_to_v14,
+                14: _migrate_v14_to_v15,
             }
             while version < SCHEMA_VERSION:
                 migration = migrations.get(version)
@@ -1230,6 +1235,18 @@ def _migrate_v13_to_v14(connection: sqlite3.Connection) -> None:
     connection.execute("UPDATE schema_info SET version = 14")
 
 
+def _migrate_v14_to_v15(connection: sqlite3.Connection) -> None:
+    _create_transaction_split_table(connection)
+    connection.execute(
+        """
+        UPDATE transaction_splits
+        SET sort_order = rowid
+        WHERE sort_order = 0
+        """
+    )
+    connection.execute("UPDATE schema_info SET version = 15")
+
+
 def _create_transaction_split_table(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
@@ -1239,6 +1256,8 @@ def _create_transaction_split_table(connection: sqlite3.Connection) -> None:
             transaction_id TEXT NOT NULL
                 REFERENCES transactions(transaction_id)
                 ON DELETE CASCADE,
+            sort_order INTEGER NOT NULL DEFAULT 0
+                CHECK (sort_order >= 0),
             amount_minor INTEGER NOT NULL,
             description TEXT NOT NULL DEFAULT '',
             transaction_type TEXT NOT NULL DEFAULT '',
@@ -1258,10 +1277,25 @@ def _create_transaction_split_table(connection: sqlite3.Connection) -> None:
         )
         """
     )
+    _add_columns_if_missing(
+        connection,
+        "transaction_splits",
+        {
+            "sort_order": (
+                "INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0)"
+            ),
+        },
+    )
     connection.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_transaction_splits_transaction_id
             ON transaction_splits(transaction_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_transaction_splits_transaction_order
+            ON transaction_splits(transaction_id, sort_order)
         """
     )
     connection.execute(

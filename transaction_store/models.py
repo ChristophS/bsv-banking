@@ -56,6 +56,7 @@ class TransactionSplit:
     split_id: str
     transaction_id: str
     amount_minor: int
+    sort_order: int = 0
     description: str = ""
     transaction_type: str = ""
     top_category: str = ""

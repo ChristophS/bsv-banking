@@ -693,6 +693,8 @@ class DashboardDataStoreTests(unittest.TestCase):
                     "split_id": "split_tx_newer_1",
                     "transaction_id": "tx_newer",
                     "transaktions_id": "tx_newer",
+                    "sort_order": 0,
+                    "reihenfolge": 0,
                     "amount_minor": 1500,
                     "betrag_cent": 1500,
                     "betrag": "15.00",
@@ -760,6 +762,10 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual(
             [split["amount_minor"] for split in result["transaction"]["splits"]],
             [1000, 1500],
+        )
+        self.assertEqual(
+            [split["sort_order"] for split in result["transaction"]["splits"]],
+            [1, 2],
         )
         self.assertEqual(
             self.store.transaction_detail("tx_newer")["splits"][1][
@@ -2562,6 +2568,7 @@ class DashboardHTTPTests(unittest.TestCase):
                 payload["splits"][0]["amount_minor"],
                 1500,
             )
+            self.assertEqual(payload["splits"][0]["sort_order"], 0)
             self.assertEqual(
                 payload["splits"][0]["transaction_id"],
                 "tx_newer",
@@ -2597,6 +2604,12 @@ class DashboardHTTPTests(unittest.TestCase):
                     "transaction"
                 ]["splits"]],
                 [1000, 1500],
+            )
+            self.assertEqual(
+                [split["sort_order"] for split in payload[
+                    "transaction"
+                ]["splits"]],
+                [1, 2],
             )
 
         invalid_request = Request(
