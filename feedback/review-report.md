@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die Umsetzung erfüllt die fachlichen Muss-Anforderungen auf Basis des GitHub-Diffs; Branch-Zustand ist sauber und es sind passende UI-/API-Tests ergänzt.
+Die nachgeladenen Kontextdateien und der maßgebliche GitHub-Diff reichen für die fachliche Prüfung aus. Die Umsetzung erfüllt die Anforderungen, insbesondere durch lokale Split-Summenvalidierung vor dem PUT und passende Browser-Testabdeckung.
 
 ## Zusammenfassung
 
-Der Split-Editor ist in der Transaktionsdetailansicht nutzbar, zeigt vorhandene Splits an, erlaubt Bearbeiten/Hinzufügen/Entfernen und speichert über den bestehenden PUT-Endpunkt. Cent-Beträge werden als Ganzzahlen verarbeitet, lokale Betragsfehler und Backend-Validierungsfehler werden sichtbar angezeigt. Keine blockierenden Probleme gefunden.
+Akzeptiert: Der bestehende Split-Editor in der Transaktionsdetailansicht lädt und bearbeitet Splits über die vorhandene Split-API; der Diff ergänzt die vorher fehlende erkennbare lokale Summenvalidierung vor dem Speichern und passt den Browser-Test entsprechend an.
 
 # Review Report
 
@@ -22,51 +22,25 @@ Der Split-Editor ist in der Transaktionsdetailansicht nutzbar, zeigt vorhandene 
 
 ## Geprüfter Umfang
 
-Geändert wurden laut GitHub Compare:
+Geprüft wurden der Auftrag, der GitHub-Diff, der Implementierungsbericht sowie der nachgeladene Kontext zu `banking_dashboard/static/app.js`, `banking_dashboard/server.py` und `tests/test_dashboard.py`.
 
-- `banking_dashboard/static/app.js`
-- `tests/test_dashboard.py`
-- `feedback/implementation_report.md`
+## Fachliche Bewertung
 
-Der Branch ist sauber gegenüber `main`: `ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner-Validierung und GitHub Compare.
+Die Transaktionsdetailansicht enthält einen Split-Editor, der vorhandene Splits aus der Detailantwort nutzt, Split-Zeilen anzeigen, hinzufügen, bearbeiten und entfernen kann und die komplette Liste per `PUT /api/transactions/<id>/splits` speichert. Die relevanten Split-Felder sind im Editor pflegbar: Betrag, Beschreibung, Transaktionstyp, Oberkategorie, Unterkategorie, Sphäre, fachliche Beschreibung und optional `vorgangs_id`.
 
-## Fachliche Bewertung gegen das Arbeitspaket
+Der aktuelle Diff ergänzt die entscheidende lokale Validierung der Split-Summe: Bei nicht ausgeglichener Summe wird eine verständliche Fehlermeldung angezeigt und vor dem Speichern geprüft, sodass kein `PUT` ausgelöst wird. Damit ist das Akzeptanzkriterium erfüllt, dass eine nicht passende Split-Summe nicht stillschweigend gespeichert wird und der Nutzer einen verständlichen Hinweis erhält.
 
-### Erfüllte Muss-Anforderungen
+Nach erfolgreichem Speichern werden die vom Backend gelieferten Split-Daten wieder in den Editor übernommen und neu gerendert, sodass gespeicherte Splits sichtbar bleiben.
 
-- Vorhandene Splits werden weiterhin aus `transaction.splits` in der Transaktionsdetailansicht gerendert.
-- Split-Zeilen enthalten Betrag, Beschreibung und Klassifikationsfelder inklusive Transaktionstyp, Oberkategorie, Unterkategorie, Sphäre, fachlicher Beschreibung und Vorgangs-ID.
-- Split-Zeilen können bearbeitet, hinzugefügt und über den bestehenden Entfernen-Button entfernt werden.
-- Das Speichern verwendet weiterhin `PUT /api/transactions/<id>/splits`.
-- Nach erfolgreichem Speichern werden die vom Backend zurückgegebenen Split-Daten in den Editor übernommen und neu gerendert.
-- Backend-Validierungsfehler werden jetzt im Split-Bereich über `.form-error` angezeigt und zusätzlich weiterhin über den allgemeinen Fehler-Toast gemeldet.
-- Die bisherige Float-/Euro-Parsing-Logik wurde für Split-Eingaben durch eine ganzzahlige Cent-Validierung ersetzt.
-- Leere und nicht ganzzahlige Beträge werden lokal sichtbar abgewiesen.
+## Tests
 
-### Tests
-
-Der neue Playwright-basierte Browser-Test deckt zentrale Akzeptanzkriterien ab:
-
-- Anzeigen vorhandener Splits
-- Bearbeiten vorhandener Split-Beträge
-- Hinzufügen einer neuen Split-Zeile
-- Speichern über den Split-Endpunkt
-- Persistenzprüfung nach erneutem API-Laden
-- lokale Fehlermeldung bei leerem Betrag
-- Backend-400 bei unpassender Split-Summe und sichtbare Fehlermeldung
-- keine Persistenzänderung nach fehlgeschlagenem Save
-
-Laut Implementation Report wurde `pytest tests/test_dashboard.py` erfolgreich ausgeführt: 102 Tests bestanden, 6 übersprungen.
+Der Browser-Test `test_transaction_split_editor_updates_and_shows_errors` wurde erweitert, sodass er den erfolgreichen Save/Reload-Pfad, Betragsvalidierung und die lokale Summenvalidierung ohne weiteren `PUT` abdeckt. Bestehende API-/Store-Tests decken zusätzlich die serverseitige Split-Persistenz und Validierungsfehler ab.
 
 ## Nicht blockierende Hinweise
 
-- Der neue Browser-Test prüft das Entfernen bestehender Split-Zeilen nicht explizit. Die UI-Funktion ist vorhanden, aber ein dedizierter Test wäre sinnvoll.
-- Für extreme Eingaben könnte zusätzlich geprüft werden, dass Cent-Beträge innerhalb von `Number.MAX_SAFE_INTEGER` liegen, bevor sie als JSON-Zahl gesendet werden.
+- Die Split-Klassifikationsfelder könnten noch konsequenter dieselben Vorschlagsquellen/Datalists wie die bestehende Klassifikationsbearbeitung verwenden.
+- Nach einem lokalen Summenfehler könnte `status.className` beim erneuten Ausgleichen der Summe explizit zurückgesetzt werden, damit die Statusoptik nicht im Fehlerzustand bleibt.
 
-## Kontext-Hinweis
+## Schlussfolgerung
 
-Die nachgeladene vollständige `app.js`/`tests/test_dashboard.py` wirkte im Split-Bereich nicht vollständig deckungsgleich mit dem GitHub-Diff. Für die Entscheidung war das nicht blockierend, da der GitHub-Diff gemäß Review-Regeln maßgeblich ist und ausreichend Kontext zur Integration vorhanden war.
-
-## Schlussbewertung
-
-Keine blockierenden fachlichen oder technischen Probleme gefunden. Die Umsetzung erfüllt das Arbeitspaket und kann akzeptiert werden.
+Es wurden keine blockierenden fachlichen oder technischen Probleme gefunden. Der Branch-Zustand ist sauber (`ahead_by=1`, `behind_by=0`) und die Umsetzung kann akzeptiert werden.
