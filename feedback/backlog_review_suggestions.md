@@ -1,2 +1,3 @@
-- API-Felder im Split-GET auf mittlere Sicht vereinheitlichen (`amount_minor` vs. `betrag_cent`).
-- Compare-/Runner-Abgleich im Agentenprozess strenger halten, damit zusätzliche Dateien nicht erst im Review auffallen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
