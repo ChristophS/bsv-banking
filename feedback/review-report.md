@@ -8,42 +8,89 @@
 
 ## Begründung
 
-Der Diff ist ausreichend aussagekräftig; Umsetzung, API-Flow, UI-Anbindung und Tests decken die Muss-Anforderungen ab.
+Der GitHub-Diff erfüllt die fachlichen Anforderungen für Mehrfachanhänge im mailbasierten Vorgangsimport; die vorhandenen Tests decken den Server-Import mit mehreren Dokumenten ab. Es gibt keine blockierenden technischen oder fachlichen Probleme.
 
 ## Zusammenfassung
 
-Die Umsetzung ergänzt einen dedizierten, idempotenten Backend-Flow zum Verknüpfen einer Transaktion mit einem bestehenden Vorgang, erweitert Vorschläge/Kandidaten um Vorgänge und bindet die Zuordnung in der Transaktionsdetailansicht ein. Erfolgsfall, Wiederholung und Fehlerfall sind getestet; es gibt keine blockierenden Auffälligkeiten.
+Die Umsetzung erweitert die Review-UI des Mail-Vorgangsimports auf eine Dokumentzeile je Mail-Anhang, erzeugt Default-Metadaten bei fehlender Analyse, erhält attachment_index und sendet mehrere aktivierte Dokumente im documents-Array. Der Serverpfad verarbeitet diese Einträge bereits und die Tests wurden um Mehrfachdokument-Importfälle erweitert. Accepted, da die Muss-Kriterien im Diff erfüllt sind.
 
-## Review-Ergebnis
+# Review Report
 
-**Accepted:** ja
+## Ergebnis
 
-## Geprüfte Anforderungen
+**Accepted:** true
 
-- Eine Transaktion kann über eine dedizierte Backend-Methode `link_transaction_vorgang` und den neuen Endpunkt `POST /api/transactions/{transaktions_id}/vorgaenge` einem bestehenden Vorgang zugeordnet werden.
-- Die Zuordnung nutzt weiterhin die bestehende Tabelle `transaktion_vorgaenge`; es wurde keine neue Parallelstruktur eingeführt.
-- Bestehende Links werden nicht ersetzt, da der Flow nicht über `update_vorgang` beziehungsweise `_replace_vorgang_links` läuft.
-- Die Zuordnung ist durch `INSERT OR IGNORE` idempotent und erzeugt bei Wiederholung keine Duplikate.
-- Unbekannte Vorgangs-IDs werden vor der Persistenz erkannt und führen über `LookupError` zu einem sauberen Fehlerpfad; der HTTP-Test erwartet hierfür 404.
-- `suggest_related_entities` liefert für `source_type: transaction` jetzt auch `vorgaenge` in `suggestions` und `candidates`.
-- Die UI lädt Vorgangsvorschläge beim Öffnen einer Transaktion, zeigt bereits verknüpfte Vorgänge an, filtert diese aus der Auswahlliste heraus und lädt die Transaktionsdetailansicht nach erfolgreicher Zuordnung neu.
-- Tests wurden für Store-Erfolgsfall, idempotente Wiederholung, Fehlerfall, Vorgangsvorschläge sowie den HTTP-Endpunkt ergänzt.
+## Geprüfter Umfang
 
-## Technische Bewertung
+Geprüft wurden die Anforderungen aus `next_task_markdown`, der GitHub-Diff sowie der nachgeladene Kontext für `server.py`, `app.js` und `tests/test_dashboard.py`. Maßgeblich für die tatsächlich umgesetzten Änderungen ist der GitHub-Diff.
 
-Die Lösung folgt dem im Arbeitspaket empfohlenen Ansatz eines dedizierten Link-Flows und vermeidet dadurch das Risiko, bestehende Vorgangs-Linklisten unbeabsichtigt zu überschreiben. Die Validierung von Transaktion und Vorgang vor dem Insert ist fachlich sinnvoll. Die Vorschlagslogik nutzt bestehende Vorgangsfelder sowie Texte verknüpfter Transaktionen und integriert sich in den vorhandenen Suggestion-/Candidate-Mechanismus.
+Hinweis: Die zusätzlich nachgeladene Vollversion von `banking_dashboard/static/app.js` und `tests/test_dashboard.py` wirkt stellenweise wie ein älterer Stand und enthält die Diff-Änderungen nicht sichtbar. Für die Entscheidung war das nicht blockierend, weil die relevanten bestehenden Funktionen im Kontext erkennbar waren und der GitHub-Diff die geänderten Stellen ausreichend konkret zeigt.
 
-Der UI-Flow ist ausreichend: Bereits bestehende Vorgangsverknüpfungen werden angezeigt, neue Kandidaten können ausgewählt werden, doppelte Verknüpfungen werden herausgefiltert beziehungsweise backendseitig idempotent behandelt, und nach erfolgreichem POST wird die Detailansicht aktualisiert.
+## Fachliche Bewertung
+
+### Mehrere Anhänge sichtbar
+
+Die neue Funktion `mailReviewDocuments(detail, analysis.documents || [])` baut die Dokumentliste anhand der tatsächlichen `detail.attachments` auf. Dadurch wird nicht mehr nur `analysis.documents[0]` oder eine reine Analyse-Liste angezeigt, sondern für jeden Mail-Anhang ein Review-Eintrag erzeugt.
+
+Dabei werden je Anhang verarbeitet bzw. dargestellt:
+
+- `attachment_index`
+- Dateiname
+- Kategorie
+- Beschreibung
+- Aktiv-/Deaktiviert-Checkbox über `enabled`
+
+Fehlende Analyse-Metadaten werden über Defaults ergänzt, z. B. Kategorie `sonstige_dokumente`, Dateiname aus dem Attachment oder `anhang-N`.
+
+### Reihenfolge und Attachment-Index
+
+Die Reihenfolge orientiert sich an `detail.attachments.forEach(...)`. Der verwendete Index ist `attachment.attachmentIndex` mit Fallback auf `index + 1`. Analyse-Dokumente werden per `attachment_index` zugeordnet. Damit ist die Anforderung erfüllt, die UI-Reihenfolge an der gelieferten Attachment-Struktur bzw. `attachmentIndex` auszurichten.
+
+### Mehrere Dokumente im Import-Payload
+
+Die bestehende Serialisierung über `readReviewRows(form, "document")` erzeugt weiterhin ein Array aller Dokument-Review-Zeilen. Da nun mehrere Dokumentzeilen gerendert werden, landen mehrere aktivierte Anhänge als mehrere Einträge in `documents`:
+
+- `enabled`
+- `attachment_index`
+- `category`
+- `filename`
+- weitere Metadaten
+
+Der Serverpfad `_mail_vorgang_import` iteriert bereits über `payload.get("documents")`, überspringt deaktivierte Einträge und importiert je aktivem Dokument den passenden Anhang über `read_attachment(inbox_id, attachment_index)`. Diese Architektur wurde nicht unnötig umgebaut.
+
+### Vorschau/Einzelpreview
+
+Pro Dokumentzeile wird ein Vorschau-Button ergänzt. Der Button setzt `state.selectedMailAttachment` auf den passenden Attachment-Index und rendert die bestehende Preview neu. Das erfüllt die Soll-Anforderung einer einfachen auswählbaren Liste bzw. Einzelvorschau.
+
+### Leere Zustände und Ein-Anhang-Regressionsfall
+
+Wenn keine Attachments vorhanden sind, liefert `mailReviewDocuments` eine leere Liste. Der bestehende UI-Flow zeigt dann für Dokumente den vorhandenen leeren Zustand an und der Serverimport mit leerem `documents`-Array bleibt möglich. Bei genau einem Anhang entsteht weiterhin genau eine Dokumentzeile, sodass das bisherige Verhalten erhalten bleibt.
 
 ## Tests
 
-Laut Implementation Report wurde `tests/test_dashboard.py` erfolgreich ausgeführt mit `92 passed, 4 skipped`. Die im Diff sichtbaren Tests decken die zentralen Akzeptanzkriterien ab.
+`tests/test_dashboard.py` wurde laut Diff erweitert:
 
-## Blockierende Punkte
+- Mail-Fixture enthält zwei Anhänge.
+- Fake-Mail-Backend kann beide Anhänge ausliefern.
+- Fake-Analyzer liefert zwei Dokumenteinträge mit `attachment_index` 1 und 2.
+- HTTP-Importtests erwarten zwei importierte Dokumente und prüfen Dateinamen, Kategorien, Ablagepfade und Existenz der Dateien.
+- Direktabschluss-Import erwartet ebenfalls zwei Dokumente.
 
-Keine.
+Damit ist der Mehrfachanhang-Import auf Serverseite abgesichert. Ein zusätzlicher Frontend-Test für die Payload-Erzeugung wäre sinnvoll, ist aber nicht blockierend.
+
+## Projektregeln / Scope
+
+- Keine Secrets oder produktiven Daten betroffen.
+- Keine externe Mail-, Banking-, DFBnet- oder Login-Aktion eingeführt.
+- Keine neue Dokumentarchitektur eingeführt; `create_document_from_bytes` und `vorgang_belege` bleiben der Importpfad.
+- Kein erheblicher Scope Creep erkennbar.
+- Branch-Zustand ist sauber: `compare_status=ahead`, `ahead_by=1`, `behind_by=0`.
 
 ## Nicht-blockierende Hinweise
 
-- Ein zusätzlicher HTTP-Test für eine unbekannte Transaktions-ID wäre als Absicherung nützlich.
-- Eine explizit sichtbare Erfolgsmeldung in der UI kann später verbessert werden, falls der vorhandene Statushinweis nicht ausreichend auffällt.
+- Ein gezielter Frontend-/Browser-Test für `mailReviewDocuments` und `readMailVorgangReviewForm` würde die zentrale UI-Anforderung noch robuster absichern.
+- Eine visuelle Markierung des aktuell in der Vorschau geöffneten Anhangs in der Review-Dokumentliste könnte die Bedienbarkeit verbessern.
+
+## Fazit
+
+Die Muss-Anforderungen sind erfüllt: Alle Mail-Anhänge werden als Dokumenteinträge sichtbar, mehrere aktivierte Anhänge werden über `documents` mit korrektem `attachment_index` importiert, fehlende Metadaten erhalten Defaults und der Mehrfachimport ist automatisiert getestet. Daher wird die Umsetzung akzeptiert.
