@@ -51,11 +51,11 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - existing_backlog
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege, wie man geschickt damit umgehen kann.
 
-## 4. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
+## 4. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration in konkrete Teilpakete zerlegen
 
 **Priorität:** mittel
 
-**Grund:** Großes eigenständiges Vorhaben mit Datenmodell-, Dokumenten- und externer Integrationskomplexität; sollte zunächst fachlich und technisch in Teilpakete zerlegt werden.
+**Grund:** Großes eigenständiges Vorhaben mit Datenmodell-, Dokumenten- und externer Integrationskomplexität; vor Umsetzung sollte es sauber als Epic mit kleinen Teilpaketen geplant werden.
 
 **Feedback:**
 
