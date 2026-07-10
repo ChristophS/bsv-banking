@@ -539,6 +539,55 @@ class DashboardDataStore:
             "vorgaenge": self._transaction_vorgaenge(transaktions_id),
         }
 
+    def link_transaction_vorgang(
+        self,
+        transaktions_id: str,
+        vorgangs_id: str,
+    ) -> dict[str, Any]:
+        cleaned_transaction_id = str(transaktions_id or "").strip()
+        cleaned_vorgangs_id = str(vorgangs_id or "").strip()
+        if not cleaned_transaction_id:
+            raise ValueError("Transaktions-ID fehlt.")
+        if not cleaned_vorgangs_id:
+            raise ValueError("Vorgangs-ID fehlt.")
+        now = datetime.now().astimezone().isoformat()
+        with closing(self._connect(writable=True)) as connection:
+            if connection.execute(
+                "SELECT 1 FROM transactions WHERE transaction_id = ?",
+                (cleaned_transaction_id,),
+            ).fetchone() is None:
+                raise LookupError("Transaktion nicht gefunden.")
+            if connection.execute(
+                "SELECT 1 FROM vorgaenge WHERE vorgangs_id = ?",
+                (cleaned_vorgangs_id,),
+            ).fetchone() is None:
+                raise LookupError("Vorgang wurde nicht gefunden.")
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO transaktion_vorgaenge (
+                    transaktions_id, vorgangs_id
+                ) VALUES (?, ?)
+                """,
+                (cleaned_transaction_id, cleaned_vorgangs_id),
+            )
+            if cursor.rowcount == 1:
+                connection.execute(
+                    """
+                    UPDATE vorgaenge
+                    SET aktualisiert_am = ?
+                    WHERE vorgangs_id = ?
+                    """,
+                    (now, cleaned_vorgangs_id),
+                )
+            connection.commit()
+        detail = self.transaction_detail(cleaned_transaction_id)
+        if detail is None:
+            raise LookupError("Transaktion nicht gefunden.")
+        return {
+            "transaction": detail,
+            "vorgaenge": self._transaction_vorgaenge(cleaned_transaction_id),
+        }
+
     def overview_counts(self) -> dict[str, Any]:
         today = date.today().isoformat()
         mail_folder_names = tuple(sorted(TARGET_MAIL_FOLDER_NAMES))
@@ -705,6 +754,12 @@ class DashboardDataStore:
                 raise LookupError("Quellentitaet wurde nicht gefunden.")
             context_tokens = _suggestion_tokens(context["text"])
             suggestions = {
+                "vorgaenge": self._suggest_vorgaenge(
+                    connection,
+                    context_tokens,
+                    source_type,
+                    source_id,
+                ),
                 "transactions": self._suggest_transactions(
                     connection,
                     context_tokens,
@@ -3864,6 +3919,11 @@ class DashboardDataStore:
                 source_type,
                 source_id,
             ),
+            "vorgaenge": self._vorgang_link_candidates(
+                connection,
+                source_type,
+                source_id,
+            ),
             "mails": self._mail_link_candidates(
                 connection,
                 source_type,
@@ -3931,6 +3991,19 @@ class DashboardDataStore:
                     **_transaction_classification_metadata(row_data),
                 }
             )
+        return result
+
+    def _vorgang_link_candidates(
+        self,
+        connection: sqlite3.Connection,
+        source_type: str,
+        source_id: str,
+    ) -> list[dict[str, Any]]:
+        result = []
+        for row in self._vorgang_candidate_rows(connection):
+            if source_type == "vorgang" and row["vorgangs_id"] == source_id:
+                continue
+            result.append(self._vorgang_candidate_item(row, score=0))
         return result
 
     def _mail_link_candidates(
@@ -4100,6 +4173,167 @@ class DashboardDataStore:
                 }
             )
         return result
+
+    def _suggest_vorgaenge(
+        self,
+        connection: sqlite3.Connection,
+        context_tokens: set[str],
+        source_type: str,
+        source_id: str,
+    ) -> list[dict[str, Any]]:
+        candidates = []
+        linked_vorgangs_ids = self._linked_vorgangs_for_source(
+            connection,
+            source_type,
+            source_id,
+        )
+        for row in self._vorgang_candidate_rows(connection):
+            if source_type == "vorgang" and row["vorgangs_id"] == source_id:
+                continue
+            text = " ".join(str(row[key] or "") for key in row.keys())
+            score, reason = _suggestion_score(context_tokens, text)
+            selected = row["vorgangs_id"] in linked_vorgangs_ids
+            if selected:
+                score = max(score, 0.99)
+                reason = "Bereits verknuepft"
+            if score <= 0:
+                continue
+            candidates.append(
+                self._vorgang_candidate_item(
+                    row,
+                    score=score,
+                    reason=(
+                        reason
+                        if selected
+                        else f"Vorschlag: {reason}"
+                    ),
+                    selected=selected,
+                )
+            )
+        return _top_suggestions(candidates)
+
+    def _vorgang_candidate_rows(
+        self,
+        connection: sqlite3.Connection,
+    ) -> list[sqlite3.Row]:
+        mail_count_expression = (
+            """
+            (
+                SELECT COUNT(*)
+                FROM inbox_vorgaenge AS iv
+                WHERE iv.vorgangs_id = v.vorgangs_id
+            )
+            """
+            if _table_exists(connection, "inbox_vorgaenge")
+            else "0"
+        )
+        return connection.execute(
+            f"""
+            SELECT
+                v.vorgangs_id,
+                v.titel,
+                v.beschreibung,
+                v.vorgangstyp,
+                v.status,
+                v.aktualisiert_am,
+                COUNT(DISTINCT tv.transaktions_id)
+                    AS anzahl_transaktionen,
+                MAX(n.datum) AS letztes_datum,
+                CASE
+                    WHEN TRIM(v.titel) <> ''
+                    THEN v.titel
+                    WHEN COUNT(DISTINCT tv.transaktions_id) = 1
+                    THEN MAX(n.zahlungsbeteiligter)
+                    WHEN {mail_count_expression} > 0
+                    THEN PRINTF('%d Mail(s)', {mail_count_expression})
+                    ELSE PRINTF(
+                        '%d Transaktionen',
+                        COUNT(DISTINCT tv.transaktions_id)
+                    )
+                END AS bezug,
+                SUM(CAST(n.betrag AS REAL)) AS betrag,
+                GROUP_CONCAT(
+                    COALESCE(n.zahlungsbeteiligter, '') || ' ' ||
+                    COALESCE(n.verwendungszweck, '') || ' ' ||
+                    COALESCE(n.transaktionstyp, '') || ' ' ||
+                    COALESCE(n.oberkategorie, '') || ' ' ||
+                    COALESCE(n.unterkategorie, '') || ' ' ||
+                    COALESCE(n.sphaere, '') || ' ' ||
+                    COALESCE(n.fachliche_beschreibung, ''),
+                    ' '
+                ) AS transaktions_text
+            FROM vorgaenge AS v
+            LEFT JOIN transaktion_vorgaenge AS tv
+              ON tv.vorgangs_id = v.vorgangs_id
+            LEFT JOIN normalized_transactions AS n
+              ON n.transaktions_id = tv.transaktions_id
+            GROUP BY
+                v.vorgangs_id,
+                v.titel,
+                v.beschreibung,
+                v.vorgangstyp,
+                v.status,
+                v.aktualisiert_am
+            ORDER BY
+                CASE
+                    WHEN v.status = 'abgeschlossen' THEN 1
+                    ELSE 0
+                END,
+                COALESCE(MAX(n.datum), '') DESC,
+                v.aktualisiert_am DESC,
+                v.vorgangs_id
+            LIMIT 250
+            """
+        ).fetchall()
+
+    @staticmethod
+    def _vorgang_candidate_item(
+        row: sqlite3.Row,
+        *,
+        score: float,
+        reason: str = "Vorhandener Vorgang",
+        selected: bool = False,
+    ) -> dict[str, Any]:
+        return {
+            "id": str(row["vorgangs_id"]),
+            "label": str(row["titel"] or row["bezug"] or row["vorgangs_id"]),
+            "date": str(row["letztes_datum"] or row["aktualisiert_am"] or ""),
+            "status": str(row["status"] or ""),
+            "type": str(row["vorgangstyp"] or ""),
+            "amount": (
+                f"{float(row['betrag']):.2f}"
+                if row["betrag"] is not None
+                else ""
+            ),
+            "score": score,
+            "reason": reason,
+            "selected": selected,
+            "vorgangs_id": str(row["vorgangs_id"]),
+            "titel": str(row["titel"] or ""),
+            "bezug": str(row["bezug"] or ""),
+            "vorgangstyp": str(row["vorgangstyp"] or ""),
+            "anzahl_transaktionen": int(row["anzahl_transaktionen"] or 0),
+        }
+
+    @staticmethod
+    def _linked_vorgangs_for_source(
+        connection: sqlite3.Connection,
+        source_type: str,
+        source_id: str,
+    ) -> set[str]:
+        if source_type == "transaction":
+            return {
+                str(row["vorgangs_id"])
+                for row in connection.execute(
+                    """
+                    SELECT vorgangs_id
+                    FROM transaktion_vorgaenge
+                    WHERE transaktions_id = ?
+                    """,
+                    (source_id,),
+                )
+            }
+        return set()
 
     def _suggest_mails(
         self,
@@ -5360,6 +5594,29 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     self.server.mail_manager.link_vorgang(
                         mail_parts[0],
                         self._read_json_body(),
+                    )
+                )
+                return
+            transaction_prefix = "/api/transactions/"
+            transaction_suffix = "/vorgaenge"
+            if (
+                parsed.path.startswith(transaction_prefix)
+                and parsed.path.endswith(transaction_suffix)
+            ):
+                transaktions_id = unquote(
+                    parsed.path[
+                        len(transaction_prefix) : -len(transaction_suffix)
+                    ]
+                ).strip("/")
+                payload = self._read_json_body()
+                if set(payload) != {"vorgangs_id"}:
+                    raise ValueError(
+                        "Das Feld vorgangs_id ist erforderlich."
+                    )
+                self._json_response(
+                    self.server.data_store.link_transaction_vorgang(
+                        transaktions_id,
+                        str(payload["vorgangs_id"]),
                     )
                 )
                 return

@@ -7542,11 +7542,13 @@ async function loadTransactionWorkspace(transaktionsId, ruleStatus = "") {
     rulesResponse,
     completionRulesResponse,
     optionsResponse,
+    suggestionsPayload,
   ] = await Promise.all([
     fetch(`/api/transactions/${encodeURIComponent(transaktionsId)}`),
     fetch("/api/rules"),
     fetch("/api/completion-rules"),
     fetch("/api/classification-options"),
+    loadVorgangSuggestions("transaction", transaktionsId).catch(() => null),
   ]);
   const [payload, rulesPayload, completionRulesPayload, options] = await Promise.all([
     readResponse(transactionResponse),
@@ -7559,7 +7561,13 @@ async function loadTransactionWorkspace(transaktionsId, ruleStatus = "") {
   state.ruleMatchOperators = completionRulesPayload.match_operators;
   state.ruleLogicConnectors = completionRulesPayload.logic_connectors;
   state.classificationOptions = options;
-  renderDetail(payload.transaction, rulesPayload, completionRulesPayload, ruleStatus);
+  renderDetail(
+    payload.transaction,
+    rulesPayload,
+    completionRulesPayload,
+    ruleStatus,
+    suggestionsPayload,
+  );
 }
 
 function renderDetail(
@@ -7567,6 +7575,7 @@ function renderDetail(
   rulesPayload,
   completionRulesPayload,
   ruleStatus = "",
+  suggestionsPayload = null,
 ) {
   elements.detailTitle.textContent =
     transaction.zahlungsbeteiligter || transaction.kontoname;
@@ -7598,7 +7607,7 @@ function renderDetail(
     ),
   );
   elements.detailContent.append(layout);
-  renderTransactionContent(transaction, details);
+  renderTransactionContent(transaction, details, suggestionsPayload);
 }
 
 function renderVorgangWorkspace(
@@ -8502,6 +8511,7 @@ function createCompletionRuleManager(
 function renderTransactionContent(
   transaction,
   target = elements.detailContent,
+  suggestionsPayload = null,
 ) {
 
   const summary = document.createElement("div");
@@ -8555,6 +8565,13 @@ function renderTransactionContent(
   ], target);
 
   appendClassificationEditor(transaction, target);
+  if (suggestionsPayload) {
+    appendTransactionVorgangLinkSection(
+      transaction,
+      suggestionsPayload,
+      target,
+    );
+  }
 
   appendDetailSection("Zuordnungen und Referenzen", [
     detailField(
@@ -8583,6 +8600,167 @@ function renderTransactionContent(
   ], target);
 
   appendRawDataSection(transaction.rohdaten, target);
+}
+
+function appendTransactionVorgangLinkSection(
+  transaction,
+  suggestionsPayload,
+  target = elements.detailContent,
+) {
+  const section = mailElement("section", "detail-section suggestion-section");
+  const heading = mailElement("div", "suggestion-heading");
+  heading.append(mailElement("h3", "", "Bestehendem Vorgang zuordnen"));
+  section.append(heading);
+
+  const linkedIds = new Set(transaction.vorgangs_ids || []);
+  const linkedItems = linkItems(suggestionsPayload, "vorgaenge")
+    .filter((item) => linkedIds.has(item.id));
+  const linkedList = mailElement("div", "mail-vorgang-list");
+  if (linkedIds.size) {
+    const byId = new Map(linkedItems.map((item) => [item.id, item]));
+    for (const id of linkedIds) {
+      const item = byId.get(id) || {id, label: id};
+      const row = mailElement("div", "mail-vorgang-item");
+      row.append(
+        mailElement("strong", "", item.label || item.id),
+        mailElement(
+          "small",
+          "",
+          [
+            item.type || item.vorgangstyp,
+            formatStatus(item.status),
+            item.date ? formatDateTimeOrDate(item.date) : "",
+          ].filter(Boolean).join(" · "),
+        ),
+      );
+      const openButton = mailElement(
+        "button",
+        "suggestion-open-action",
+        "Öffnen",
+      );
+      openButton.type = "button";
+      openButton.addEventListener("click", () => openVorgang(id));
+      row.append(openButton);
+      linkedList.append(row);
+    }
+  } else {
+    linkedList.append(
+      mailElement("p", "suggestion-empty", "Noch keinem Vorgang zugeordnet."),
+    );
+  }
+  section.append(linkedList);
+
+  const form = mailElement("form", "mail-vorgang-form");
+  form.dataset.linkTransactionVorgang = transaction.transaktions_id;
+  const searchLabel = mailElement("label", "suggestion-search");
+  searchLabel.append(mailElement("span", "", "Suchen"));
+  const search = document.createElement("input");
+  search.type = "search";
+  search.autocomplete = "off";
+  search.placeholder = "Vorgänge durchsuchen";
+  searchLabel.append(search);
+  const list = mailElement("div", "suggestion-list");
+  const candidates = linkItems(suggestionsPayload, "vorgaenge")
+    .filter((item) => item?.id && !linkedIds.has(item.id));
+  if (!candidates.length) {
+    list.append(
+      mailElement(
+        "p",
+        "suggestion-empty",
+        "Keine weiteren Vorgänge gefunden.",
+      ),
+    );
+  }
+  for (const item of candidates) {
+    const row = mailElement("div", "suggestion-row");
+    row.classList.toggle("is-suggested", item.source === "suggestion");
+    row.dataset.searchText = [
+      item.label,
+      item.id,
+      item.reason,
+      item.date,
+      item.status,
+      item.type,
+      item.vorgangstyp,
+      item.bezug,
+    ].filter(Boolean).join(" ").toLocaleLowerCase("de-DE");
+    const label = mailElement("label", "suggestion-choice");
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "vorgangs_id";
+    radio.value = item.id;
+    const text = mailElement("span");
+    text.append(
+      mailElement("strong", "", item.label || item.id),
+      mailElement(
+        "small",
+        "",
+        [
+          item.reason,
+          item.type || item.vorgangstyp,
+          formatStatus(item.status),
+          item.date ? formatDateTimeOrDate(item.date) : "",
+          item.amount ? currencyFormatter.format(Number(item.amount)) : "",
+        ].filter(Boolean).join(" · "),
+      ),
+    );
+    label.append(radio, text);
+    row.append(label);
+    list.append(row);
+  }
+  search.addEventListener("input", () => {
+    const query = search.value.trim().toLocaleLowerCase("de-DE");
+    for (const row of list.querySelectorAll(".suggestion-row")) {
+      row.hidden = Boolean(query) && !row.dataset.searchText.includes(query);
+    }
+  });
+  const submit = mailElement(
+    "button",
+    "primary-action",
+    "Zuordnen",
+  );
+  submit.type = "submit";
+  submit.disabled = !candidates.length;
+  form.addEventListener("change", () => {
+    submit.disabled = !form.querySelector('input[name="vorgangs_id"]:checked');
+  });
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const selected = form.querySelector('input[name="vorgangs_id"]:checked');
+    if (!selected) {
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = "Wird zugeordnet";
+    try {
+      const response = await fetch(
+        `/api/transactions/${encodeURIComponent(
+          transaction.transaktions_id,
+        )}/vorgaenge`,
+        {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({vorgangs_id: selected.value}),
+        },
+      );
+      await readResponse(response);
+      state.vorgaengeLoaded = false;
+      await Promise.all([
+        loadTransactions(),
+        loadTransactionWorkspace(
+          transaction.transaktions_id,
+          "Vorgang zugeordnet",
+        ),
+      ]);
+    } catch (error) {
+      showError(error.message);
+      submit.disabled = false;
+      submit.textContent = "Zuordnen";
+    }
+  });
+  form.append(searchLabel, list, submit);
+  section.append(form);
+  target.append(section);
 }
 
 function appendClassificationEditor(

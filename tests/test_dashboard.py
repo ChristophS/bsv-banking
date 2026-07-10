@@ -649,6 +649,83 @@ class DashboardDataStoreTests(unittest.TestCase):
             "Weiterer Wert",
         )
 
+    def test_transaction_can_be_linked_to_existing_vorgang_idempotently(self):
+        first = self.store.link_transaction_vorgang(
+            "tx_newer",
+            "vorgang_tx_older",
+        )
+        second = self.store.link_transaction_vorgang(
+            "tx_newer",
+            "vorgang_tx_older",
+        )
+
+        self.assertEqual(
+            ["vorgang_tx_newer", "vorgang_tx_older"],
+            sorted(first["transaction"]["vorgangs_ids"]),
+        )
+        self.assertEqual(
+            ["vorgang_tx_newer", "vorgang_tx_older"],
+            sorted(second["transaction"]["vorgangs_ids"]),
+        )
+        detail = self.store.vorgang_detail("vorgang_tx_older")
+        self.assertEqual(
+            ["tx_newer", "tx_older"],
+            sorted(
+                item["transaktions_id"]
+                for item in detail["transaktionen"]
+            ),
+        )
+
+    def test_transaction_link_rejects_unknown_vorgang(self):
+        with self.assertRaisesRegex(LookupError, "Vorgang"):
+            self.store.link_transaction_vorgang(
+                "tx_newer",
+                "vorgang_unbekannt",
+            )
+
+        self.assertEqual(
+            ["vorgang_tx_newer"],
+            self.store.transaction_detail("tx_newer")["vorgangs_ids"],
+        )
+
+    def test_transaction_suggestions_include_existing_vorgaenge(self):
+        connection = connect_database(self.database_path)
+        try:
+            connection.execute(
+                """
+                INSERT INTO vorgaenge (
+                    vorgangs_id, titel, beschreibung, vorgangstyp,
+                    status, erstellt_am, aktualisiert_am
+                ) VALUES (
+                    'vorgang_neuer_zweck', 'Neuer Zweck Sammelvorgang',
+                    'Neuer Verein', 'Ausgabe', 'in_bearbeitung',
+                    '2026-06-11T08:00:00+00:00',
+                    '2026-06-11T08:00:00+00:00'
+                )
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        result = self.store.suggest_related_entities(
+            {"source_type": "transaction", "source_id": "tx_newer"}
+        )
+
+        self.assertIn("vorgaenge", result["suggestions"])
+        self.assertIn("vorgaenge", result["candidates"])
+        suggestion_ids = [
+            item["id"] for item in result["suggestions"]["vorgaenge"]
+        ]
+        self.assertIn("vorgang_tx_newer", suggestion_ids)
+        self.assertIn("vorgang_neuer_zweck", suggestion_ids)
+        linked = next(
+            item
+            for item in result["suggestions"]["vorgaenge"]
+            if item["id"] == "vorgang_tx_newer"
+        )
+        self.assertTrue(linked["selected"])
+
     def test_vorgaenge_are_listed_with_linked_transactions(self):
         rows = self.store.list_vorgaenge()
         detail = self.store.vorgang_detail("vorgang_tx_newer")
@@ -2360,6 +2437,49 @@ class DashboardHTTPTests(unittest.TestCase):
         ) as response:
             payload = json.load(response)
             self.assertEqual(payload["series"][0]["id"], "gesamt")
+
+    def test_transaction_vorgang_link_api_is_idempotent(self):
+        link_request = Request(
+            self.base_url + "/api/transactions/tx_newer/vorgaenge",
+            data=json.dumps({"vorgangs_id": "vorgang_tx_older"}).encode(
+                "utf-8"
+            ),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(link_request, timeout=5) as response:
+            linked = json.load(response)
+        duplicate_request = Request(
+            self.base_url + "/api/transactions/tx_newer/vorgaenge",
+            data=json.dumps({"vorgangs_id": "vorgang_tx_older"}).encode(
+                "utf-8"
+            ),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(duplicate_request, timeout=5) as response:
+            duplicate = json.load(response)
+
+        self.assertEqual(
+            ["vorgang_tx_newer", "vorgang_tx_older"],
+            sorted(linked["transaction"]["vorgangs_ids"]),
+        )
+        self.assertEqual(
+            ["vorgang_tx_newer", "vorgang_tx_older"],
+            sorted(duplicate["transaction"]["vorgangs_ids"]),
+        )
+
+        unknown_request = Request(
+            self.base_url + "/api/transactions/tx_newer/vorgaenge",
+            data=json.dumps({"vorgangs_id": "vorgang_unbekannt"}).encode(
+                "utf-8"
+            ),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as error:
+            urlopen(unknown_request, timeout=5)
+        self.assertEqual(404, error.exception.code)
 
     def test_classification_can_be_updated_over_http(self):
         request = Request(
