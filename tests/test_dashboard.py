@@ -2728,6 +2728,60 @@ class DashboardHTTPTests(unittest.TestCase):
             period = json.load(response)
         self.assertTrue(period["available"])
 
+    def test_link_candidates_endpoint_reflects_new_transactions(self):
+        with urlopen(
+            self.base_url + "/api/vorgaenge/link-candidates",
+            timeout=5,
+        ) as response:
+            first_payload = json.load(response)
+
+        self.assertNotIn(
+            "tx_after_start",
+            [
+                item["id"]
+                for item in first_payload["candidates"]["transactions"]
+            ],
+        )
+
+        database_path = self.server.data_store.database_path
+        with closing(connect_database(database_path)) as connection:
+            connection.execute(
+                """
+                INSERT INTO transactions (
+                    transaction_id, fingerprint, occurrence, provider,
+                    account_id, account_name, account_number, booking_date,
+                    value_date, counterparty, amount, currency, booking_text,
+                    purpose, amount_minor, counterparty_account, creditor_id,
+                    mandate_reference, source_info, raw_fields_json,
+                    first_seen_at, transaction_type, top_category,
+                    sub_category, sphere, professional_description,
+                    account_balance_minor
+                ) VALUES (
+                    'tx_after_start', 'fp_after_start', 1, 'testbank',
+                    'acct_test', 'Hauptkonto', 'DE001', '2026-07-10',
+                    '2026-07-10', 'Frischer Import', '19.20', 'EUR',
+                    'Ueberweisung', 'Nach Dashboard-Start importiert', 1920,
+                    'DE003', 'creditor_2', 'mandate_2', 'Testquelle',
+                    '{}', '2026-07-10T08:00:00+00:00', 'Einnahme',
+                    'Mitgliedschaft', 'Beitrag', 'Ideeller Bereich',
+                    'Frisch importierte Kontobewegung', 4420
+                )
+                """
+            )
+            connection.commit()
+
+        with urlopen(
+            self.base_url + "/api/vorgaenge/link-candidates",
+            timeout=5,
+        ) as response:
+            second_payload = json.load(response)
+
+        transaction_ids = [
+            item["id"]
+            for item in second_payload["candidates"]["transactions"]
+        ]
+        self.assertIn("tx_after_start", transaction_ids)
+
     def test_vorgang_can_be_created_completed_over_http(self):
         request = Request(
             self.base_url + "/api/vorgaenge",
