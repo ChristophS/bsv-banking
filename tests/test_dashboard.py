@@ -4157,13 +4157,26 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     expect(editor).to_contain_text("Teilbetrag Eintritt")
                     expect(
                         editor.locator("[data-split-amount]").first()
-                    ).to_have_value("1500")
+                    ).to_have_value("15,00")
                     expect(editor).to_contain_text("Spielbetrieb")
+                    self.assertTrue(
+                        page.evaluate(
+                            """
+                            () => Boolean(
+                              document
+                                .querySelector("[data-split-type]")
+                                .getAttribute("list")
+                            )
+                            """
+                        )
+                    )
 
-                    editor.locator("[data-split-amount]").first().fill("1000")
+                    editor.locator("[data-split-amount]").first().fill("10,00")
                     editor.locator("button", has_text="Zeile hinzufuegen").click()
                     second_row = editor.locator(".split-row").last()
-                    second_row.locator("[data-split-amount]").fill("1500")
+                    expect(
+                        second_row.locator("[data-split-amount]")
+                    ).to_have_value("15,00")
                     second_row.locator(
                         "[data-split-description]"
                     ).fill("API Teil 2")
@@ -4211,7 +4224,7 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
 
                     editor.locator("[data-split-amount]").first().fill("")
                     expect(editor.locator(".form-error")).to_contain_text(
-                        "Split 1 braucht einen Betrag in Cent."
+                        "Split 1 braucht einen Betrag in Euro."
                     )
                     expect(
                         editor.locator(
@@ -4220,9 +4233,9 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         )
                     ).to_be_disabled()
 
-                    editor.locator("[data-split-amount]").first().fill("1000")
+                    editor.locator("[data-split-amount]").first().fill("10,00")
                     second_row = editor.locator(".split-row").last()
-                    second_row.locator("[data-split-amount]").fill("1000")
+                    second_row.locator("[data-split-amount]").fill("10,00")
                     with page.expect_response(
                         lambda response: (
                             response.request.method == "PUT"
