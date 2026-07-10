@@ -1,2 +1,2 @@
-- Optional zusätzlichen HTTP-Test für unbekannte Transaktions-ID ergänzen.
-- Optional UI-Erfolgsmeldung nach Vorgangszuordnung deutlicher darstellen.
+- Ergänze bei Gelegenheit einen Browser- oder JS-Test, der die Review-UI mit mehreren Anhängen rendert, zwei Checkboxen aktiv lässt, eine deaktiviert und das resultierende `documents`-Array aus `readMailVorgangReviewForm` prüft.
+- Optional: Aktuell in der Vorschau ausgewählten Anhang in der Dokumentliste visuell markieren.
