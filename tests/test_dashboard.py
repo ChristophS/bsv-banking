@@ -2649,6 +2649,9 @@ class DashboardHTTPTests(unittest.TestCase):
         ) as response:
             payload = json.load(response)
             self.assertEqual(payload["transaction_id"], "tx_newer")
+            self.assertEqual(payload["amount_minor"], 2500)
+            self.assertEqual(payload["betrag_cent"], 2500)
+            self.assertEqual(payload["betrag"], "25.00")
             self.assertEqual(
                 payload["splits"][0]["amount_minor"],
                 1500,
@@ -4349,6 +4352,21 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     expect(
                         editor.locator("[data-split-summary='difference']")
                     ).to_contain_text("Differenz")
+                    expect(
+                        editor.locator("[data-split-amount]").first()
+                    ).to_have_value("15,00")
+                    with page.expect_response(
+                        lambda response: (
+                            response.request.method == "GET"
+                            and response.url.endswith(
+                                "/api/transactions/tx_newer/splits"
+                            )
+                        )
+                    ):
+                        editor.locator(
+                            "button",
+                            has_text="Splits neu laden",
+                        ).click()
                     expect(
                         editor.locator("[data-split-amount]").first()
                     ).to_have_value("15,00")

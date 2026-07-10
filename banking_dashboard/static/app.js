@@ -9272,6 +9272,10 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
   addButton.type = "button";
   addButton.className = "secondary-action";
   addButton.textContent = "Zeile hinzufuegen";
+  const reloadButton = document.createElement("button");
+  reloadButton.type = "button";
+  reloadButton.className = "secondary-action";
+  reloadButton.textContent = "Splits neu laden";
   const saveButton = document.createElement("button");
   saveButton.type = "submit";
   saveButton.className = "primary-action";
@@ -9412,6 +9416,15 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     updateSummary();
   };
 
+  const renderRows = (nextSplits) => {
+    splits = (nextSplits || []).map((split) => ({...split}));
+    rows.replaceChildren();
+    for (const split of splits) {
+      addRow(split);
+    }
+    updateSummary();
+  };
+
   addButton.addEventListener("click", () => {
     const current = readRows();
     const sum = current.reduce(
@@ -9427,6 +9440,32 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       sphere: transaction.sphaere || "",
       professional_description: transaction.fachliche_beschreibung || "",
     });
+  });
+  reloadButton.addEventListener("click", async () => {
+    reloadButton.disabled = true;
+    status.className = "save-state is-saving";
+    status.textContent = "Wird geladen";
+    try {
+      const response = await fetch(
+        `/api/transactions/${encodeURIComponent(
+          transaction.transaktions_id,
+        )}/splits`,
+      );
+      const result = await readResponse(response);
+      renderRows(result.splits || []);
+      status.className = "save-state is-saved";
+      status.textContent = "Splits geladen";
+      elements.detailDialogStatus.textContent = "Splits geladen";
+    } catch (error) {
+      formError.textContent = error.message;
+      formError.hidden = false;
+      status.className = "save-state is-error";
+      status.textContent = "Laden fehlgeschlagen";
+      elements.detailDialogStatus.textContent = error.message;
+      showError(error.message);
+    } finally {
+      reloadButton.disabled = false;
+    }
   });
   rows.addEventListener("input", updateSummary);
   form.addEventListener("submit", async (event) => {
@@ -9461,12 +9500,7 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       );
       const result = await readResponse(response);
       Object.assign(transaction, result.transaction);
-      splits = (transaction.splits || []).map((split) => ({...split}));
-      rows.replaceChildren();
-      for (const split of splits) {
-        addRow(split);
-      }
-      updateSummary();
+      renderRows(transaction.splits || []);
       status.className = "save-state is-saved";
       status.textContent = "Gespeichert";
       elements.detailDialogStatus.textContent = "Splits gespeichert";
@@ -9481,12 +9515,9 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     }
   });
 
-  form.append(formError, rows, summary, addButton, saveButton);
+  form.append(formError, rows, summary, addButton, reloadButton, saveButton);
   section.append(headingRow, form);
-  for (const split of splits) {
-    addRow(split);
-  }
-  updateSummary();
+  renderRows(splits);
   target.append(section);
 }
 
