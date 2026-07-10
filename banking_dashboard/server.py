@@ -1208,6 +1208,11 @@ class DashboardDataStore:
             for transaction in detail["transaktionen"]
             if not _transaction_classification_complete(transaction)
         ]
+        if _is_empty_sphere_fehlbuchung_vorgang(
+            detail["vorgangstyp"],
+            detail["transaktionen"],
+        ):
+            incomplete = []
         detail["unvollstaendige_transaktionen"] = incomplete
         detail["todos"] = self._todos_for_vorgang(vorgangs_id)
         detail["belege"] = self._belege_for_vorgang(vorgangs_id)
@@ -1232,6 +1237,15 @@ class DashboardDataStore:
             connection,
             values["transaction_ids"],
         )
+        transactions = self._completion_transactions(
+            connection,
+            values["transaction_ids"],
+        )
+        if _is_empty_sphere_fehlbuchung_vorgang(
+            values["vorgangstyp"],
+            transactions,
+        ):
+            incomplete = []
         requirements = _vorgang_completion_requirements(
             values["vorgangstyp"],
             values["transaction_ids"],
@@ -1284,6 +1298,15 @@ class DashboardDataStore:
             connection,
             transaction_ids,
         )
+        transactions = self._completion_transactions(
+            connection,
+            transaction_ids,
+        )
+        if _is_empty_sphere_fehlbuchung_vorgang(
+            str(row["vorgangstyp"] or ""),
+            transactions,
+        ):
+            incomplete = []
         return _vorgang_completion_requirements(
             str(row["vorgangstyp"] or ""),
             transaction_ids,
@@ -1328,6 +1351,30 @@ class DashboardDataStore:
                 (vorgangs_id,),
             )
         ]
+
+    @staticmethod
+    def _completion_transactions(
+        connection: sqlite3.Connection,
+        transaction_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        if not transaction_ids:
+            return []
+        placeholders = ", ".join("?" for _ in transaction_ids)
+        rows = connection.execute(
+            f"""
+            SELECT
+                transaction_id AS transaktions_id,
+                transaction_type AS transaktionstyp,
+                top_category AS oberkategorie,
+                sub_category AS unterkategorie,
+                sphere AS sphaere
+            FROM transactions
+            WHERE transaction_id IN ({placeholders})
+            ORDER BY transaction_id
+            """,
+            tuple(transaction_ids),
+        ).fetchall()
+        return [dict(row) for row in rows]
 
     @staticmethod
     def _incomplete_transaction_ids(
@@ -6878,6 +6925,32 @@ def _transaction_classification_complete(value: dict[str, Any]) -> bool:
             "sphaere",
         )
     )
+
+
+def _is_empty_sphere_fehlbuchung_vorgang(
+    vorgangstyp: Any,
+    transactions: list[dict[str, Any]],
+) -> bool:
+    if str(vorgangstyp or "").strip().casefold() != "sonstige":
+        return False
+    if not transactions:
+        return False
+    for transaction in transactions:
+        if not str(transaction.get("transaktionstyp") or "").strip():
+            return False
+        if (
+            str(transaction.get("oberkategorie") or "").strip().casefold()
+            != "sonstige"
+        ):
+            return False
+        if (
+            str(transaction.get("unterkategorie") or "").strip().casefold()
+            != "fehlbuchung"
+        ):
+            return False
+        if str(transaction.get("sphaere") or "").strip():
+            return False
+    return True
 
 
 def _transaction_classification_metadata(
