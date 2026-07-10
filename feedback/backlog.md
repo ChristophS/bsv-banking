@@ -10,7 +10,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Epic-Ziel:** Transaktionen fachlich so aufteilen können, dass Teilbeträge getrennt klassifiziert und darauf aufbauende Rechnungs- und Vorgangszuordnungen unterstützt werden.
 
-**Teilpaket:** Teil 3
+**Teilpaket:** Teil 4
 
 **Priorität:** hoch
 
@@ -28,7 +28,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Epic-Ziel:** Transaktionen fachlich so aufteilen können, dass Teilbeträge getrennt klassifiziert und darauf aufbauende Rechnungs- und Vorgangszuordnungen unterstützt werden.
 
-**Teilpaket:** Teil 4
+**Teilpaket:** Teil 3
 
 **Priorität:** mittel
 
