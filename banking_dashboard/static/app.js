@@ -2735,7 +2735,7 @@ async function startMailVorgangReview(entryId, button) {
       ),
       loadVorgangTypes(),
       loadVorgangSuggestions("mail", entryId).catch(() => null),
-      loadLinkCandidates(),
+      loadLinkCandidates(true),
       fetch("/api/classification-options"),
     ]);
     const [payload, options] = await Promise.all([

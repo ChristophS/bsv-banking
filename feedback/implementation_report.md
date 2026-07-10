@@ -2,34 +2,26 @@
 
 ## Branchname
 
-agent2/codex-20260710-130946
+agent2/codex-20260710-134814
 
 ## Geaenderte Dateien
 
-- banking_dashboard/mail_integration.py
 - banking_dashboard/static/app.js
-- banking_dashboard/static/styles.css
-- tests/test_mail_integration.py
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Der bestehende Reply-Endpunkt akzeptiert weiterhin `{ "body": "..." }` und zusaetzlich `to_recipients` beziehungsweise `recipients`.
-- Antworttexte werden serverseitig nicht mehr fuer den Versand getrimmt; echte Zeilenumbrueche bleiben im Body erhalten.
-- Empfaengerangaben werden serverseitig als Text oder Liste normalisiert, dedupliziert und einfach auf gueltige E-Mail-Adressen validiert.
-- Microsoft Graph nutzt fuer Antworten nun `createReply`, aktualisiert den Draft mit HTML-Body inklusive `<br>`-Zeilenumbruechen und optionalen `toRecipients`, und sendet danach den Draft.
-- Der Outlook-Reply-Pfad kann die `To`-Zeile der Antwort mit den ausgewaehlten Empfaengern ueberschreiben.
-- Das bestehende Mail-Reply-UI zeigt ein bearbeitbares Feld `An`, vorbelegt mit dem Absender aus dem Mailkontext.
-- Das UI sendet den Textarea-Inhalt ohne clientseitiges Trimmen sowie die bearbeitete Empfaengerliste an den Reply-Endpunkt.
-- Tests sichern Empfaengerweitergabe, Zeilenumbrueche im Reply-Body, Graph-Draft-Payload und den erweiterten HTTP-Payload ab.
+- Der Mail-Flow zum Anlegen eines Vorgangs ruft die Link-Kandidaten beim Start der Vorgangspruefung jetzt mit `loadLinkCandidates(true)` frisch vom Server ab.
+- Der bestehende Cache fuer Link-Kandidaten bleibt fuer andere Flows erhalten; nur der Mail-Vorgangsimport erzwingt den aktuellen Serverstand.
+- Die bestehende Import- und Verknuepfungslogik ueber `links.transaction_ids` und `POST /api/mail/<id>/vorgang-import` wurde nicht veraendert.
+- Ein HTTP-Test prueft, dass `GET /api/vorgaenge/link-candidates` nach einer neu eingefuegten Transaktion den aktualisierten Kandidatenstand liefert.
 
 ## Nicht umgesetzte Punkte
 
-- Kein neuer Mail-Composer fuer freie neue Mails.
-- Keine Kontaktverwaltung oder Adressdatenbank.
-- Keine CC/BCC-Erweiterung; umgesetzt wurde die kleine `An`-Empfaengerliste im vorhandenen Reply-Flow.
-- Keine echten Microsoft-Graph-, Outlook-, Banking-, Mail- oder Login-Aktionen ausgefuehrt.
+- Kein neuer Backend-Endpunkt angelegt; der vorhandene Endpunkt `/api/vorgaenge/link-candidates` wird weiterverwendet.
+- Kein expliziter Reload-Button im Dialog ergaenzt, da der automatische frische Abruf beim Oeffnen des Mail-Vorgangsdialogs ausreicht.
+- Keine echten Banking-, Microsoft-Graph-, Mail- oder externen Login-Aktionen ausgefuehrt.
 - Keine Aenderungen an `feedback/next_task.md`, `feedback/backlog.md`, `feedback/agent2_prompt.md`, `feedback/agent2_review_request.md` oder Review-Report-Dateien.
 
 ## Ausgefuehrte Tests
@@ -40,18 +32,17 @@ agent2/codex-20260710-130946
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 93 passed, 4 skipped
+- `tests/test_dashboard.py`: 94 passed, 4 skipped
 - `tests/test_mail_integration.py`: 38 passed, 1 skipped
 - `node --check banking_dashboard/static/app.js`: erfolgreich ohne Ausgabe
 
 ## Bekannte Einschraenkungen
 
-- Keine manuellen Tests gegen ein echtes Mailkonto ausgefuehrt.
-- Die Empfaengersteuerung umfasst nur `An`; CC/BCC bleiben ausserhalb dieses Arbeitspakets.
-- Die E-Mail-Validierung ist bewusst einfach gehalten und akzeptiert normale Adressen sowie `Name <adresse@example.org>`.
+- Kein manueller Browser-Test gegen das Dashboard ausgefuehrt.
+- Der Test sichert die Serveraktualitaet des Kandidatenendpunkts ab; die Frontend-Aenderung selbst ist der gezielte Force-Refresh im Mail-Flow.
 
 ## Hinweise fuer den Review-Agenten
 
 - Der Arbeitsbaum enthielt bereits vor dieser Umsetzung Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md`; diese Dateien wurden nicht bearbeitet.
-- Der Graph-Reply-Pfad wurde von `/reply` mit `comment` auf `createReply` plus Draft-Update umgestellt, damit Empfaenger vor dem Senden kontrollierbar sind.
-- Alte minimale Reply-Payloads bleiben kompatibel und verwenden die Standardempfaenger des jeweiligen Mail-Backends.
+- Die Aenderung in `app.js` ist absichtlich minimal: `startMailVorgangReview()` nutzt denselben Loader wie vorher, aber mit `force = true`.
+- Andere Vorgangsanlegen-Flows verwenden weiterhin den bestehenden Kandidaten-Cache.
