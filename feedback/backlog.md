@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Separater kleiner UI-Punkt, aber weniger wichtig als die Sichtbarkeit und Importierbarkeit mehrerer Anhänge.
+**Grund:** Kleiner separater UI-Punkt; sinnvoll, aber nicht so wichtig wie der jetzt ausgewählte arbeitsnahe Mail-Sende-Fehler.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigener Refresh-/Kandidaten-Flow; sollte getrennt vom Mehrfachanhang-Thema untersucht werden.
+**Grund:** Eigenständiger Kandidaten-/Refresh-Flow im Mail-Vorgangsanlegen und daher getrennt vom Reply-/Senden-Paket behandeln.
 
 **Feedback:**
 
@@ -36,57 +36,47 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Eigenständiger fachlicher Sonderfall mit Abschlussvalidierung und Klassifikationslogik.
+**Grund:** Eigenständiger fachlicher Sonderfall mit Abschlussvalidierung und Klassifikationsregeln; separat umsetzen.
 
 **Feedback:**
 
 - Ich habe aktuelle eine Fehlbuchung. Diese muss zusammen mit dem Gegenbetrag einfach genullt und abgeschlossen werden können. Fehlbuchungen haben immer: Vorgangstyp "Sonstige", Oberkategorie "Sonstige" Unterkategorie "Fehlbuchung", Sphäre "leer" und können sofort als abgeschlossen markiert werden
 
-## 5. Mail-Senden: Zeilenumbrüche erhalten und Empfängerauswahl ermöglichen
-
-**Priorität:** hoch
-
-**Grund:** Separater Compose-/Reply-Flow im Mailmodul.
-
-**Feedback:**
-
-- Wenn ich direkt aus dem Tool eine Mail sende, dann werden zeilenumbrüche ignoriert. Ich kann auch nicht auswählen an wen.
-
-## 6. Dashboard-Startseite mit anstehenden Terminen, To-Dos, offenen Vorgängen und Alles-synchronisieren
+## 5. Dashboard-Startseite mit anstehenden Terminen, To-Dos, offenen Vorgängen und Alles-synchronisieren
 
 **Priorität:** mittel
 
-**Grund:** Größerer Oberflächenpunkt mit mehreren Widgets; kein kleines Folgepaket.
+**Grund:** Größeres Oberflächenthema mit mehreren Widgets und Zusammenführung bestehender Bereiche; nicht klein genug für dieses Paket.
 
 **Feedback:**
 
 - Gut wäre, wenn man beim Start ein Dashboard hätte mit anstehenden Terminen, ToDos, offene Vorgänge, usw. UND einen Button mit "alles synchronisieren" Also Mails, Transaktionen vor allem
 
-## 7. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
+## 6. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
 **Priorität:** mittel
 
-**Grund:** Größere Erweiterung der Zuordnungslogik; bewusst getrennt vom jetzigen Sichtbarkeits-/Importpaket.
+**Grund:** Größere Erweiterung der Zuordnungslogik zwischen Mail, Belegen, Vorgängen und Transaktionen; bewusst getrennt halten.
 
 **Feedback:**
 
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege, wie man geschickt damit umgehen kann.
 
-## 8. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
+## 7. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration konzipieren
 
 **Priorität:** mittel
 
-**Grund:** Neues größeres Modul mit Konzeptionsbedarf; weit außerhalb eines kleinen Implementierungspakets.
+**Grund:** Neues größeres Modul mit Konzeptionsbedarf; klar außerhalb eines kleinen nächsten Implementierungspakets.
 
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
 
-## 9. Unbekannte Transaktions-ID per HTTP zusätzlich testen
+## 8. Unbekannte Transaktions-ID per HTTP zusätzlich testen
 
 **Priorität:** niedrig
 
-**Grund:** Nützliche Absicherung, aber nicht arbeitskritisch und unabhängig vom ausgewählten Paket.
+**Grund:** Nützliche Absicherung, aber unabhängig vom ausgewählten Paket und mit niedrigerer Priorität.
 
 **Feedback:**
 
