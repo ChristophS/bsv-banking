@@ -1,2 +1,3 @@
-- Leere Zustände je Dashboard-Vorschau spezifischer formulieren, z. B. „Keine offenen Vorgänge“, „Keine offenen To-Dos“ und „Keine anstehenden Termine“.
-- Optional einen UI-Test ergänzen, der explizit prüft, dass beide Synchronisieren-Buttons während eines laufenden Refreshs deaktiviert sind und denselben Status anzeigen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
