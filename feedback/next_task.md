@@ -2,44 +2,40 @@
 
 ## Titel
 
-Kleinen Split-Workflow im Dashboard für bestehende Transaktions-Splits fertig nutzbar machen
+Split-Bereich in der Transaktionsdetailansicht für vorhandene Splits nutzbar machen
 
 ## Ziel
 
-Die bereits vorhandene Backend-Unterstützung für transaction_splits im lokalen Dashboard sichtbar und bearbeitbar machen, sodass eine einzelne Transaktion in mehrere fachlich klassifizierte Teilsummen aufgeteilt und gespeichert werden kann.
+In der bestehenden Dashboard-Detailansicht einer einzelnen Transaktion die bereits vorhandenen Splits sichtbar laden, bearbeiten und per bestehender Split-API speichern können, ohne die übrige Transaktionsbearbeitung zu verändern.
 
 ## Relevante Dateien
 
-- banking_dashboard/server.py
 - banking_dashboard/static/app.js
 - banking_dashboard/static/index.html
-- transaction_store/database.py
-- transaction_store/models.py
+- banking_dashboard/server.py
 - tests/test_dashboard.py
-- tests/test_transactions.py
 
 ## Wahrscheinliche Änderungsstellen
 
-- banking_dashboard/static/app.js: Transaktions-Detailansicht um Laden, Anzeigen, Bearbeiten und Speichern von Splits ergänzen.
-- banking_dashboard/static/index.html: Platzhalter/Struktur für einen kleinen Split-Bereich in der bestehenden Transaktions-Detailansicht ergänzen.
-- banking_dashboard/server.py: nur falls für Fehlermeldungen oder Response-Formate kleine Anpassungen nötig sind; keine neue Architektur.
-- tests/test_dashboard.py: API- und/oder Dashboard-Verhalten für Splits ergänzen, insbesondere Laden und Ersetzen.
-- tests/test_transactions.py: falls bereits Store-/DB-nahe Split-Tests vorhanden sind, diese um Validierungs- oder Persistenzfälle ergänzen.
+- banking_dashboard/static/app.js: Transaktionsdetailansicht um Split-Laden, Split-Liste, Editieren, Hinzufügen und Löschen ergänzen.
+- banking_dashboard/static/index.html: kleine UI-Struktur für den Split-Bereich in der bestehenden Detailansicht ergänzen.
+- banking_dashboard/server.py: nur falls für die bestehende PUT /api/transactions/<id>/splits-Antwort oder Fehlermeldungen minimale Anpassungen nötig sind.
+- tests/test_dashboard.py: Verhalten für Laden, Speichern und Validierungsfehler der Split-Ansicht absichern.
 
 ## Muss umgesetzt werden
 
-- In der Transaktions-Detailansicht einen Split-Bereich anzeigen, der vorhandene Splits aus transaction_detail.splits oder per Split-API lädt.
-- Benutzer muss mehrere Split-Zeilen für eine Transaktion anlegen, bearbeiten und entfernen können.
-- Pro Split mindestens Betrag in Cent/Euro sowie die vorhandenen Klassifikationsfelder pflegbar machen: Transaktionstyp, Oberkategorie, Unterkategorie, Sphäre, fachliche Beschreibung; Beschreibung des Splits ebenfalls bearbeitbar.
+- In der Transaktionsdetailansicht einen Split-Bereich anzeigen, der vorhandene Splits aus der Detailantwort oder per Split-API lädt.
+- Mehrere Split-Zeilen für eine Transaktion anlegen, bearbeiten und entfernen können.
+- Pro Split mindestens Betrag sowie die vorhandenen Klassifikationsfelder pflegbar machen: Transaktionstyp, Oberkategorie, Unterkategorie, Sphäre, fachliche Beschreibung; Beschreibung des Splits ebenfalls bearbeitbar.
 - Speichern muss die vorhandene PUT /api/transactions/<id>/splits-Schnittstelle nutzen und die komplette Split-Liste ersetzen.
-- Vor dem Speichern clientseitig oder serverseitig klar abfangen, wenn die Summe der Split-Beträge nicht exakt dem Transaktionsbetrag entspricht; der Nutzer braucht eine verständliche Fehlermeldung.
+- Vor dem Speichern muss eine nicht passende Split-Summe als Fehler erkennbar sein und eine verständliche Meldung auslösen.
 - Nach erfolgreichem Speichern muss die Detailansicht aktualisiert werden und die gespeicherten Splits sichtbar bleiben.
 
 ## Soll umgesetzt werden
 
-- Für die Eingabe der Klassifikationsfelder dieselben Vorschlagsquellen bzw. Auswahloptionen wie in der bestehenden Klassifikationsbearbeitung nutzen, soweit im Frontend bereits verfügbar.
-- Die UI sollte klar zwischen Transaktions-Gesamtbetrag und Summe der Splits unterscheiden und eine Restdifferenz sichtbar machen.
-- Falls technisch klein umsetzbar, leere/neue Split-Zeilen mit sinnvollen Defaults starten, statt alle Felder manuell leer bauen zu müssen.
+- Für die Eingabe der Klassifikationsfelder dieselben Vorschlagsquellen oder Auswahloptionen wie in der bestehenden Klassifikationsbearbeitung nutzen, soweit bereits vorhanden.
+- Die UI sollte den Transaktions-Gesamtbetrag und die Summe der Splits klar unterscheiden.
+- Leere neue Split-Zeilen möglichst mit sinnvollen Defaults starten.
 
 ## Nicht Teil dieses Arbeitspakets
 
@@ -47,7 +43,7 @@ Die bereits vorhandene Backend-Unterstützung für transaction_splits im lokalen
 - Fachliches Modell für Rechnungshierarchien oder mehrstufige Zuordnungen
 - Automatische Erzeugung oder Anpassung zusätzlicher Vorgänge je Split
 - Verknüpfung mehrerer Mail-Anhänge mit unterschiedlichen Transaktionen innerhalb eines Vorgangs
-- Spendenbescheinigungen, Adressdatenbank oder DFBnet-Verein-Integration
+- Spendenbescheinigungen, Adressdatenbank oder DFBnet-Integration
 
 ## Akzeptanzkriterien
 
@@ -60,20 +56,20 @@ Die bereits vorhandene Backend-Unterstützung für transaction_splits im lokalen
 
 ## Hinweise für den Umsetzungs-Agenten
 
-- Da transaction_detail() bereits splits liefert, sollte die Frontend-Detailansicht möglichst darauf aufsetzen und nur bei Bedarf den dedizierten Split-Endpunkt nachladen.
-- Die Payload für PUT /api/transactions/<id>/splits muss dem bestehenden Parser in _transaction_splits_from_payload() entsprechen, inklusive Unterstützung der deutschen/englischen Feldnamen.
-- Falls die UI Euro-Beträge bearbeitet, beim Senden sauber in amount_minor/betrag_cent umrechnen und Rundungsfehler vermeiden.
-- Wenn die Backend-Funktion replace_transaction_splits() bereits Summenvalidierung enthält, diese nicht duplizieren; andernfalls mindestens im UI frühzeitig plausibilisieren und Backend-Fehler anzeigen.
+- Die Frontend-Detailansicht sollte möglichst auf der bereits gelieferten Split-Information aufsetzen und nur bei Bedarf den dedizierten Split-Endpunkt nutzen.
+- Die Payload für PUT /api/transactions/<id>/splits muss dem bestehenden Parser entsprechen, inklusive der vorhandenen Feldnamen.
+- Falls die UI Euro-Beträge bearbeitet, beim Senden sauber in Cent umrechnen und Rundungsfehler vermeiden.
 - Änderungen klein halten: kein neuer globaler Zustand und kein neuer separater Split-Workflow außerhalb der bestehenden Transaktionsdetails.
 
 ## Manuelle Testhinweise
 
-- Dashboard starten, Transaktion öffnen, Split-Bereich prüfen.
-- Zwei Splits mit zusammen exakt dem Originalbetrag anlegen, speichern, Detailansicht neu öffnen und Persistenz prüfen.
-- Einen Split löschen bzw. Beträge so ändern, dass die Summe nicht mehr passt; prüfen, dass eine verständliche Fehlermeldung erscheint.
+- Dashboard starten und eine Transaktion öffnen.
+- Zwei Splits anlegen, die zusammen exakt den Originalbetrag ergeben, speichern und die Detailansicht erneut öffnen.
+- Die Persistenz der Splits prüfen und sicherstellen, dass sie unverändert angezeigt werden.
+- Die Beträge so ändern, dass die Summe nicht mehr passt, und prüfen, dass eine verständliche Fehlermeldung erscheint.
 - Prüfen, dass normale Transaktionsdetails und bestehende Klassifikationsbearbeitung weiterhin funktionieren.
 
 ## Offene Fragen
 
-- Ob replace_transaction_splits() die Summengleichheit bereits serverseitig strikt validiert, ist aus dem geladenen Ausschnitt nicht eindeutig ersichtlich; falls nicht, sollte der Umsetzungs-Agent die bestehende DB-Logik zuerst prüfen und nur minimal ergänzen.
-- Ob Splits zusätzlich einen vorgangs_id-Bezug in der UI pflegbar machen sollen, ist im kleinen Paket nicht zwingend; wenn das im Code schon vorgesehen, nur freischalten, wenn der Nutzen ohne neue Komplexität klar ist.
+- Ob die Summengleichheit bereits serverseitig strikt validiert wird, sollte vor der Umsetzung kurz geprüft werden.
+- Ob Splits zusätzlich einen vorgangs_id-Bezug in der UI pflegbar machen sollen, ist für dieses kleine Paket nicht erforderlich.
