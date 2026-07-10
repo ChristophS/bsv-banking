@@ -31,3 +31,15 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
+
+## 4. Expliziten Migrationstest für Schema-Version 13 auf 14 ergänzen
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierender Review-Hinweis zur Absicherung der Migration auf `transaction_splits`.
+
+## 5. Prüfen, ob `TransactionSplit` `created_at` und `updated_at` enthalten soll
+
+**Priorität:** niedrig
+
+**Grund:** Nicht-blockierender Review-Hinweis zur Vollständigkeit des Datentyps gegenüber der Persistenz.
