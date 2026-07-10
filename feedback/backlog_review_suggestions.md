@@ -1,4 +1,3 @@
-- API-Fehlerantworten für Split-Speicherung strukturieren, z. B. `code`, `field`, `index`, `message`.
-- Cent-Beträge im Split-Payload strikt als Integer validieren und JSON-Floats explizit ablehnen.
-- `vorgangs_id` in Split-Zeilen vor dem Insert validieren und gezielte 400/404-Fehler liefern.
-- Optional zusätzliche Tests für ungültige `vorgangs_id` und nicht-ganzzahlige Beträge ergänzen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
