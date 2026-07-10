@@ -1,2 +1,3 @@
-- Optional: Die sticky/obere Aktionsleiste zusätzlich mit einem visuellen Regressionstest oder einer Layout-Assertion absichern.
-- Optional: Eine kleinere nicht-browserabhängige Testabdeckung für die Label-Funktion ergänzen, damit die Kernlogik auch dann geprüft wird, wenn Playwright/Chromium nicht verfügbar ist.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
