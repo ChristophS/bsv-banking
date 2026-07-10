@@ -1,4 +1,3 @@
-- Split-Editor: invalide Betragseingaben explizit erkennen und als Zeilenfehler anzeigen, statt sie zu `0` Cent zu normalisieren.
-- Split-Editor: komplett leere Zeilen vor dem Speichern verhindern oder bewusst ignorieren.
-- Backend/API: unbekannte `vorgangs_id` in Split-Payloads gezielt als 400/404 mit verständlicher Fehlermeldung behandeln.
-- Tests: ergänzenden Browser-/DOM-Test für den Split-Editor aufnehmen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
