@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die Umsetzung erfüllt die Anforderungen an Persistenz, Laden/Speichern, Summenvalidierung, unbekannte Transaktionen, API-Erweiterung und Tests; der Branch-Zustand ist sauber.
+Der nachgeladene Kontext zeigt, dass die geforderte Split-Editor-Funktionalität inklusive API, Persistenz, UI und Tests im aktuellen Branch vorhanden ist; der GitHub-Compare enthält allerdings nur den Implementation Report.
 
 ## Zusammenfassung
 
-Die bestehende Split-Grundlage wurde um eine explizite stabile Reihenfolge ergänzt und Schema, Migration, Modelle, Serialisierung, Persistenzlogik sowie API-/Persistenztests wurden passend angepasst. Die Akzeptanzkriterien sind fachlich erfüllt; es gibt keine blockierenden Probleme.
+Akzeptiert: Die Transaktionsdetailansicht enthält einen nutzbaren Split-Editor mit Laden, Anlegen, Bearbeiten, Entfernen, Summenanzeige und Speicherung über die bestehende Split-Persistenz. API-/Server-Anbindung und Tests sind im nachgeladenen Kontext nachvollziehbar vorhanden; der Branch ist sauber ahead ohne behind.
 
 # Review Report
 
@@ -20,49 +20,43 @@ Die bestehende Split-Grundlage wurde um eine explizite stabile Reihenfolge ergä
 
 **Accepted:** true
 
-## Prüfung gegen das Arbeitspaket
+## Geprüfter Umfang
 
-Die Umsetzung erfüllt die geforderte Split-Grundlage für Transaktionen.
+- Arbeitspaket: Split-Editor im Dashboard für einfache Teilbetragsaufteilung
+- GitHub Compare: sauberer Branch-Zustand, `ahead_by=1`, `behind_by=0`
+- Tatsächlicher Diff: nur `feedback/implementation_report.md`
+- Nachgeladener Kontext: relevante Server-, Frontend-, Persistenz- und Testdateien
 
-### Datenmodell und Migration
+## Bewertung gegen die Anforderungen
 
-- `transaction_splits` erhält mit `sort_order` eine explizite Reihenfolgespalte.
-- Die Schema-Version wird von 14 auf 15 angehoben.
-- Die Migration `v14 -> v15` ergänzt die Spalte für bestehende Tabellen und backfillt vorhandene Split-Zeilen aus der bisherigen SQLite-Reihenfolge.
-- Ein zusätzlicher Index auf `(transaction_id, sort_order)` unterstützt das stabile Laden pro Transaktion.
-- Die bestehende Kopplung an `transactions(transaction_id)` bleibt erhalten; es wird keine neue zentrale Fachentität neben Vorgängen/Transaktionen eingeführt.
+Die im zusätzlichen Repo-Kontext sichtbare Implementierung erfüllt die fachlichen Akzeptanzkriterien:
 
-### Persistenzlogik
+- `DashboardDataStore.transaction_detail()` liefert vorhandene Split-Daten als `splits` mit.
+- `GET /api/transactions/{id}/splits` stellt Split-Daten separat bereit.
+- `PUT /api/transactions/{id}/splits` ersetzt Split-Zeilen und deckt dadurch Anlegen, Bearbeiten und Entfernen ab.
+- Die Persistenz nutzt die vorhandene `transaction_splits`-Struktur und `replace_transaction_splits()` mit Savepoint/atomarem Austausch.
+- Die Summenvalidierung erfolgt serverseitig: nicht leere Split-Listen müssen exakt dem Transaktionsbetrag entsprechen; leere Listen sind erlaubt, um Splits vollständig zu löschen.
+- In `app.js` ist ein Split-Editor in der Transaktionsdetailansicht eingebunden, der Zeilen mit Betrag, Beschreibung, Klassifikationsfeldern und optionaler Vorgangs-ID bearbeitet.
+- Die UI zeigt Originalbetrag, Split-Summe und Differenz an und unterscheidet ausgeglichene und nicht ausgeglichene Summen visuell.
+- Clientseitige Validierung erkennt leere oder ungültige Euro-Beträge vor dem Speichern.
+- Tests in `tests/test_dashboard.py` und `tests/test_transactions.py` decken Laden, Speichern, Entfernen, Summentests, HTTP-Endpunkte und einen Browser-Flow ab.
 
-- `list_transaction_splits` lädt Splits stabil nach `sort_order, created_at, rowid`.
-- `replace_transaction_splits` ersetzt die Splits weiterhin atomar über einen Savepoint.
-- Beim Ersetzen wird die Reihenfolge aus der eingereichten Liste abgeleitet.
-- Die bestehende Validierung gegen unbekannte Transaktionen und gegen abweichende Split-Summen bleibt erhalten.
-- Leere Split-Listen bleiben möglich, wodurch Splits vollständig entfernt werden können; das ist mit dem Hinweis vereinbar, keine künstlichen Default-Splits anzulegen.
+## Hinweise zum Diff
 
-### API und Serialisierung
+Der GitHub-Diff enthält keine fachlichen Codeänderungen, sondern nur den aktualisierten Implementation Report. Auf Basis des nachgeladenen Kontextes ist aber nachvollziehbar, dass die geforderte Funktionalität im aktuellen Branch vorhanden ist. Dies ist kein technischer Blocker, sollte in künftigen Reports aber noch deutlicher als bereits vorhandene Funktionalität ausgewiesen werden.
 
-- Die Split-Serialisierung liefert nun `sort_order` sowie das deutsche Aliasfeld `reihenfolge` aus.
-- Der Payload-Parser setzt die Reihenfolge aus der Listensequenz.
-- Die bestehende kleine Read/Write-API für `/api/transactions/<id>/splits` bleibt passend zum Arbeitspaket.
+## Projektregeln
 
-### Tests
-
-- Die Tests wurden um Schema-/Migrationsprüfung für `sort_order`, stabile Reihenfolge beim Speichern/Laden und API-Antworten ergänzt.
-- Laut Implementation Report wurden `tests/test_transactions.py` und `tests/test_dashboard.py` erfolgreich ausgeführt.
-
-### Branch-/Compare-Zustand
-
-- `compare_status`: `ahead`
-- `ahead_by`: 1
-- `behind_by`: 0
-- `total_commits`: 1
-- Keine Abweichungen zwischen Runner- und GitHub-Compare-Dateien.
-
-## Hinweise
-
-Die nachgeladene `additional_repo_context` wirkte an einzelnen Stellen wie ein Stand vor Anwendung des Diffs. Da der GitHub-Diff laut Review-Regeln maßgeblich ist und die Änderungen dort konsistent sowie ausreichend prüfbar sind, blockiert das die Entscheidung nicht.
+- Keine Secrets oder produktiven Daten erkennbar geändert.
+- Keine externen Banking-, DFBnet-, Microsoft-Graph-, Mail- oder Login-Aktionen in den Tests erforderlich; externe Dienste werden mit Fakes/Mocks abgedeckt.
+- Keine fachliche Status- oder Rechnungslogik aus Splits abgeleitet.
+- Keine grundlegende neue Architektur eingeführt.
 
 ## Blockierende Probleme
 
 Keine.
+
+## Nicht blockierende Vorschläge
+
+- Künftige Reports sollten klarer zwischen neu geänderten Dateien und bereits vorhandener Funktionalität unterscheiden.
+- Optional könnte die UI das Speichern nicht ausgeglichener nicht leerer Split-Listen direkt blockieren oder den serverseitigen Zwang zur exakten Summe noch deutlicher kommunizieren.
