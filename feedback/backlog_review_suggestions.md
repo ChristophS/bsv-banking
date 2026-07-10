@@ -1,3 +1,3 @@
-- Zusätzliche HTTP-Negativtests für leere oder ungültige `to_recipients` ergänzen.
-- Clientseitige Validierung und verständlichere Fehlermeldungen im Reply-Formular ergänzen.
-- Optional einen Browser-/Frontend-Test ergänzen, der mehrere manuell bearbeitete Empfänger im Reply-Flow prüft.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
