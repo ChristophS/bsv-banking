@@ -3230,12 +3230,30 @@ function createMailReviewEntityList(title, type, items, rowFactory) {
   const section = mailElement("section", "detail-section mail-review-entities");
   section.append(mailElement("h3", "", title));
   const list = mailElement("div", "mail-review-list");
-  if (!items.length) {
+  list.dataset.reviewList = type;
+  if (!items.length && type !== "todo") {
     list.append(mailElement("p", "suggestion-empty", "Keine Vorschläge."));
   }
   items.forEach((item, index) => {
     list.append(rowFactory(item, index, type));
   });
+  if (type === "todo") {
+    if (!items.length) {
+      list.append(mailElement("p", "suggestion-empty", "Keine To-Do-Vorschläge."));
+      list.append(rowFactory({}, 0, type));
+    }
+    const actions = mailElement("div", "mail-review-list-actions");
+    const addButton = mailElement("button", "secondary-action", "To-Do hinzufügen");
+    addButton.type = "button";
+    addButton.dataset.addReviewTodo = "";
+    addButton.addEventListener("click", () => {
+      const nextIndex = list.querySelectorAll('[data-review-type="todo"]').length;
+      list.append(rowFactory({}, nextIndex, type));
+    });
+    actions.append(addButton);
+    section.append(list, actions);
+    return section;
+  }
   section.append(list);
   return section;
 }
