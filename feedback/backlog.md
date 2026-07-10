@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Das ist das größere Hauptthema, aber deutlich umfangreicher als ein kleines, kontrolliertes Arbeitspaket. Der Migrationstest ist der klar abgrenzbare nächste Schritt.
+**Grund:** Das ist das größere Hauptthema, aber deutlich umfangreicher als ein kleines, kontrolliertes Arbeitspaket.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiger Mail-/Dokumentenworkflow mit separatem UI- und Datenfluss; nicht Teil des kleinen Migrationspakets.
+**Grund:** Eigenständiger Mail-/Dokumentenworkflow mit separatem UI- und Datenfluss.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größeres neues Modul mit erheblichem Konzeptions- und Integrationsaufwand; bewusst nicht in dieses kleine Paket aufnehmen.
+**Grund:** Größeres neues Modul mit erheblichem Konzeptions- und Integrationsaufwand.
 
 **Feedback:**
 
