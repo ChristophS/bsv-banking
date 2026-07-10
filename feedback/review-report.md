@@ -8,43 +8,53 @@
 
 ## Begründung
 
-Der Diff ist ausreichend aussagekräftig; die Muss-Anforderungen sind fachlich erfüllt und durch passende Backend-/API-/Integrationstests abgedeckt.
+Der GitHub-Compare-Diff erfüllt die Kernanforderung durch einen erzwungenen frischen Abruf der Link-Kandidaten im Mail-Vorgangsanlegen; der ergänzte Test deckt die Server-Aktualität des Kandidaten-Endpunkts ab.
 
 ## Zusammenfassung
 
-Die Umsetzung erweitert den bestehenden Reply-Flow um bearbeitbare An-Empfänger, erhält Zeilenumbrüche serverseitig und im Graph-/Outlook-Versandpfad und ergänzt passende Tests. Es wurden keine blockierenden Probleme festgestellt.
+Im Mail-Flow zum Vorgangsanlegen wird die Kandidatenliste laut maßgeblichem GitHub-Diff jetzt mit `loadLinkCandidates(true)` frisch vom Server geladen. Die bestehende Import-/Verknüpfungslogik bleibt unverändert, und ein HTTP-Test sichert ab, dass `/api/vorgaenge/link-candidates` neue Transaktionen nachträglich reflektiert. Daher ist die Umsetzung akzeptiert.
 
-## Review-Ergebnis
+# Review Report
 
-**Accepted: true**
+## Ergebnis
 
-Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch auf Basis des GitHub-Diffs.
+**Accepted:** true
 
 ## Geprüfte Anforderungen
 
-- Der bestehende Reply-Endpunkt bleibt mit `{ "body": "..." }` kompatibel und akzeptiert zusätzlich `to_recipients` bzw. `recipients`.
-- Antworttexte werden nicht mehr für den Versand getrimmt; echte Zeilenumbrüche werden normalisiert, aber nicht entfernt.
-- Für HTML-Versand werden Zeilenumbrüche kontrolliert in `<br>` umgewandelt und HTML-Inhalte escaped.
-- Microsoft Graph wird auf `createReply` plus Draft-Update und anschließendem Send umgestellt, sodass Empfänger und Body kontrolliert gesetzt werden können.
-- Der Outlook-Pfad kann die `To`-Zeile der Antwort überschreiben und erhält die Absatzstruktur im HTML-Reply.
-- Die Reply-UI enthält nun ein bearbeitbares Feld `An`, das aus dem vorhandenen Mailkontext vorbelegt wird.
-- Das UI sendet den Textarea-Inhalt ohne clientseitiges `.trim()` und übergibt die Empfängerliste an den bestehenden Reply-Endpunkt.
-- Neue Tests decken den erweiterten API-Payload, Weitergabe der Empfänger, Zeilenumbrüche und den Graph-Draft-Payload ab.
+- Der Mail-Flow zum Vorgangsanlegen soll Transaktionskandidaten frisch vom Server laden.
+- Die bestehende Verknüpfungslogik über `links.transaction_ids` und `POST /api/mail/<id>/vorgang-import` soll unverändert bleiben.
+- Mindestens ein Test soll absichern, dass Kandidatenlisten nach einem neuen Import nicht auf einem alten Snapshot festhängen.
 
 ## Bewertung
 
-Die wesentlichen Akzeptanzkriterien sind erfüllt:
+Der maßgebliche GitHub-Compare-Diff ändert in `banking_dashboard/static/app.js` innerhalb von `startMailVorgangReview()` den Kandidatenabruf von:
 
-- Zeilenumbrüche bleiben beim Antworten sinnvoll erhalten.
-- Der Reply-Endpunkt ist abwärtskompatibel erweitert.
-- Nutzer können vor dem Senden sehen und beeinflussen, an wen die Antwort geht.
-- Standardempfänger werden aus dem Mailkontext vorbelegt.
-- Die neuen Tests adressieren die zentralen Risiken des Arbeitspakets.
+```js
+loadLinkCandidates()
+```
 
-Es gibt keinen erkennbaren verbotenen Scope Creep, keine Änderungen an geschützten Daten oder externen Echtaktionen und keine offensichtliche Verletzung der Projektregeln.
+auf:
 
-## Nicht-blockierende Hinweise
+```js
+loadLinkCandidates(true)
+```
 
-- Die serverseitige Empfängervalidierung ist bewusst einfach gehalten; das ist für dieses Paket akzeptabel.
-- Zusätzliche Negativtests für ungültige Empfänger auf HTTP-Ebene wären sinnvoll, sind aber nicht zwingend blockierend.
-- Eine clientseitige Validierung könnte die Nutzerführung verbessern, ist aber nicht erforderlich für die Annahme.
+Die bestehende Funktion `loadLinkCandidates(force = false)` unterstützt diesen Force-Parameter bereits und umgeht bei `true` den vorhandenen Frontend-Cache. Damit wird beim Öffnen bzw. Starten der Mail-Vorgangsprüfung ein frischer Abruf von `/api/vorgaenge/link-candidates` ausgelöst. Das entspricht dem Kern des Arbeitspakets.
+
+Die Importlogik und das Lesen/Übermitteln von `links.transaction_ids` wurden laut Diff nicht verändert. Es gibt daher keine sichtbare Verschlechterung der bestehenden Mail-Import-Verknüpfung.
+
+In `tests/test_dashboard.py` wurde ein Test ergänzt, der den Kandidaten-Endpunkt vor und nach dem Einfügen einer neuen Transaktion abfragt und sicherstellt, dass die neue Transaktion anschließend in `candidates.transactions` enthalten ist. Damit ist zumindest serverseitig abgesichert, dass der Endpunkt keinen alten Snapshot liefert und der neue Frontend-Force-Refresh aktuelle Daten erhalten kann.
+
+## Hinweise
+
+Der zusätzlich nachgeladene vollständige Inhalt von `banking_dashboard/static/app.js` war an der zentralen Stelle nicht konsistent mit dem GitHub-Compare-Diff. Da die Review-Regeln den `github_diff_patch` als maßgebliche Quelle für die tatsächlich geänderten Stellen festlegen, wurde die fachliche Bewertung auf Basis des GitHub-Diffs durchgeführt.
+
+## Blockierende Probleme
+
+Keine.
+
+## Nicht blockierende Vorschläge
+
+- Ein dedizierter Frontend- oder Mail-Flow-Test könnte zusätzlich prüfen, dass `startMailVorgangReview()` tatsächlich `loadLinkCandidates(true)` nutzt.
+- Falls später UI-Feinschliff geplant ist, könnte der Lade-/Fehlerzustand für das Nachladen der Transaktionskandidaten im Dialog noch expliziter angezeigt werden; aktuell ist der globale Ablauf über Button-Status und Fehler-Toast ausreichend.
