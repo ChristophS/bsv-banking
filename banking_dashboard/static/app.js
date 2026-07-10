@@ -9255,6 +9255,9 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
 
   const form = document.createElement("form");
   form.className = "split-form";
+  const formError = document.createElement("p");
+  formError.className = "form-error";
+  formError.hidden = true;
   const rows = document.createElement("div");
   rows.className = "split-rows";
   const summary = document.createElement("div");
@@ -9268,28 +9271,33 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
   saveButton.className = "primary-action";
   saveButton.textContent = "Splits speichern";
 
-  const readRows = () => [...rows.querySelectorAll("[data-split-row]")].map(
-    (row) => ({
-      split_id: row.dataset.splitId || "",
-      amount_minor: parseMinorAmount(
+  const readRows = () => [...rows.querySelectorAll("[data-split-row]")]
+    .map((row, index) => {
+      const amount = parseSplitAmountMinor(
         row.querySelector("[data-split-amount]").value,
-      ),
-      description: row.querySelector("[data-split-description]").value,
-      transaction_type: row.querySelector("[data-split-type]").value,
-      top_category: row.querySelector("[data-split-top]").value,
-      sub_category: row.querySelector("[data-split-sub]").value,
-      sphere: row.querySelector("[data-split-sphere]").value,
-      professional_description: row.querySelector(
-        "[data-split-professional]",
-      ).value,
-      vorgangs_id: row.querySelector("[data-split-vorgang]").value,
-    }),
-  );
+        index + 1,
+      );
+      return {
+        split_id: row.dataset.splitId || "",
+        amount_minor: amount.value,
+        amount_error: amount.error,
+        description: row.querySelector("[data-split-description]").value,
+        transaction_type: row.querySelector("[data-split-type]").value,
+        top_category: row.querySelector("[data-split-top]").value,
+        sub_category: row.querySelector("[data-split-sub]").value,
+        sphere: row.querySelector("[data-split-sphere]").value,
+        professional_description: row.querySelector(
+          "[data-split-professional]",
+        ).value,
+        vorgangs_id: row.querySelector("[data-split-vorgang]").value,
+      };
+    });
 
   const updateSummary = () => {
     const current = readRows();
+    const amountError = current.find((split) => split.amount_error);
     const sum = current.reduce(
-      (total, split) => total + split.amount_minor,
+      (total, split) => total + (split.amount_minor ?? 0),
       0,
     );
     const difference = originalAmount - sum;
@@ -9300,12 +9308,19 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     const valid = current.length === 0 || difference === 0;
     summary.classList.toggle("is-balanced", valid);
     summary.classList.toggle("is-unbalanced", !valid);
-    saveButton.disabled = !valid;
-    if (!current.length) {
+    saveButton.disabled = Boolean(amountError);
+    if (amountError) {
+      formError.textContent = amountError.amount_error;
+      formError.hidden = false;
+      status.textContent = amountError.amount_error;
+    } else if (!current.length) {
+      formError.hidden = true;
       status.textContent = "Speichern entfernt alle Splits";
     } else if (valid) {
+      formError.hidden = true;
       status.textContent = "Split-Summe ausgeglichen";
     } else {
+      formError.hidden = true;
       status.textContent = "Split-Summe nicht ausgeglichen";
     }
   };
@@ -9317,7 +9332,7 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     row.dataset.splitId = split.split_id || "";
     row.append(
       splitInput(
-        "Betrag",
+        "Betrag (Cent)",
         formatMinorInput(split.amount_minor ?? split.betrag_cent),
         "amount",
       ),
@@ -9377,7 +9392,20 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
   rows.addEventListener("input", updateSummary);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const payload = {splits: readRows()};
+    const current = readRows();
+    const amountError = current.find((split) => split.amount_error);
+    if (amountError) {
+      formError.textContent = amountError.amount_error;
+      formError.hidden = false;
+      status.className = "save-state is-error";
+      status.textContent = "Eingabe pruefen";
+      updateSummary();
+      return;
+    }
+    const payload = {
+      splits: current.map(({amount_error, ...split}) => split),
+    };
+    formError.hidden = true;
     saveButton.disabled = true;
     status.className = "save-state is-saving";
     status.textContent = "Wird gespeichert";
@@ -9403,14 +9431,16 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
       status.className = "save-state is-saved";
       status.textContent = "Gespeichert";
     } catch (error) {
+      updateSummary();
+      formError.textContent = error.message;
+      formError.hidden = false;
       status.className = "save-state is-error";
       status.textContent = "Speichern fehlgeschlagen";
       showError(error.message);
-      updateSummary();
     }
   });
 
-  form.append(rows, summary, addButton, saveButton);
+  form.append(formError, rows, summary, addButton, saveButton);
   section.append(headingRow, form);
   for (const split of splits) {
     addRow(split);
@@ -9459,23 +9489,28 @@ function splitSphereField(value) {
   return field;
 }
 
-function parseMinorAmount(value) {
-  const normalized = String(value || "")
-    .trim()
-    .replace(/\./g, "")
-    .replace(",", ".");
-  const amount = Number(normalized);
-  if (!Number.isFinite(amount)) {
-    return 0;
+function parseSplitAmountMinor(value, index) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return {
+      value: null,
+      error: `Split ${index} braucht einen Betrag in Cent.`,
+    };
   }
-  return Math.round(amount * 100);
+  if (!/^-?\d+$/.test(raw)) {
+    return {
+      value: null,
+      error: `Split ${index} braucht einen ganzzahligen Betrag in Cent.`,
+    };
+  }
+  return {value: Number.parseInt(raw, 10), error: ""};
 }
 
 function formatMinorInput(value) {
   if (value === null || value === undefined || value === "") {
     return "";
   }
-  return (Number(value) / 100).toFixed(2).replace(".", ",");
+  return String(value);
 }
 
 function formatMinorAmount(value) {
