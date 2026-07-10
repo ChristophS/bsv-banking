@@ -476,6 +476,22 @@ class DashboardDataStore:
             ]
         return detail
 
+    def transaction_splits(self, transaktions_id: str) -> dict[str, Any]:
+        cleaned_id = str(transaktions_id or "").strip()
+        if not cleaned_id:
+            raise ValueError("Transaktions-ID fehlt.")
+        with closing(self._connect()) as connection:
+            if connection.execute(
+                "SELECT 1 FROM transactions WHERE transaction_id = ?",
+                (cleaned_id,),
+            ).fetchone() is None:
+                raise LookupError("Transaktion nicht gefunden.")
+            splits = [
+                _serialize_transaction_split(item)
+                for item in list_transaction_splits(connection, cleaned_id)
+            ]
+        return {"transaction_id": cleaned_id, "splits": splits}
+
     def replace_transaction_splits(
         self,
         transaktions_id: str,
@@ -5247,6 +5263,19 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._balance_history_response(parse_qs(parsed.query))
                 return
             if parsed.path.startswith("/api/transactions/"):
+                transaction_suffix = "/splits"
+                if parsed.path.endswith(transaction_suffix):
+                    transaktions_id = unquote(
+                        parsed.path[
+                            len("/api/transactions/") : -len(transaction_suffix)
+                        ]
+                    ).strip("/")
+                    self._json_response(
+                        self.server.data_store.transaction_splits(
+                            transaktions_id
+                        )
+                    )
+                    return
                 transaktions_id = unquote(
                     parsed.path.removeprefix("/api/transactions/")
                 )
@@ -7005,17 +7034,27 @@ def _transaction_classification_complete(value: dict[str, Any]) -> bool:
 def _serialize_transaction_split(split: TransactionSplit) -> dict[str, Any]:
     return {
         "split_id": split.split_id,
+        "transaction_id": split.transaction_id,
         "transaktions_id": split.transaction_id,
+        "amount_minor": split.amount_minor,
         "betrag_cent": split.amount_minor,
         "betrag": _minor_to_decimal_string(split.amount_minor),
+        "description": split.description,
         "beschreibung": split.description,
+        "transaction_type": split.transaction_type,
         "transaktionstyp": split.transaction_type,
+        "top_category": split.top_category,
         "oberkategorie": split.top_category,
+        "sub_category": split.sub_category,
         "unterkategorie": split.sub_category,
+        "sphere": split.sphere,
         "sphaere": split.sphere,
+        "professional_description": split.professional_description,
         "fachliche_beschreibung": split.professional_description,
         "vorgangs_id": split.vorgangs_id,
+        "created_at": split.created_at,
         "erstellt_am": split.created_at,
+        "updated_at": split.updated_at,
         "aktualisiert_am": split.updated_at,
     }
 
@@ -7045,13 +7084,29 @@ def _transaction_splits_from_payload(
                 split_id=str(item.get("split_id") or "").strip(),
                 transaction_id=transaktions_id,
                 amount_minor=amount_minor,
-                description=str(item.get("beschreibung") or "").strip(),
-                transaction_type=str(item.get("transaktionstyp") or "").strip(),
-                top_category=str(item.get("oberkategorie") or "").strip(),
-                sub_category=str(item.get("unterkategorie") or "").strip(),
-                sphere=str(item.get("sphaere") or "").strip(),
+                description=str(
+                    item.get("description", item.get("beschreibung", ""))
+                    or ""
+                ).strip(),
+                transaction_type=str(
+                    item.get("transaction_type", item.get("transaktionstyp", ""))
+                    or ""
+                ).strip(),
+                top_category=str(
+                    item.get("top_category", item.get("oberkategorie", ""))
+                    or ""
+                ).strip(),
+                sub_category=str(
+                    item.get("sub_category", item.get("unterkategorie", ""))
+                    or ""
+                ).strip(),
+                sphere=str(item.get("sphere", item.get("sphaere", "")) or "").strip(),
                 professional_description=str(
-                    item.get("fachliche_beschreibung") or ""
+                    item.get(
+                        "professional_description",
+                        item.get("fachliche_beschreibung", ""),
+                    )
+                    or ""
                 ).strip(),
                 vorgangs_id=str(item.get("vorgangs_id") or "").strip()
                 or None,

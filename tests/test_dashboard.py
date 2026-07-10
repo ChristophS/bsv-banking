@@ -691,17 +691,27 @@ class DashboardDataStoreTests(unittest.TestCase):
             [
                 {
                     "split_id": "split_tx_newer_1",
+                    "transaction_id": "tx_newer",
                     "transaktions_id": "tx_newer",
+                    "amount_minor": 1500,
                     "betrag_cent": 1500,
                     "betrag": "15.00",
+                    "description": "Teilbetrag Eintritt",
                     "beschreibung": "Teilbetrag Eintritt",
+                    "transaction_type": "Einnahme",
                     "transaktionstyp": "Einnahme",
+                    "top_category": "Spielbetrieb",
                     "oberkategorie": "Spielbetrieb",
+                    "sub_category": "Eintritt",
                     "unterkategorie": "Eintritt",
+                    "sphere": "Zweckbetrieb",
                     "sphaere": "Zweckbetrieb",
+                    "professional_description": "Split-Test",
                     "fachliche_beschreibung": "Split-Test",
                     "vorgangs_id": "vorgang_tx_newer",
+                    "created_at": "2026-06-11T08:00:00+00:00",
                     "erstellt_am": "2026-06-11T08:00:00+00:00",
+                    "updated_at": "2026-06-11T08:00:00+00:00",
                     "aktualisiert_am": "2026-06-11T08:00:00+00:00",
                 }
             ],
@@ -721,30 +731,34 @@ class DashboardDataStoreTests(unittest.TestCase):
         result = self.store.replace_transaction_splits(
             "tx_newer",
             {
-                "splits": [
-                    {
-                        "betrag_cent": 1000,
-                        "beschreibung": "Teil 1",
-                        "transaktionstyp": "Einnahme",
-                        "oberkategorie": "Spielbetrieb",
-                        "unterkategorie": "Eintritt",
-                        "sphaere": "Zweckbetrieb",
-                    },
-                    {
-                        "betrag_cent": 1500,
-                        "beschreibung": "Teil 2",
-                        "transaktionstyp": "Einnahme",
-                        "oberkategorie": "Spielbetrieb",
-                        "unterkategorie": "Eintritt",
-                        "sphaere": "Zweckbetrieb",
-                        "vorgangs_id": "vorgang_tx_newer",
-                    },
-                ]
+                    "splits": [
+                        {
+                            "amount_minor": 1000,
+                            "description": "Teil 1",
+                            "transaction_type": "Einnahme",
+                            "top_category": "Spielbetrieb",
+                            "sub_category": "Eintritt",
+                            "sphere": "Zweckbetrieb",
+                        },
+                        {
+                            "amount_minor": 1500,
+                            "description": "Teil 2",
+                            "transaction_type": "Einnahme",
+                            "top_category": "Spielbetrieb",
+                            "sub_category": "Eintritt",
+                            "sphere": "Zweckbetrieb",
+                            "vorgangs_id": "vorgang_tx_newer",
+                        },
+                    ]
             },
         )
 
         self.assertEqual(
             [split["betrag_cent"] for split in result["transaction"]["splits"]],
+            [1000, 1500],
+        )
+        self.assertEqual(
+            [split["amount_minor"] for split in result["transaction"]["splits"]],
             [1000, 1500],
         )
         self.assertEqual(
@@ -2538,6 +2552,20 @@ class DashboardHTTPTests(unittest.TestCase):
                 payload["transaction"]["splits"][0]["split_id"],
                 "split_tx_newer_1",
             )
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(payload["transaction_id"], "tx_newer")
+            self.assertEqual(
+                payload["splits"][0]["amount_minor"],
+                1500,
+            )
+            self.assertEqual(
+                payload["splits"][0]["transaction_id"],
+                "tx_newer",
+            )
 
         request = Request(
             self.base_url + "/api/transactions/tx_newer/splits",
@@ -2545,16 +2573,16 @@ class DashboardHTTPTests(unittest.TestCase):
                 {
                     "splits": [
                         {
-                            "betrag_cent": 1000,
-                            "beschreibung": "API Teil 1",
-                            "transaktionstyp": "Einnahme",
-                            "oberkategorie": "Spielbetrieb",
-                            "unterkategorie": "Eintritt",
-                            "sphaere": "Zweckbetrieb",
+                            "amount_minor": 1000,
+                            "description": "API Teil 1",
+                            "transaction_type": "Einnahme",
+                            "top_category": "Spielbetrieb",
+                            "sub_category": "Eintritt",
+                            "sphere": "Zweckbetrieb",
                         },
                         {
-                            "betrag_cent": 1500,
-                            "beschreibung": "API Teil 2",
+                            "amount_minor": 1500,
+                            "description": "API Teil 2",
                         },
                     ]
                 }
@@ -2565,7 +2593,7 @@ class DashboardHTTPTests(unittest.TestCase):
         with urlopen(request, timeout=5) as response:
             payload = json.load(response)
             self.assertEqual(
-                [split["betrag_cent"] for split in payload[
+                [split["amount_minor"] for split in payload[
                     "transaction"
                 ]["splits"]],
                 [1000, 1500],
