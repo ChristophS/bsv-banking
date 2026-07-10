@@ -2,9 +2,15 @@
 
 ## Branchname
 
-agent2/codex-20260710-151119
+agent2/codex-20260710-152331
 
 ## Geaenderte Dateien
+
+- feedback/implementation_report.md
+
+Keine Code-Dateien in diesem Lauf geaendert. Die im Arbeitspaket geforderte
+Split-Grundlage war im aktuellen Stand bereits in folgenden Dateien vorhanden
+und wurde geprueft:
 
 - transaction_store/database.py
 - transaction_store/models.py
@@ -13,19 +19,18 @@ agent2/codex-20260710-151119
 - banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - tests/test_transactions.py
-- feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Repository-Funktion `list_transaction_splits()` ergaenzt, die Splits einer Transaktion stabil in Einfuegereihenfolge laedt.
-- Repository-Funktion `replace_transaction_splits()` ergaenzt, die Split-Listen per Savepoint atomar ersetzt.
+- Vorhandene Repository-Funktion `list_transaction_splits()` geprueft: Splits einer Transaktion werden stabil in Einfuegereihenfolge geladen.
+- Vorhandene Repository-Funktion `replace_transaction_splits()` geprueft: Split-Listen werden per Savepoint atomar ersetzt.
 - Nicht-leere Split-Listen werden vor dem Loeschen/Ersetzen exakt gegen `transactions.amount_minor` validiert, inklusive positiver und negativer Betraege.
 - Leere Split-Listen entfernen vorhandene Splits vollstaendig.
 - Transaktionsdetail-API nutzt die zentrale Split-Lesefunktion und liefert Split-Betraege, Klassifikationsfelder, Beschreibung, optionale `vorgangs_id` sowie Zeitstempel aus.
-- Neuer Endpunkt `PUT /api/transactions/<id>/splits` speichert Split-Listen und liefert bei Summenfehlern `400` sowie bei unbekannter Transaktion `404`.
+- Endpunkt `PUT /api/transactions/<id>/splits` speichert Split-Listen und liefert bei Summenfehlern `400` sowie bei unbekannter Transaktion `404`.
 - Frontend-Detailansicht enthaelt einen einfachen Split-Editor mit Zeilen hinzufuegen, entfernen, Betrag/Klassifikation/Beschreibung/Vorgangs-ID bearbeiten und speichern.
 - Frontend zeigt Originalbetrag, Split-Summe und Differenz an und deaktiviert Speichern bei nicht ausgeglichener nicht-leerer Split-Liste.
-- Tests fuer API, Store-Verhalten, Atomaritaet, positive/negative Betraege und Entfernen von Splits ergaenzt.
+- Tests fuer API, Store-Verhalten, Atomaritaet, positive/negative Betraege und Entfernen von Splits sind vorhanden und erfolgreich ausgefuehrt.
 
 ## Nicht umgesetzte Punkte
 
