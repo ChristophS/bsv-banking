@@ -4335,15 +4335,19 @@ th[aria-sort="descending"] .sort-indicator {
   font-weight: 800;
 }
 
+.mail-reply-form input,
 .mail-reply-form textarea {
   width: 100%;
   padding: 12px;
-  resize: vertical;
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
   background: #fff;
   line-height: 1.5;
+}
+
+.mail-reply-form textarea {
+  resize: vertical;
 }
 
 .mail-reply-actions {

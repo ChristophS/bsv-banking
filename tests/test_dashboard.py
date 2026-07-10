@@ -95,8 +95,11 @@ class FakeDashboardMailBackend:
     def delete_message(self, entry_id):
         self.message["deleted"] = True
 
-    def send_reply(self, entry_id, body):
-        self.message["lastReply"] = body
+    def send_reply(self, entry_id, body, to_recipients=None):
+        self.message["lastReply"] = {
+            "body": body,
+            "to_recipients": to_recipients,
+        }
 
 
 class FakeMailVorgangAnalyzer:
@@ -2833,6 +2836,43 @@ class DashboardHTTPTests(unittest.TestCase):
 
         self.assertEqual([], unlinked_payload["vorgangs_ids"])
         self.assertEqual([], unlinked_payload["vorgaenge"])
+
+    def test_mail_reply_api_accepts_recipients_and_preserves_newlines(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+        reply_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/reply",
+            data=json.dumps(
+                {
+                    "body": "Hallo\n\nDanke.",
+                    "to_recipients": [
+                        "vorstand@example.test",
+                        "kasse@example.test",
+                    ],
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with urlopen(reply_request, timeout=5) as response:
+            payload = json.load(response)
+
+        self.assertTrue(payload["sent"])
+        self.assertEqual(
+            ["vorstand@example.test", "kasse@example.test"],
+            payload["to_recipients"],
+        )
+        self.assertEqual(
+            {
+                "body": "Hallo\n\nDanke.",
+                "to_recipients": [
+                    "vorstand@example.test",
+                    "kasse@example.test",
+                ],
+            },
+            self.server.mail_manager.backend.message["lastReply"],
+        )
 
     def test_mail_analysis_and_confirmed_import_create_entities_over_http(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:

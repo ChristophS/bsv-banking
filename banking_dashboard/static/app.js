@@ -2266,6 +2266,17 @@ function renderMailDetail() {
 
   const replyForm = mailElement("form", "mail-reply-form");
   replyForm.dataset.mailReplyForm = summary.id;
+  const recipientLabel = mailElement("label");
+  recipientLabel.append(
+    mailElement("span", "", "An"),
+  );
+  const recipientInput = document.createElement("input");
+  recipientInput.name = "to_recipients";
+  recipientInput.type = "text";
+  recipientInput.required = true;
+  recipientInput.value = defaultReplyRecipients(detail, summary).join(", ");
+  recipientInput.placeholder = "mail@example.org, zweite@example.org";
+  recipientLabel.append(recipientInput);
   const replyLabel = mailElement("label");
   replyLabel.append(
     mailElement("span", "", "Antwort"),
@@ -2288,7 +2299,7 @@ function renderMailDetail() {
     replyButton,
     mailElement("span", "mail-reply-status"),
   );
-  replyForm.append(replyLabel, replyActions);
+  replyForm.append(recipientLabel, replyLabel, replyActions);
   const nodes = [header, readingLayout];
   if (summaryPanel) {
     nodes.splice(1, 0, summaryPanel);
@@ -2300,6 +2311,25 @@ function renderMailDetail() {
   nodes.push(replyForm);
   elements.mailDetail.append(...nodes);
   applyMailZoom();
+}
+
+function defaultReplyRecipients(detail, summary) {
+  const candidates = [
+    detail?.fromAddress,
+    detail?.from?.emailAddress?.address,
+    summary?.fromAddress,
+  ];
+  const recipients = [];
+  const seen = new Set();
+  for (const candidate of candidates) {
+    const value = String(candidate || "").trim();
+    if (!value || seen.has(value.toLowerCase())) {
+      continue;
+    }
+    seen.add(value.toLowerCase());
+    recipients.push(value);
+  }
+  return recipients;
 }
 
 function renderMailVorgangSection(detail) {
@@ -4064,7 +4094,11 @@ async function submitMailReply(event) {
     return;
   }
   event.preventDefault();
-  const body = new FormData(form).get("body")?.toString().trim() || "";
+  const formData = new FormData(form);
+  const body = formData.get("body")?.toString() || "";
+  const toRecipients = parseReplyRecipients(
+    formData.get("to_recipients")?.toString() || "",
+  );
   const button = form.querySelector("button[type='submit']");
   const status = form.querySelector(".mail-reply-status");
   button.disabled = true;
@@ -4075,7 +4109,7 @@ async function submitMailReply(event) {
       {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({body}),
+        body: JSON.stringify({body, to_recipients: toRecipients}),
       },
     );
     await readResponse(response);
@@ -4087,6 +4121,13 @@ async function submitMailReply(event) {
   } finally {
     button.disabled = false;
   }
+}
+
+function parseReplyRecipients(value) {
+  return String(value || "")
+    .split(/[;,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function mailAffectedIds(payload, fallbackId) {

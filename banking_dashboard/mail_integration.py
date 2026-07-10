@@ -135,7 +135,12 @@ class MailBackend(Protocol):
 
     def delete_message(self, entry_id: str) -> None: ...
 
-    def send_reply(self, entry_id: str, body: str) -> None: ...
+    def send_reply(
+        self,
+        entry_id: str,
+        body: str,
+        to_recipients: list[str] | None = None,
+    ) -> None: ...
 
 
 class SpamScorer(Protocol):
@@ -1430,19 +1435,38 @@ class DashboardMailManager:
         }
 
     def reply(self, entry_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        if set(payload) != {"body"}:
+        allowed_fields = {"body", "to_recipients", "recipients"}
+        unknown_fields = sorted(set(payload) - allowed_fields)
+        if unknown_fields:
+            raise ValueError(
+                "Unbekannte Felder: " + ", ".join(unknown_fields)
+            )
+        if "body" not in payload:
             raise ValueError("Das Feld body ist erforderlich.")
-        body = str(payload["body"] or "").strip()
-        if not body:
+        body = str(payload["body"] or "").replace("\r\n", "\n").replace(
+            "\r",
+            "\n",
+        )
+        if not body.strip():
             raise ValueError("Antworttext fehlt.")
         if len(body) > MAX_MAIL_BODY_LENGTH:
             raise ValueError(
                 f"Der Antworttext darf hoechstens {MAX_MAIL_BODY_LENGTH} "
                 "Zeichen enthalten."
             )
+        raw_recipients = payload.get("to_recipients", payload.get("recipients"))
+        to_recipients = (
+            _normalize_reply_recipients(raw_recipients)
+            if raw_recipients is not None
+            else None
+        )
         inbox_id, source_message_id = self._resolve_mail_id(entry_id)
-        self._required_backend().send_reply(source_message_id, body)
-        return {"id": inbox_id, "sent": True}
+        self._required_backend().send_reply(
+            source_message_id,
+            body,
+            to_recipients,
+        )
+        return {"id": inbox_id, "sent": True, "to_recipients": to_recipients}
 
     def mark_read(self, entry_id: str) -> dict[str, Any]:
         inbox_id, source_message_id = self._resolve_mail_id(entry_id)
@@ -2854,11 +2878,37 @@ class MicrosoftGraphMailBackend:
             expected_statuses={204},
         )
 
-    def send_reply(self, entry_id: str, body: str) -> None:
+    def send_reply(
+        self,
+        entry_id: str,
+        body: str,
+        to_recipients: list[str] | None = None,
+    ) -> None:
+        draft = self._request_json(
+            "POST",
+            (
+                f"/me/messages/"
+                f"{quote(_required_entry_id(entry_id), safe='')}/createReply"
+            ),
+            expected_statuses={201},
+        )
+        draft_id = _required_entry_id(str(draft.get("id") or ""))
+        payload: dict[str, Any] = {
+            "body": {
+                "contentType": "HTML",
+                "content": _reply_body_html(body),
+            }
+        }
+        if to_recipients is not None:
+            payload["toRecipients"] = _graph_reply_recipients(to_recipients)
+        self._request_json(
+            "PATCH",
+            f"/me/messages/{quote(draft_id, safe='')}",
+            payload=payload,
+        )
         self._request_json(
             "POST",
-            f"/me/messages/{quote(_required_entry_id(entry_id), safe='')}/reply",
-            payload={"comment": body},
+            f"/me/messages/{quote(draft_id, safe='')}/send",
             expected_statuses={202},
         )
 
@@ -3568,8 +3618,13 @@ class OutlookMailBackend:
     def delete_message(self, entry_id: str) -> None:
         _run_outlook_worker("delete", entry_id)
 
-    def send_reply(self, entry_id: str, body: str) -> None:
-        _run_outlook_worker("reply", entry_id, body)
+    def send_reply(
+        self,
+        entry_id: str,
+        body: str,
+        to_recipients: list[str] | None = None,
+    ) -> None:
+        _run_outlook_worker("reply", entry_id, body, to_recipients)
 
 
 def _run_outlook_worker(operation: str, *args: Any) -> Any:
@@ -3782,12 +3837,16 @@ def _outlook_delete_message(entry_id: str) -> None:
         pythoncom.CoUninitialize()
 
 
-def _outlook_send_reply(entry_id: str, body: str) -> None:
+def _outlook_send_reply(
+    entry_id: str,
+    body: str,
+    to_recipients: list[str] | None = None,
+) -> None:
     pythoncom, win32_client = _outlook_modules()
     pythoncom.CoInitialize()
     try:
         item = _outlook_namespace(win32_client).GetItemFromID(entry_id)
-        _prepare_and_send_reply(item, body)
+        _prepare_and_send_reply(item, body, to_recipients)
     finally:
         pythoncom.CoUninitialize()
 
@@ -4542,22 +4601,70 @@ def _normalize_category(category: str) -> str:
     raise ValueError("Tag muss BSV oder Privat sein.")
 
 
-def _prepare_and_send_reply(item: Any, body: str) -> None:
+def _prepare_and_send_reply(
+    item: Any,
+    body: str,
+    to_recipients: list[str] | None = None,
+) -> None:
     reply = item.Reply()
+    if to_recipients is not None:
+        reply.To = "; ".join(to_recipients)
     existing_html = str(getattr(reply, "HTMLBody", "") or "")
     if existing_html:
-        escaped_body = html_escape(body).replace("\r\n", "\n").replace(
-            "\r",
-            "\n",
-        )
-        reply.HTMLBody = (
-            f"<div>{escaped_body.replace(chr(10), '<br>')}</div><br>"
-            f"{existing_html}"
-        )
+        reply.HTMLBody = f"{_reply_body_html(body)}<br>{existing_html}"
     else:
         existing_body = str(getattr(reply, "Body", "") or "")
         reply.Body = f"{body}\r\n\r\n{existing_body}"
     reply.Send()
+
+
+def _reply_body_html(body: str) -> str:
+    normalized = str(body or "").replace("\r\n", "\n").replace("\r", "\n")
+    paragraphs = normalized.split("\n")
+    escaped_lines = [html_escape(line) for line in paragraphs]
+    return f"<div>{'<br>'.join(escaped_lines)}</div>"
+
+
+def _graph_reply_recipients(recipients: list[str]) -> list[dict[str, Any]]:
+    return [
+        {"emailAddress": {"address": recipient}}
+        for recipient in recipients
+    ]
+
+
+def _normalize_reply_recipients(value: Any) -> list[str]:
+    if isinstance(value, str):
+        raw_values = re.split(r"[;,\n]", value)
+    elif isinstance(value, list):
+        raw_values = value
+    else:
+        raise ValueError("Empfaenger muessen als Liste oder Text angegeben werden.")
+    recipients: list[str] = []
+    seen: set[str] = set()
+    for raw_value in raw_values:
+        cleaned_value = str(raw_value or "").strip()
+        if not cleaned_value:
+            continue
+        address = _extract_email_address(cleaned_value)
+        if not address:
+            continue
+        key = address.casefold()
+        if key not in seen:
+            seen.add(key)
+            recipients.append(address)
+    if not recipients:
+        raise ValueError("Mindestens ein Empfaenger ist erforderlich.")
+    return recipients
+
+
+def _extract_email_address(value: str) -> str:
+    cleaned = value.strip()
+    match = re.search(r"<([^<>]+)>", cleaned)
+    if match:
+        cleaned = match.group(1).strip()
+    if not re.fullmatch(r"[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", cleaned):
+        raise ValueError(f"Ungueltige Empfaengeradresse: {value.strip()}")
+    return cleaned
 
 
 def _read_attachment_text(file_path: Path) -> str:
