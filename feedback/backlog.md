@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Bleibt als übergeordnetes Hauptthema bestehen; das nächste Arbeitspaket liefert nur die kleine technische Grundlage für Anzeige und Speicherung vorhandener Splits.
+**Grund:** Bleibt als größeres Hauptthema bestehen. Das nächste Arbeitspaket liefert nur die kleine technische Grundlage für Lesen/Speichern vorhandener Splits.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiger Mail- und Dokumentenworkflow außerhalb des kleinen Split-Grundlagenpakets.
+**Grund:** Eigenständiger Mail-/Dokumentenworkflow, fachlich getrennt vom aktuellen kleinen Split-Grundlagenpaket.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges neues Modul mit erheblichem Konzeptions- und Integrationsaufwand.
+**Grund:** Neues Modul mit erheblichem Konzeptions- und Integrationsaufwand; nicht klein genug für das nächste kontrollierte Arbeitspaket.
 
 **Feedback:**
 
@@ -36,7 +36,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Sinnvoll, aber nachrangig gegenüber der nutzbaren Split-Grundlage im Dashboard.
+**Grund:** Sinnvoller Qualitätspunkt, aber nachrangig gegenüber der Nutzbarkeit der Split-Grundlage im Dashboard.
 
 **Feedback:**
 
@@ -46,7 +46,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Modellkonsistenzfrage, die nach der ersten nutzbaren Split-Verwendung separat geklärt werden kann.
+**Grund:** Modellkonsistenzfrage bleibt relevant, ist aber kleiner Nachfolgepunkt nach dem ersten nutzbaren API-/UI-Roundtrip.
 
 **Feedback:**
 
