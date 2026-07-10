@@ -467,6 +467,32 @@ class DashboardDataStore:
                     (transaktions_id,),
                 )
             ]
+            detail["splits"] = [
+                dict(item)
+                for item in connection.execute(
+                    """
+                    SELECT
+                        split_id,
+                        transaction_id AS transaktions_id,
+                        amount_minor AS betrag_cent,
+                        PRINTF('%.2f', amount_minor / 100.0) AS betrag,
+                        description AS beschreibung,
+                        transaction_type AS transaktionstyp,
+                        top_category AS oberkategorie,
+                        sub_category AS unterkategorie,
+                        sphere AS sphaere,
+                        professional_description
+                            AS fachliche_beschreibung,
+                        vorgangs_id,
+                        created_at AS erstellt_am,
+                        updated_at AS aktualisiert_am
+                    FROM transaction_splits
+                    WHERE transaction_id = ?
+                    ORDER BY created_at, split_id
+                    """,
+                    (transaktions_id,),
+                )
+            ]
         return detail
 
     def update_transaction_classification(

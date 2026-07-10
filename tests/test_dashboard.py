@@ -352,6 +352,21 @@ def create_dashboard_database(path: Path) -> None:
             )
         connection.execute(
             """
+            INSERT INTO transaction_splits (
+                split_id, transaction_id, amount_minor, description,
+                transaction_type, top_category, sub_category, sphere,
+                professional_description, vorgangs_id, created_at, updated_at
+            ) VALUES (
+                'split_tx_newer_1', 'tx_newer', 1500,
+                'Teilbetrag Eintritt', 'Einnahme', 'Spielbetrieb',
+                'Eintritt', 'Zweckbetrieb', 'Split-Test',
+                'vorgang_tx_newer', '2026-06-11T08:00:00+00:00',
+                '2026-06-11T08:00:00+00:00'
+            )
+            """
+        )
+        connection.execute(
+            """
             INSERT INTO belege (
                 beleg_id, dateiname, dateipfad, dateityp,
                 dateigroesse, datei_sha256, vorhanden, quelle,
@@ -671,10 +686,43 @@ class DashboardDataStoreTests(unittest.TestCase):
 
         self.assertEqual(detail["vorgangs_ids"], ["vorgang_tx_newer"])
         self.assertNotIn("beleg_ids", detail)
+        self.assertEqual(
+            detail["splits"],
+            [
+                {
+                    "split_id": "split_tx_newer_1",
+                    "transaktions_id": "tx_newer",
+                    "betrag_cent": 1500,
+                    "betrag": "15.00",
+                    "beschreibung": "Teilbetrag Eintritt",
+                    "transaktionstyp": "Einnahme",
+                    "oberkategorie": "Spielbetrieb",
+                    "unterkategorie": "Eintritt",
+                    "sphaere": "Zweckbetrieb",
+                    "fachliche_beschreibung": "Split-Test",
+                    "vorgangs_id": "vorgang_tx_newer",
+                    "erstellt_am": "2026-06-11T08:00:00+00:00",
+                    "aktualisiert_am": "2026-06-11T08:00:00+00:00",
+                }
+            ],
+        )
         self.assertEqual(detail["quellen"][0]["dateiname"], "test.csv")
         self.assertEqual(
             detail["rohdaten"]["Originalfeld"],
             "Weiterer Wert",
+        )
+
+    def test_detail_without_splits_returns_empty_split_list(self):
+        detail = self.store.transaction_detail("tx_older")
+
+        self.assertEqual(detail["splits"], [])
+
+    def test_vorgang_detail_includes_transaction_splits(self):
+        detail = self.store.vorgang_detail("vorgang_tx_newer")
+
+        self.assertEqual(
+            detail["transaktionen"][0]["splits"][0]["split_id"],
+            "split_tx_newer_1",
         )
 
     def test_transaction_can_be_linked_to_existing_vorgang_idempotently(self):
@@ -2411,6 +2459,10 @@ class DashboardHTTPTests(unittest.TestCase):
         ) as response:
             payload = json.load(response)
             self.assertNotIn("beleg_ids", payload["transaction"])
+            self.assertEqual(
+                payload["transaction"]["splits"][0]["split_id"],
+                "split_tx_newer_1",
+            )
 
         with urlopen(
             self.base_url + "/api/vorgaenge",

@@ -49,3 +49,17 @@ class ParsedFile:
     account_balance: Decimal | None
     balance_as_of: str | None
     balance_currency: str | None
+
+
+@dataclass(frozen=True)
+class TransactionSplit:
+    split_id: str
+    transaction_id: str
+    amount_minor: int
+    description: str = ""
+    transaction_type: str = ""
+    top_category: str = ""
+    sub_category: str = ""
+    sphere: str = ""
+    professional_description: str = ""
+    vorgangs_id: str | None = None
