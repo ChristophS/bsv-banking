@@ -68,8 +68,11 @@ from transaction_store.database import (
     TERMIN_STATUS_PLANNED,
     configured_belege_directory,
     connect_database,
+    list_transaction_splits,
+    replace_transaction_splits,
     sync_belege_directory,
 )
+from transaction_store.models import TransactionSplit
 
 
 STATIC_ROOT = Path(__file__).resolve().parent / "static"
@@ -468,32 +471,24 @@ class DashboardDataStore:
                 )
             ]
             detail["splits"] = [
-                dict(item)
-                for item in connection.execute(
-                    """
-                    SELECT
-                        split_id,
-                        transaction_id AS transaktions_id,
-                        amount_minor AS betrag_cent,
-                        PRINTF('%.2f', amount_minor / 100.0) AS betrag,
-                        description AS beschreibung,
-                        transaction_type AS transaktionstyp,
-                        top_category AS oberkategorie,
-                        sub_category AS unterkategorie,
-                        sphere AS sphaere,
-                        professional_description
-                            AS fachliche_beschreibung,
-                        vorgangs_id,
-                        created_at AS erstellt_am,
-                        updated_at AS aktualisiert_am
-                    FROM transaction_splits
-                    WHERE transaction_id = ?
-                    ORDER BY created_at, split_id
-                    """,
-                    (transaktions_id,),
-                )
+                _serialize_transaction_split(item)
+                for item in list_transaction_splits(connection, transaktions_id)
             ]
         return detail
+
+    def replace_transaction_splits(
+        self,
+        transaktions_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        splits = _transaction_splits_from_payload(transaktions_id, payload)
+        with closing(self._connect(writable=True)) as connection:
+            replace_transaction_splits(connection, transaktions_id, splits)
+            connection.commit()
+        detail = self.transaction_detail(transaktions_id)
+        if detail is None:
+            raise LookupError("Transaktion nicht gefunden.")
+        return {"transaction": detail}
 
     def update_transaction_classification(
         self,
@@ -5508,6 +5503,46 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 status=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 
+    def do_PUT(self) -> None:
+        parsed = urlparse(self.path)
+        try:
+            prefix = "/api/transactions/"
+            suffix = "/splits"
+            if parsed.path.startswith(prefix) and parsed.path.endswith(suffix):
+                transaktions_id = unquote(
+                    parsed.path[len(prefix) : -len(suffix)]
+                ).strip("/")
+                if not transaktions_id:
+                    raise ValueError("Transaktions-ID fehlt.")
+                self._json_response(
+                    self.server.data_store.replace_transaction_splits(
+                        transaktions_id,
+                        self._read_json_body(),
+                    )
+                )
+                return
+            self._json_response(
+                {"error": "API-Endpunkt nicht gefunden."},
+                status=HTTPStatus.NOT_FOUND,
+            )
+        except ValueError as exc:
+            self._json_response(
+                {"error": str(exc)},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+        except LookupError as exc:
+            self._json_response(
+                {"error": str(exc)},
+                status=HTTPStatus.NOT_FOUND,
+            )
+        except (BrokenPipeError, ConnectionResetError):
+            return
+        except Exception:
+            self._json_response(
+                {"error": "Aenderung konnte nicht gespeichert werden."},
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
     def do_DELETE(self) -> None:
         parsed = urlparse(self.path)
         try:
@@ -6965,6 +7000,64 @@ def _transaction_classification_complete(value: dict[str, Any]) -> bool:
             "sphaere",
         )
     )
+
+
+def _serialize_transaction_split(split: TransactionSplit) -> dict[str, Any]:
+    return {
+        "split_id": split.split_id,
+        "transaktions_id": split.transaction_id,
+        "betrag_cent": split.amount_minor,
+        "betrag": _minor_to_decimal_string(split.amount_minor),
+        "beschreibung": split.description,
+        "transaktionstyp": split.transaction_type,
+        "oberkategorie": split.top_category,
+        "unterkategorie": split.sub_category,
+        "sphaere": split.sphere,
+        "fachliche_beschreibung": split.professional_description,
+        "vorgangs_id": split.vorgangs_id,
+        "erstellt_am": split.created_at,
+        "aktualisiert_am": split.updated_at,
+    }
+
+
+def _transaction_splits_from_payload(
+    transaktions_id: str,
+    payload: dict[str, Any],
+) -> list[TransactionSplit]:
+    if set(payload) != {"splits"}:
+        raise ValueError("Das Feld splits ist erforderlich.")
+    raw_splits = payload["splits"]
+    if not isinstance(raw_splits, list):
+        raise ValueError("Das Feld splits muss eine Liste sein.")
+    splits: list[TransactionSplit] = []
+    for index, item in enumerate(raw_splits, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"Split {index} muss ein Objekt sein.")
+        raw_amount = item.get("betrag_cent", item.get("amount_minor"))
+        try:
+            amount_minor = int(raw_amount)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Split {index} braucht einen ganzzahligen Betrag in Cent."
+            ) from exc
+        splits.append(
+            TransactionSplit(
+                split_id=str(item.get("split_id") or "").strip(),
+                transaction_id=transaktions_id,
+                amount_minor=amount_minor,
+                description=str(item.get("beschreibung") or "").strip(),
+                transaction_type=str(item.get("transaktionstyp") or "").strip(),
+                top_category=str(item.get("oberkategorie") or "").strip(),
+                sub_category=str(item.get("unterkategorie") or "").strip(),
+                sphere=str(item.get("sphaere") or "").strip(),
+                professional_description=str(
+                    item.get("fachliche_beschreibung") or ""
+                ).strip(),
+                vorgangs_id=str(item.get("vorgangs_id") or "").strip()
+                or None,
+            )
+        )
+    return splits
 
 
 def _is_empty_sphere_fehlbuchung_vorgang(

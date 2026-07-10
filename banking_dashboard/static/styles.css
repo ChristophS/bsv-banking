@@ -2644,6 +2644,70 @@ th[aria-sort="descending"] .sort-indicator {
   background: #eef1ef;
 }
 
+.split-form {
+  display: grid;
+  gap: 12px;
+}
+
+.split-rows {
+  display: grid;
+  gap: 12px;
+}
+
+.split-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fafbfa;
+}
+
+.split-field {
+  display: block;
+  min-width: 0;
+}
+
+.split-field input,
+.split-field select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: 0;
+  color: var(--ink);
+  background: #fff;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.split-summary {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-muted);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.split-summary.is-balanced {
+  color: var(--positive);
+  background: var(--positive-bg);
+}
+
+.split-summary.is-unbalanced {
+  color: var(--negative);
+  background: #fff3f3;
+}
+
+.split-form > .primary-action,
+.split-form > .secondary-action {
+  justify-self: start;
+}
+
 .vorgang-create-form,
 .vorgang-edit-form {
   display: grid;
@@ -4730,6 +4794,14 @@ th[aria-sort="descending"] .sort-indicator {
 
   .classification-field.is-wide {
     grid-column: auto;
+  }
+
+  .split-row {
+    grid-template-columns: 1fr;
+  }
+
+  .split-remove {
+    justify-self: start;
   }
 
   .detail-field.is-wide {

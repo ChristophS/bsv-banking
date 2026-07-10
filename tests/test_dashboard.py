@@ -717,6 +717,81 @@ class DashboardDataStoreTests(unittest.TestCase):
 
         self.assertEqual(detail["splits"], [])
 
+    def test_transaction_splits_can_be_replaced_with_valid_sum(self):
+        result = self.store.replace_transaction_splits(
+            "tx_newer",
+            {
+                "splits": [
+                    {
+                        "betrag_cent": 1000,
+                        "beschreibung": "Teil 1",
+                        "transaktionstyp": "Einnahme",
+                        "oberkategorie": "Spielbetrieb",
+                        "unterkategorie": "Eintritt",
+                        "sphaere": "Zweckbetrieb",
+                    },
+                    {
+                        "betrag_cent": 1500,
+                        "beschreibung": "Teil 2",
+                        "transaktionstyp": "Einnahme",
+                        "oberkategorie": "Spielbetrieb",
+                        "unterkategorie": "Eintritt",
+                        "sphaere": "Zweckbetrieb",
+                        "vorgangs_id": "vorgang_tx_newer",
+                    },
+                ]
+            },
+        )
+
+        self.assertEqual(
+            [split["betrag_cent"] for split in result["transaction"]["splits"]],
+            [1000, 1500],
+        )
+        self.assertEqual(
+            self.store.transaction_detail("tx_newer")["splits"][1][
+                "vorgangs_id"
+            ],
+            "vorgang_tx_newer",
+        )
+
+    def test_transaction_splits_validate_negative_amounts(self):
+        result = self.store.replace_transaction_splits(
+            "tx_older",
+            {
+                "splits": [
+                    {"betrag_cent": -1000, "beschreibung": "Ausgabe 1"},
+                    {"betrag_cent": -234, "beschreibung": "Ausgabe 2"},
+                ]
+            },
+        )
+
+        self.assertEqual(
+            [split["betrag_cent"] for split in result["transaction"]["splits"]],
+            [-1000, -234],
+        )
+
+    def test_invalid_transaction_split_sum_keeps_existing_splits(self):
+        with self.assertRaises(ValueError):
+            self.store.replace_transaction_splits(
+                "tx_newer",
+                {"splits": [{"betrag_cent": 2400}]},
+            )
+
+        self.assertEqual(
+            [split["split_id"] for split in self.store.transaction_detail(
+                "tx_newer"
+            )["splits"]],
+            ["split_tx_newer_1"],
+        )
+
+    def test_transaction_splits_can_be_removed(self):
+        result = self.store.replace_transaction_splits(
+            "tx_newer",
+            {"splits": []},
+        )
+
+        self.assertEqual(result["transaction"]["splits"], [])
+
     def test_vorgang_detail_includes_transaction_splits(self):
         detail = self.store.vorgang_detail("vorgang_tx_newer")
 
@@ -2463,6 +2538,71 @@ class DashboardHTTPTests(unittest.TestCase):
                 payload["transaction"]["splits"][0]["split_id"],
                 "split_tx_newer_1",
             )
+
+        request = Request(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            data=json.dumps(
+                {
+                    "splits": [
+                        {
+                            "betrag_cent": 1000,
+                            "beschreibung": "API Teil 1",
+                            "transaktionstyp": "Einnahme",
+                            "oberkategorie": "Spielbetrieb",
+                            "unterkategorie": "Eintritt",
+                            "sphaere": "Zweckbetrieb",
+                        },
+                        {
+                            "betrag_cent": 1500,
+                            "beschreibung": "API Teil 2",
+                        },
+                    ]
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with urlopen(request, timeout=5) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [split["betrag_cent"] for split in payload[
+                    "transaction"
+                ]["splits"]],
+                [1000, 1500],
+            )
+
+        invalid_request = Request(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            data=json.dumps(
+                {"splits": [{"betrag_cent": 2499}]}
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with self.assertRaises(HTTPError) as invalid_error:
+            urlopen(invalid_request, timeout=5)
+        self.assertEqual(invalid_error.exception.code, 400)
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [split["betrag_cent"] for split in payload[
+                    "transaction"
+                ]["splits"]],
+                [1000, 1500],
+            )
+
+        missing_request = Request(
+            self.base_url + "/api/transactions/tx_missing/splits",
+            data=json.dumps({"splits": []}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with self.assertRaises(HTTPError) as missing_error:
+            urlopen(missing_request, timeout=5)
+        self.assertEqual(missing_error.exception.code, 404)
 
         with urlopen(
             self.base_url + "/api/vorgaenge",

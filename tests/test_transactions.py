@@ -25,8 +25,12 @@ from transaction_store.classification import (
     requires_manual_classification_review,
 )
 from transaction_store import database as database_module
-from transaction_store.database import connect_database
-from transaction_store.models import AccountDefinition
+from transaction_store.database import (
+    connect_database,
+    list_transaction_splits,
+    replace_transaction_splits,
+)
+from transaction_store.models import AccountDefinition, TransactionSplit
 from transaction_store.parsers import (
     SPARKASSE_LEGACY_HEADERS,
     SPARKASSE_HEADERS,
@@ -122,6 +126,83 @@ class DatabaseConnectionTests(unittest.TestCase):
             ("vorgangs_id", "vorgaenge", "vorgangs_id"),
             foreign_keys,
         )
+
+    def test_transaction_splits_are_replaced_atomically(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                connection.execute(
+                    """
+                    INSERT INTO accounts (
+                        account_id, provider, account_name, account_number
+                    ) VALUES ('acct_test', 'test', 'Testkonto', 'DE001')
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transactions (
+                        transaction_id, fingerprint, occurrence, provider,
+                        account_id, account_name, account_number,
+                        booking_date, value_date, counterparty, amount,
+                        currency, booking_text, purpose, amount_minor,
+                        counterparty_account, creditor_id,
+                        mandate_reference, source_info, first_seen_at,
+                        raw_fields_json
+                    ) VALUES (
+                        'tx_split', 'fp_split', 1, 'test', 'acct_test',
+                        'Testkonto', 'DE001', '2026-06-10', '2026-06-10',
+                        'Partner', '25.00', 'EUR', 'Ueberweisung',
+                        'Zweck', 2500, '', '', '', 'Testquelle',
+                        '2026-06-10T10:00:00+00:00', '{}'
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaction_splits (
+                        split_id, transaction_id, amount_minor
+                    ) VALUES ('split_existing', 'tx_split', 2500)
+                    """
+                )
+                connection.commit()
+
+                replace_transaction_splits(
+                    connection,
+                    "tx_split",
+                    [
+                        TransactionSplit("", "tx_split", 1000),
+                        TransactionSplit("", "tx_split", 1500),
+                    ],
+                )
+                self.assertEqual(
+                    [
+                        split.amount_minor
+                        for split in list_transaction_splits(
+                            connection,
+                            "tx_split",
+                        )
+                    ],
+                    [1000, 1500],
+                )
+                with self.assertRaises(ValueError):
+                    replace_transaction_splits(
+                        connection,
+                        "tx_split",
+                        [TransactionSplit("", "tx_split", 2400)],
+                    )
+                self.assertEqual(
+                    [
+                        split.amount_minor
+                        for split in list_transaction_splits(
+                            connection,
+                            "tx_split",
+                        )
+                    ],
+                    [1000, 1500],
+                )
+            finally:
+                connection.close()
 
 
 def write_csv(path: Path, headers, rows, encoding="utf-8-sig"):

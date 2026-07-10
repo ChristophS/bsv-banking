@@ -63,3 +63,5 @@ class TransactionSplit:
     sphere: str = ""
     professional_description: str = ""
     vorgangs_id: str | None = None
+    created_at: str = ""
+    updated_at: str = ""
