@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Bleibt als übergeordnetes Hauptthema erhalten; das nächste Arbeitspaket setzt nur die kleine technische Grundlage für Anzeige, Erfassung und Validierung von Splits auf vorhandener Tabelle um.
+**Grund:** Bleibt als übergeordnetes Hauptthema bestehen; das nächste Arbeitspaket liefert nur die kleine technische Grundlage für Anzeige und Speicherung vorhandener Splits.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiger Mail-/Dokumentenworkflow, nicht Teil des kleinen Split-Grundlagenpakets.
+**Grund:** Eigenständiger Mail- und Dokumentenworkflow außerhalb des kleinen Split-Grundlagenpakets.
 
 **Feedback:**
 
@@ -36,17 +36,17 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Sinnvoll, aber nicht das wichtigste nächste kleine Arbeitspaket gegenüber der nutzbaren Split-Grundlage im Dashboard.
+**Grund:** Sinnvoll, aber nachrangig gegenüber der nutzbaren Split-Grundlage im Dashboard.
 
 **Feedback:**
 
 - Review-Hinweis zur Absicherung der Migration auf `transaction_splits`.
 
-## 5. Prüfen, ob `TransactionSplit` `created_at` und `updated_at` enthalten soll
+## 5. Prüfen, ob TransactionSplit created_at und updated_at enthalten soll
 
 **Priorität:** niedrig
 
-**Grund:** Kleine Modellkonsistenzfrage, kann nach der ersten nutzbaren Split-Verwendung geklärt werden.
+**Grund:** Modellkonsistenzfrage, die nach der ersten nutzbaren Split-Verwendung separat geklärt werden kann.
 
 **Feedback:**
 
