@@ -710,6 +710,8 @@ class DashboardDataStoreTests(unittest.TestCase):
                     "sphaere": "Zweckbetrieb",
                     "professional_description": "Split-Test",
                     "fachliche_beschreibung": "Split-Test",
+                    "klassifikationsstatus": "vollstaendig_klassifiziert",
+                    "classification_status": "vollstaendig_klassifiziert",
                     "vorgangs_id": "vorgang_tx_newer",
                     "created_at": "2026-06-11T08:00:00+00:00",
                     "erstellt_am": "2026-06-11T08:00:00+00:00",
@@ -728,6 +730,55 @@ class DashboardDataStoreTests(unittest.TestCase):
         detail = self.store.transaction_detail("tx_older")
 
         self.assertEqual(detail["splits"], [])
+
+    def test_transaction_detail_includes_derived_split_classification_status(self):
+        detail = self.store.transaction_detail("tx_newer")
+
+        self.assertEqual(
+            detail["splits"][0]["klassifikationsstatus"],
+            "vollstaendig_klassifiziert",
+        )
+        self.assertEqual(
+            detail["split_klassifikationsstatus"],
+            "vollstaendig_klassifiziert",
+        )
+        self.assertEqual(
+            detail["klassifikationsstatus"],
+            "vollstaendig_klassifiziert",
+        )
+        self.assertEqual(
+            detail["transaktions_klassifikationsstatus"],
+            "vollstaendig_klassifiziert",
+        )
+
+        updated = self.store.replace_transaction_splits(
+            "tx_newer",
+            {
+                "splits": [
+                    {
+                        "amount_minor": 1000,
+                        "transaction_type": "Einnahme",
+                        "top_category": "Spielbetrieb",
+                        "sub_category": "Eintritt",
+                        "sphere": "Zweckbetrieb",
+                    },
+                    {"amount_minor": 1500},
+                ]
+            },
+        )["transaction"]
+
+        self.assertEqual(
+            [split["klassifikationsstatus"] for split in updated["splits"]],
+            ["vollstaendig_klassifiziert", "unklassifiziert"],
+        )
+        self.assertEqual(
+            updated["split_klassifikationsstatus"],
+            "unvollstaendig_klassifiziert",
+        )
+        self.assertEqual(
+            updated["gesamt_klassifikationsstatus"],
+            "unvollstaendig_klassifiziert",
+        )
 
     def test_transaction_splits_can_be_replaced_with_valid_sum(self):
         result = self.store.replace_transaction_splits(

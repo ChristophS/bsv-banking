@@ -72,6 +72,10 @@ from transaction_store.database import (
     replace_transaction_splits,
     sync_belege_directory,
 )
+from transaction_store.classification import (
+    aggregate_classification_status,
+    classification_status,
+)
 from transaction_store.models import TransactionSplit
 
 
@@ -470,10 +474,17 @@ class DashboardDataStore:
                     (transaktions_id,),
                 )
             ]
+            splits = list_transaction_splits(connection, transaktions_id)
             detail["splits"] = [
-                _serialize_transaction_split(item)
-                for item in list_transaction_splits(connection, transaktions_id)
+                _serialize_transaction_split(item) for item in splits
             ]
+            if splits:
+                split_status = aggregate_classification_status(splits).value
+                detail["transaktions_klassifikationsstatus"] = detail[
+                    "klassifikationsstatus"
+                ]
+                detail["split_klassifikationsstatus"] = split_status
+                detail["gesamt_klassifikationsstatus"] = split_status
         return detail
 
     def transaction_splits(self, transaktions_id: str) -> dict[str, Any]:
@@ -486,11 +497,19 @@ class DashboardDataStore:
                 (cleaned_id,),
             ).fetchone() is None:
                 raise LookupError("Transaktion nicht gefunden.")
+            split_items = list_transaction_splits(connection, cleaned_id)
             splits = [
-                _serialize_transaction_split(item)
-                for item in list_transaction_splits(connection, cleaned_id)
+                _serialize_transaction_split(item) for item in split_items
             ]
-        return {"transaction_id": cleaned_id, "splits": splits}
+        return {
+            "transaction_id": cleaned_id,
+            "splits": splits,
+            "split_klassifikationsstatus": (
+                aggregate_classification_status(split_items).value
+                if split_items
+                else None
+            ),
+        }
 
     def replace_transaction_splits(
         self,
@@ -7032,6 +7051,7 @@ def _transaction_classification_complete(value: dict[str, Any]) -> bool:
 
 
 def _serialize_transaction_split(split: TransactionSplit) -> dict[str, Any]:
+    split_status = classification_status(split).value
     return {
         "split_id": split.split_id,
         "transaction_id": split.transaction_id,
@@ -7053,6 +7073,8 @@ def _serialize_transaction_split(split: TransactionSplit) -> dict[str, Any]:
         "sphaere": split.sphere,
         "professional_description": split.professional_description,
         "fachliche_beschreibung": split.professional_description,
+        "klassifikationsstatus": split_status,
+        "classification_status": split_status,
         "vorgangs_id": split.vorgangs_id,
         "created_at": split.created_at,
         "erstellt_am": split.created_at,
