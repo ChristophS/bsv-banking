@@ -2,53 +2,56 @@
 
 ## Branchname
 
-agent2/codex-20260710-210226
+agent2/codex-20260710-211508
 
 ## Geaenderte Dateien
 
-- banking_dashboard/static/app.js
+- transaction_store/database.py
+- transaction_store/models.py
+- banking_dashboard/server.py
+- tests/test_transactions.py
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Split-Bereich in der bestehenden Transaktionsdetailansicht weiter nutzbar gemacht.
-- Vorhandene Splits bleiben beim Oeffnen sichtbar und werden nach erfolgreichem Speichern aus der Backend-Antwort neu gerendert.
-- Split-Betraege werden im Frontend als Euro-Betraege angezeigt und vor dem Senden exakt in Minor Units umgerechnet.
-- Neue Split-Zeilen starten mit dem noch offenen Restbetrag und den vorhandenen Transaktions-Klassifikationswerten als Defaults.
-- Split-Klassifikationsfelder verwenden die vorhandenen Klassifikations-Vorschlagsquellen fuer Transaktionstyp, Oberkategorie, Unterkategorie und Sphaere.
-- Unterkategorie-Vorschlaege und Sphaeren-Defaults reagieren im Split-Editor auf die gewaehlte Ober-/Unterkategorie.
-- Lokale Betragsfehler und Backend-Validierungsfehler zur Split-Summe werden im Split-Bereich sichtbar angezeigt.
-- Browser-Test fuer Anzeigen, Bearbeiten, Hinzufuegen, Speichern, Reload/Persistenz, lokale Validierung und Backend-400-Fehler angepasst.
+- Split-Zeilen als Unterstruktur bestehender Transaktionen modelliert.
+- Explizite Reihenfolge pro Split-Zeile ueber `sort_order` ergaenzt und in API-Antworten als `sort_order` und `reihenfolge` ausgegeben.
+- Schema-Version auf 15 angehoben und Migration von Version 14 auf 15 ergaenzt.
+- Bestehende Split-Tabelle wird bei Migration um `sort_order` erweitert; vorhandene Split-Zeilen erhalten eine stabile Reihenfolge.
+- Split-Lesen sortiert stabil nach `sort_order`.
+- Split-Ersetzen setzt die Reihenfolge atomar anhand der eingereichten Liste.
+- Tests fuer Schema, Migration, Persistenz, Reihenfolge, API-Antworten und Summenvalidierung angepasst.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung an `banking_dashboard/static/index.html`, weil die Detailansicht bereits dynamisch gerendert wird.
-- Keine Backend-Aenderung an `banking_dashboard/server.py`, `transaction_store/database.py` oder `transaction_store/models.py`, weil die bestehende Split-API und Persistenzlogik ausreichen.
-- Keine komplexe Vorgangs-Auswahl fuer `vorgangs_id`; das bestehende einfache Textfeld bleibt erhalten.
-- Keine echten Banking-, Mail-, Microsoft-Graph-, DFBnet- oder externen Login-Aktionen.
+- Kein UI-Split-Editor und kein neuer Frontend-Workflow.
+- Keine Split-Klassifikationslogik, keine Vorgangsableitung und keine Rechnungs- oder Belegzuordnung auf Split-Ebene.
+- Keine automatische Anlage kuenstlicher Default-Splits fuer bestehende Transaktionen.
+- Keine externen Dienste, echten Logins oder produktiven Datenzugriffe.
 
 ## Ausgefuehrte Tests
 
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py tests/test_dashboard.py`
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py -k split`
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 102 bestanden, 6 uebersprungen.
-- `tests/test_transactions.py -k split`: 3 bestanden, 26 abgewaehlt.
+- Kombinierter Lauf: 131 bestanden, 6 uebersprungen.
+- Dashboard-Lauf mit bevorzugtem Befehl: 102 bestanden, 6 uebersprungen.
 
 ## Bekannte Einschraenkungen
 
-- Split-Summengleichheit wird weiterhin verbindlich durch die bestehende Backend-Validierung erzwungen; die UI zeigt die Differenz vorab an.
-- `vorgangs_id` bleibt ein freies Textfeld, weil ein separater Auswahl-Workflow nicht Teil des Arbeitspakets ist.
+- Leere Split-Listen bleiben erlaubt, damit Splits vollstaendig entfernt werden koennen.
+- Bei bestehenden Split-Zeilen aus Schema-Version 14 wird `sort_order` aus der bisherigen SQLite-Row-Reihenfolge abgeleitet.
+- Die fachlichen Split-Felder bleiben optionale Vorbereitungsfelder fuer spaetere Arbeitspakete.
 
 ## Hinweise fuer den Review-Agenten
 
-- Vor Beginn waren bereits Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md` im Arbeitsbaum vorhanden; diese Dateien wurden nicht bearbeitet.
-- Der zentrale Browser-Test ist `DashboardTransactionBrowserTests.test_transaction_split_editor_updates_and_shows_errors`.
-- Der API-/Store-Testbestand deckt erfolgreichen Save/Reload, Entfernen, negative Betraege und Persistenz nach unpassender Split-Summe ab.
+- Vor Beginn waren bereits Aenderungen an `feedback/Review-report.md` sowie ein untracked `feedback/agent2_prompt.md` im Arbeitsbaum vorhanden; diese Dateien wurden nicht bearbeitet.
+- Die zentrale Persistenzlogik liegt in `replace_transaction_splits` und nutzt weiterhin ein Savepoint, damit fehlerhafte Requests keine teilweise ersetzten Splits hinterlassen.
+- `feedback/agent2_review_request.md` war nicht vorhanden beziehungsweise leer; es handelt sich um eine Erstumsetzung.
 
 ## Nachbesserung nach Review
 
-- Nicht zutreffend; `feedback/agent2_review_request.md` war nicht vorhanden beziehungsweise leer.
+- Nicht zutreffend.

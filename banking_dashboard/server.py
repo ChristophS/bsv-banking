@@ -7036,6 +7036,8 @@ def _serialize_transaction_split(split: TransactionSplit) -> dict[str, Any]:
         "split_id": split.split_id,
         "transaction_id": split.transaction_id,
         "transaktions_id": split.transaction_id,
+        "sort_order": split.sort_order,
+        "reihenfolge": split.sort_order,
         "amount_minor": split.amount_minor,
         "betrag_cent": split.amount_minor,
         "betrag": _minor_to_decimal_string(split.amount_minor),
@@ -7083,6 +7085,7 @@ def _transaction_splits_from_payload(
             TransactionSplit(
                 split_id=str(item.get("split_id") or "").strip(),
                 transaction_id=transaktions_id,
+                sort_order=index,
                 amount_minor=amount_minor,
                 description=str(
                     item.get("description", item.get("beschreibung", ""))
