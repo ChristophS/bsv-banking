@@ -2,11 +2,11 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Vollständigen Bearbeitungsworkflow für Transaktions-Splitting im Dashboard ergänzen
+## 1. Transaktionen fachlich auf mehrere Rechnungen und Teilrechnungen aufteilen
 
 **Priorität:** hoch
 
-**Grund:** Das ist das größere Hauptthema, aber deutlich umfangreicher als ein kleines, kontrolliertes Arbeitspaket.
+**Grund:** Das nächste Paket deckt nur den kleinen UI-Workflow für vorhandene Transaktions-Splits ab. Die größere fachliche Modellierung von Rechnungen, Teilrechnungen und mehrstufigen Zuordnungen ist ein separates Vorhaben.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiger Mail-/Dokumentenworkflow mit separatem UI- und Datenfluss.
+**Grund:** Eigenständiger Mail- und Dokumentenworkflow mit separatem Import- und Verknüpfungsfluss; nicht Teil des kleinen Split-UI-Pakets.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Größeres neues Modul mit erheblichem Konzeptions- und Integrationsaufwand.
+**Grund:** Großes neues Modul mit erheblichem Konzeptions- und Integrationsaufwand, klar außerhalb des nächsten kleinen Arbeitspakets.
 
 **Feedback:**
 
