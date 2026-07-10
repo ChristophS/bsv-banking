@@ -2,57 +2,49 @@
 
 ## Branchname
 
-agent2/codex-20260710-153120
+agent2/codex-20260710-153939
 
 ## Geaenderte Dateien
 
-- banking_dashboard/server.py
-- banking_dashboard/static/app.js
-- banking_dashboard/static/styles.css
-- tests/test_dashboard.py
+- tests/test_transactions.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Direkten Read-Endpunkt `GET /api/transactions/<id>/splits` ergaenzt.
-- Split-Serialisierung im Dashboard erweitert: neben bestehenden deutschen Alias-Feldern werden die geforderten Modellfeldnamen `transaction_id`, `amount_minor`, `description`, `transaction_type`, `top_category`, `sub_category`, `sphere`, `professional_description`, `created_at` und `updated_at` ausgeliefert.
-- Split-Speicherpayload akzeptiert die Modellfeldnamen und bleibt rueckwaertskompatibel zu den bisherigen deutschen Alias-Feldern.
-- Frontend-Split-Editor sendet beim Speichern kanonische Modellfeldnamen und liest weiterhin beide Feldfamilien.
-- Frontend zeigt gespeicherte Split-ID sowie Erstell- und Aktualisierungszeit pro Split-Zeile an.
-- Tests fuer Detail-Serialisierung, direkten Split-Read-Endpunkt und Write-Roundtrip mit Modellfeldnamen ergaenzt.
+- Expliziten Migrationstest fuer Schema-Version 13 auf 14 ergaenzt.
+- Der Test simuliert eine befuellte v13-Datenbank, indem eine bestehende Testdatenbank mit Account, Transaktion und Vorgangslink vorbereitet, `transaction_splits` entfernt und `schema_info.version` auf 13 gesetzt wird.
+- Nach dem Oeffnen ueber `connect_database` prueft der Test `schema_info.version = 14`.
+- Der Test prueft, dass `transaction_splits` existiert und die erwarteten Spalten enthaelt: `split_id`, `transaction_id`, `amount_minor`, `description`, `transaction_type`, `top_category`, `sub_category`, `sphere`, `professional_description`, `vorgangs_id`, `created_at`, `updated_at`.
+- Der Test prueft die Foreign-Key-Beziehungen fuer `transaction_id` zu `transactions(transaction_id)` und `vorgangs_id` zu `vorgaenge(vorgangs_id)`.
+- Der Test prueft den Index `idx_transaction_splits_transaction_id`.
+- Der Test prueft, dass vorhandene Kernobjekte nach der Migration erhalten bleiben.
 
 ## Nicht umgesetzte Punkte
 
-- Kein vollstaendiger Komfort-Split-Editor ueber den vorhandenen minimalen Zeileneditor hinaus.
-- Keine automatische Vorgangserzeugung oder Neuorganisation von Vorgaengen aus Splits.
-- Keine Dokumenten- oder Mail-Zuordnung zu einzelnen Splits.
-- Keine Migrationstests 13->14.
+- Keine Produktivcode-Aenderung an `transaction_store/database.py`, da die vorhandene Migration und Tabellenerzeugung fuer das Arbeitspaket ausreichten.
+- Keine Aenderung an `transaction_store/models.py`.
+- Keine UI-, API- oder Workflow-Aenderungen fuer Splits.
 - Keine echten Banking-, Mail-, Microsoft-Graph-, DFBnet- oder externen Login-Aktionen.
 
 ## Ausgefuehrte Tests
 
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
-- `node --check banking_dashboard/static/app.js`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m unittest tests.test_transactions.DatabaseConnectionTests.test_database_version_thirteen_migrates_transaction_splits -v`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m unittest discover -s tests -v`
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 102 passed, 5 skipped
-- `tests/test_transactions.py`: 28 passed
-- `node --check banking_dashboard/static/app.js`: erfolgreich
+- Neuer Einzeltest: erfolgreich, 1 Test bestanden.
+- Vollstaendige unittest-Discovery: erfolgreich, 234 Tests bestanden, 6 Tests uebersprungen.
 
 ## Bekannte Einschraenkungen
 
-- Kein manueller Browser-Test ausgefuehrt.
-- Betragserfassung im Frontend bleibt eine Euro-Anzeigeeingabe, die clientseitig nach Cent umgerechnet wird; die verbindliche Summenvalidierung bleibt im Backend bei `replace_transaction_splits`.
-- Leere Split-Listen entfernen weiterhin alle Splits einer Transaktion.
+- Der v13-Zustand wird aus einer temporaeren lokalen SQLite-Testdatenbank abgeleitet und gezielt auf Version 13 zurueckgesetzt; es wird kein produktiver Datenbestand verwendet.
+- Die Migration wird ueber die normale `connect_database`-Initialisierung getestet.
 
 ## Hinweise fuer den Review-Agenten
 
-- Der Arbeitsbaum enthielt vor Beginn bereits Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md`; diese Dateien wurden nicht bearbeitet.
-- Die Atomaritaet der Persistenz bleibt in `transaction_store.database.replace_transaction_splits()` per SQLite-Savepoint.
-- Der neue GET-Endpunkt nutzt dieselbe Serialisierung wie die Transaktionsdetailansicht.
-- Bestehende deutsche Feldnamen bleiben aus Kompatibilitaetsgruenden erhalten; die geforderten Modellfeldnamen sind zusaetzlich vorhanden.
+- Vor Beginn waren bereits Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md` im Arbeitsbaum vorhanden; diese Dateien wurden nicht bearbeitet.
+- Der neue Test befindet sich in `DatabaseConnectionTests` und ergaenzt den bestehenden allgemeinen Split-Schema-Test um den historischen v13->v14-Migrationspfad.
 
 ## Nachbesserung nach Review
 

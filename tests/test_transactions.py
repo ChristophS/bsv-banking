@@ -127,6 +127,163 @@ class DatabaseConnectionTests(unittest.TestCase):
             foreign_keys,
         )
 
+    def test_database_version_thirteen_migrates_transaction_splits(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                connection.execute(
+                    """
+                    INSERT INTO accounts (
+                        account_id, provider, account_name, account_number
+                    ) VALUES ('acct_existing', 'volksbank', 'Hauptkonto',
+                              'DE31384621350101206017')
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transactions (
+                        transaction_id, fingerprint, occurrence, provider,
+                        account_id, account_name, account_number,
+                        booking_date, value_date, counterparty, amount,
+                        currency, booking_text, purpose, amount_minor,
+                        counterparty_account, creditor_id,
+                        mandate_reference, source_info, first_seen_at,
+                        raw_fields_json, transaction_type, top_category,
+                        sub_category, sphere, professional_description
+                    ) VALUES (
+                        'tx_existing', 'fp_existing', 1, 'volksbank',
+                        'acct_existing', 'Hauptkonto',
+                        'DE31384621350101206017', '2026-06-10',
+                        '2026-06-10', 'Zahlungsbeteiligter', '25.00',
+                        'EUR', 'Ueberweisung', 'Testzweck', 2500, '',
+                        '', '', 'Testquelle',
+                        '2026-06-10T10:00:00+00:00', '{}',
+                        'Einnahme', 'Spielbetrieb', 'Beitraege',
+                        'Ideeller Bereich', 'Mitgliedsbeitrag'
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO vorgaenge (
+                        vorgangs_id, titel, vorgangstyp, status
+                    ) VALUES (
+                        'vorgang_existing', 'Bestandsvorgang',
+                        'Einnahme', 'in_bearbeitung'
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaktion_vorgaenge (
+                        transaktions_id, vorgangs_id
+                    ) VALUES ('tx_existing', 'vorgang_existing')
+                    """
+                )
+                connection.execute("DROP TABLE transaction_splits")
+                connection.execute("UPDATE schema_info SET version = 13")
+                connection.commit()
+            finally:
+                connection.close()
+
+            migrated = connect_database(path)
+            try:
+                self.assertEqual(
+                    migrated.execute(
+                        "SELECT version FROM schema_info"
+                    ).fetchone()[0],
+                    14,
+                )
+                self.assertIsNotNone(
+                    migrated.execute(
+                        """
+                        SELECT 1
+                        FROM sqlite_master
+                        WHERE type = 'table'
+                          AND name = 'transaction_splits'
+                        """
+                    ).fetchone()
+                )
+                self.assertEqual(
+                    [
+                        item["name"]
+                        for item in migrated.execute(
+                            "PRAGMA table_info(transaction_splits)"
+                        )
+                    ],
+                    [
+                        "split_id",
+                        "transaction_id",
+                        "amount_minor",
+                        "description",
+                        "transaction_type",
+                        "top_category",
+                        "sub_category",
+                        "sphere",
+                        "professional_description",
+                        "vorgangs_id",
+                        "created_at",
+                        "updated_at",
+                    ],
+                )
+                foreign_keys = [
+                    (item["from"], item["table"], item["to"])
+                    for item in migrated.execute(
+                        "PRAGMA foreign_key_list(transaction_splits)"
+                    )
+                ]
+                self.assertIn(
+                    ("transaction_id", "transactions", "transaction_id"),
+                    foreign_keys,
+                )
+                self.assertIn(
+                    ("vorgangs_id", "vorgaenge", "vorgangs_id"),
+                    foreign_keys,
+                )
+                self.assertIsNotNone(
+                    migrated.execute(
+                        """
+                        SELECT 1
+                        FROM sqlite_master
+                        WHERE type = 'index'
+                          AND name = 'idx_transaction_splits_transaction_id'
+                        """
+                    ).fetchone()
+                )
+                self.assertEqual(
+                    migrated.execute(
+                        """
+                        SELECT account_name
+                        FROM accounts
+                        WHERE account_id = 'acct_existing'
+                        """
+                    ).fetchone()[0],
+                    "Hauptkonto",
+                )
+                self.assertEqual(
+                    migrated.execute(
+                        """
+                        SELECT amount_minor
+                        FROM transactions
+                        WHERE transaction_id = 'tx_existing'
+                        """
+                    ).fetchone()[0],
+                    2500,
+                )
+                self.assertEqual(
+                    migrated.execute(
+                        """
+                        SELECT vorgangs_id
+                        FROM transaktion_vorgaenge
+                        WHERE transaktions_id = 'tx_existing'
+                        """
+                    ).fetchone()[0],
+                    "vorgang_existing",
+                )
+            finally:
+                migrated.close()
+
     def test_transaction_splits_are_replaced_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "transactions.sqlite3"
