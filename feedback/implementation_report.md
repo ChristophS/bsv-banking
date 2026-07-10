@@ -2,51 +2,60 @@
 
 ## Branchname
 
-agent2/rework-20260710-214409
+agent2/codex-20260710-215659
 
 ## Geaenderte Dateien
 
-- transaction_store/database.py
-- tests/test_transactions.py
-- tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Datenmodell `TransactionSplit` fuer Split-Zeilen mit Transaktionsbezug,
-  stabiler ID, Reihenfolge, Betrag in Cent und vorhandenen
-  Klassifikationsfeldern angelegt.
-- Tabelle `transaction_splits` inklusive Fremdschluesseln zu Transaktionen und
-  Vorgaengen, Sortierung und Indizes in die bestehende SQLite-Struktur
-  integriert.
-- Lade- und Ersetzungslogik fuer Splits einer einzelnen Transaktion ergaenzt.
-- Speichern validiert serverseitig, dass die Split-Summe exakt dem
-  Ursprungsbetrag der Transaktion entspricht.
-- Split-Ersetzung nutzt einen Savepoint, damit fehlerhafte Speicherungen keine
-  partiell geaenderten Split-Zeilen hinterlassen.
-- Doppelte `split_id`s innerhalb eines Speicherpayloads werden vor der
-  Persistenz als Validierungsfehler abgelehnt, damit daraus kein generischer
-  Datenbankfehler und keine Teilpersistenz entstehen.
-- Schlanke API fuer Lesen und vollstaendiges Speichern unter
-  `/api/transactions/{id}/splits` bereitgestellt.
-- Split-Zeilen werden mit derselben Klassifikationslogik bewertet wie
-  Transaktionen; aggregierte Split-Klassifikationsstatus werden in Detail- und
-  Split-Antworten ausgegeben.
-- Tests fuer Schema/Migration, Persistenz, Atomaritaet, Summenvalidierung,
-  Klassifikationsstatus und API-Verhalten ergaenzt.
+- Vorhandene Split-Persistenz aus Teil 1 geprueft und fuer das Dashboard
+  bestaetigt:
+  - `transaction_store.models.TransactionSplit`
+  - Tabelle `transaction_splits`
+  - `list_transaction_splits`
+  - `replace_transaction_splits`
+- Transaktionsdetail-API gibt Split-Daten in der Detailantwort mit aus.
+- Dashboard-API fuer `/api/transactions/{id}/splits` ist vorhanden:
+  - `GET` laedt bestehende Split-Zeilen.
+  - `PUT` ersetzt die Split-Zeilen ueber die bestehende Store-Logik.
+  - Validierungsfehler werden als HTTP `400` und fehlende Transaktionen als
+    HTTP `404` beantwortet.
+- Split-Editor in der Transaktionsdetailansicht ist vorhanden:
+  - bestehende Split-Zeilen werden angezeigt,
+  - neue Zeilen koennen hinzugefuegt werden,
+  - vorhandene Zeilen koennen geaendert werden,
+  - einzelne Zeilen koennen entfernt werden,
+  - Originalbetrag, Split-Summe und Differenz werden sichtbar berechnet,
+  - Frontend-Guardrail verhindert Speichern bei fehlendem oder ungueltigem
+    Betrag,
+  - Backend-Fehler bleiben bedienbar sichtbar.
+- Die UI-Struktur enthaelt bereits anschlussfaehige Felder fuer spaetere
+  Split-Klassifikation, ohne neue fachliche Grundstruktur einzufuehren.
+- Server- und Store-Tests decken Laden, Speichern, Entfernen,
+  Summenvalidierung, Atomaritaet und API-Fehlerfaelle ab.
 
 ## Nicht umgesetzte Punkte
 
-- Kein neuer Split-Editor als fachlicher Bestandteil dieses Arbeitspakets.
-- Keine Zuordnung einzelner Splits zu mehreren Rechnungen oder Teilrechnungen.
-- Keine neue Persistenzgrundarchitektur ausserhalb der bestehenden
-  Transaktions-/Vorgangsstruktur.
-- Keine externen Dienste, echten Logins oder produktiven Datenzugriffe.
+- Keine neue Persistenzarchitektur angelegt.
+- Keine fachliche Klassifikation einzelner Split-Zeilen ueber die vorhandenen
+  Felder hinaus eingefuehrt.
+- Keine Vorschlagslisten oder Zuordnungen zu mehreren Rechnungen umgesetzt.
+- Keine externen Dienste, echten Logins, Banking-Aktionen oder produktiven
+  Daten verwendet.
+- In diesem Durchlauf waren keine Code-Aenderungen erforderlich, da die
+  benoetigte Umsetzung im aktuellen Branch bereits vorhanden war und durch
+  Tests bestaetigt wurde.
 
 ## Ausgefuehrte Tests
 
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
+- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
+- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
+
+Hinweis: Der bevorzugte absolute Python-Aufruf wurde in PowerShell mit `&`
+ausgefuehrt, weil ein direkt beginnender quoted executable path sonst als
+Ausdruck geparst wird.
 
 ## Testergebnis
 
@@ -55,41 +64,18 @@ agent2/rework-20260710-214409
 
 ## Bekannte Einschraenkungen
 
-- Das Speichern ist bewusst als vollstaendiges Ersetzen aller Splits einer
-  Transaktion umgesetzt.
-- `klassifikationsstatus` bleibt die bestehende Transaktionsklassifikation.
-  Der aus Splits abgeleitete Status wird separat als
-  `split_klassifikationsstatus` beziehungsweise
-  `gesamt_klassifikationsstatus` transportiert.
-- Leere Split-Listen liefern im Split-Endpunkt keinen aggregierten
-  Split-Status, weil keine Split-Zeilen vorhanden sind.
+- Das Speichern der Splits erfolgt gesammelt als vollstaendiges Ersetzen aller
+  Split-Zeilen einer Transaktion.
+- Leere Split-Listen sind erlaubt und entfernen alle Splits.
+- Die Split-Summe muss bei nicht leerer Split-Liste exakt dem
+  Transaktionsbetrag entsprechen.
 
 ## Hinweise fuer den Review-Agenten
 
-- `feedback/agent2_review_request.md` wurde gelesen und nicht bearbeitet.
-- Vor Arbeitsbeginn waren bereits `feedback/Review-report.md` geaendert sowie
-  `feedback/agent2_prompt.md` und `feedback/agent2_review_request.md`
-  untracked; diese Dateien wurden nicht bearbeitet.
-- In diesem Durchlauf wurden keine `.env`-Dateien, Secrets, externen Dienste
-  oder echten Login-/Banking-Aktionen verwendet.
-
-## Nachbesserung nach Review
-
-- Die blockierende Review-Beanstandung war, dass im abgelehnten Branch nur
-  dieser Implementation Report sichtbar war und die behaupteten Code- und
-  Testaenderungen nicht im Diff enthalten waren.
-- Im aktuellen Rework-Stand sind die fachlichen Aenderungen fuer
-  Transaktions-Splits in den relevanten Code- und Testdateien vorhanden:
-  Datenmodell, Tabelle/Migration, Lade- und Speicherlogik, Summenvalidierung,
-  API-Endpunkte sowie Persistenz- und API-Tests.
-- Die Atomaritaet fehlerhafter Speicherungen ist durch einen Store-Test
-  abgesichert: Eine falsche Split-Summe loest `ValueError` aus und laesst
-  bestehende Split-Zeilen unveraendert.
-- Die Nachbesserung ergaenzt eine reale Code- und Testaenderung:
-  `replace_transaction_splits` validiert doppelte Split-IDs vor dem
-  Datenbank-Savepoint. Store- und API-Tests sichern ab, dass solche Requests
-  mit `ValueError` beziehungsweise HTTP `400` abgelehnt werden und bestehende
-  Split-Zeilen unveraendert bleiben.
-- Die API-Fehlerfaelle sind durch Dashboard-Tests abgesichert: Ein PUT mit
-  falscher Split-Summe oder doppelten Split-IDs liefert `400` und bestehende
-  Splits bleiben erhalten.
+- `feedback/next_task.md` wurde gelesen und nicht bearbeitet.
+- `feedback/agent2_review_request.md` war nicht vorhanden beziehungsweise leer.
+- Vor Arbeitsbeginn waren `feedback/Review-report.md` geaendert und
+  `feedback/agent2_prompt.md` untracked; diese Dateien wurden nicht bearbeitet.
+- Es wurden keine `.env`-Dateien, Secrets, Datenbanken ausserhalb der
+  testweise erzeugten temporaeren Testdatenbanken, externen Dienste oder echte
+  Login-/Banking-Aktionen verwendet.
