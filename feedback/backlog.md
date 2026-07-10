@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Der vollständige Split-Workflow ist der große fachliche Hauptteil und geht deutlich über das kleine Vorbereitungspaket hinaus.
+**Grund:** Bleibt als übergeordnetes Hauptthema erhalten; das nächste Arbeitspaket setzt nur die kleine technische Grundlage für Anzeige, Erfassung und Validierung von Splits auf vorhandener Tabelle um.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiges Mail-/Dokumenten-/Vorgangszuordnungsthema mit separatem Workflow und eigener Komplexität.
+**Grund:** Eigenständiger Mail-/Dokumentenworkflow, nicht Teil des kleinen Split-Grundlagenpakets.
 
 **Feedback:**
 
@@ -26,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Neues Modul mit erheblichem Konzeptions- und Integrationsaufwand, klar außerhalb des aktuellen Split-Vorbereitungspakets.
+**Grund:** Eigenständiges neues Modul mit erheblichem Konzeptions- und Integrationsaufwand.
 
 **Feedback:**
 
@@ -36,10 +36,18 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Nicht-blockierender Review-Hinweis zur Absicherung der Migration auf `transaction_splits`.
+**Grund:** Sinnvoll, aber nicht das wichtigste nächste kleine Arbeitspaket gegenüber der nutzbaren Split-Grundlage im Dashboard.
+
+**Feedback:**
+
+- Review-Hinweis zur Absicherung der Migration auf `transaction_splits`.
 
 ## 5. Prüfen, ob `TransactionSplit` `created_at` und `updated_at` enthalten soll
 
 **Priorität:** niedrig
 
-**Grund:** Nicht-blockierender Review-Hinweis zur Vollständigkeit des Datentyps gegenüber der Persistenz.
+**Grund:** Kleine Modellkonsistenzfrage, kann nach der ersten nutzbaren Split-Verwendung geklärt werden.
+
+**Feedback:**
+
+- Review-Hinweis zur Vollständigkeit des Datentyps gegenüber der Persistenz.
