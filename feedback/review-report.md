@@ -8,87 +8,42 @@
 
 ## Begründung
 
-Der Diff plus nachgeladener Kontext reichen für die fachliche Prüfung aus. Die Umsetzung erfüllt die Muss-Anforderungen; keine blockierenden Probleme erkennbar.
+Der Diff ist ausreichend aussagekräftig; Umsetzung, API-Flow, UI-Anbindung und Tests decken die Muss-Anforderungen ab.
 
 ## Zusammenfassung
 
-Die Mail-Vorgangsanlage rendert für To-Dos nun auch ohne Analysevorschläge eine manuell ausfüllbare Zeile, erlaubt weitere manuelle To-Dos und übergibt diese über den bestehenden todos-Import-Payload. Der Backend-Pfad ignoriert leere Titel defensiv und verknüpft importierte To-Dos mit dem neuen Vorgang; ein passender HTTP-Test wurde ergänzt. Daher accepted=true.
+Die Umsetzung ergänzt einen dedizierten, idempotenten Backend-Flow zum Verknüpfen einer Transaktion mit einem bestehenden Vorgang, erweitert Vorschläge/Kandidaten um Vorgänge und bindet die Zuordnung in der Transaktionsdetailansicht ein. Erfolgsfall, Wiederholung und Fehlerfall sind getestet; es gibt keine blockierenden Auffälligkeiten.
 
-# Review Report
+## Review-Ergebnis
 
-## Ergebnis
+**Accepted:** ja
 
-**Accepted:** true
+## Geprüfte Anforderungen
 
-## Geprüfter Umfang
+- Eine Transaktion kann über eine dedizierte Backend-Methode `link_transaction_vorgang` und den neuen Endpunkt `POST /api/transactions/{transaktions_id}/vorgaenge` einem bestehenden Vorgang zugeordnet werden.
+- Die Zuordnung nutzt weiterhin die bestehende Tabelle `transaktion_vorgaenge`; es wurde keine neue Parallelstruktur eingeführt.
+- Bestehende Links werden nicht ersetzt, da der Flow nicht über `update_vorgang` beziehungsweise `_replace_vorgang_links` läuft.
+- Die Zuordnung ist durch `INSERT OR IGNORE` idempotent und erzeugt bei Wiederholung keine Duplikate.
+- Unbekannte Vorgangs-IDs werden vor der Persistenz erkannt und führen über `LookupError` zu einem sauberen Fehlerpfad; der HTTP-Test erwartet hierfür 404.
+- `suggest_related_entities` liefert für `source_type: transaction` jetzt auch `vorgaenge` in `suggestions` und `candidates`.
+- Die UI lädt Vorgangsvorschläge beim Öffnen einer Transaktion, zeigt bereits verknüpfte Vorgänge an, filtert diese aus der Auswahlliste heraus und lädt die Transaktionsdetailansicht nach erfolgreicher Zuordnung neu.
+- Tests wurden für Store-Erfolgsfall, idempotente Wiederholung, Fehlerfall, Vorgangsvorschläge sowie den HTTP-Endpunkt ergänzt.
 
-Geprüft wurden die Anforderungen aus dem Arbeitspaket gegen den GitHub-Diff sowie den nachgeladenen Kontext aus `banking_dashboard/static/app.js` und `banking_dashboard/server.py`.
+## Technische Bewertung
 
-Geänderte Dateien laut Compare:
+Die Lösung folgt dem im Arbeitspaket empfohlenen Ansatz eines dedizierten Link-Flows und vermeidet dadurch das Risiko, bestehende Vorgangs-Linklisten unbeabsichtigt zu überschreiben. Die Validierung von Transaktion und Vorgang vor dem Insert ist fachlich sinnvoll. Die Vorschlagslogik nutzt bestehende Vorgangsfelder sowie Texte verknüpfter Transaktionen und integriert sich in den vorhandenen Suggestion-/Candidate-Mechanismus.
 
-- `banking_dashboard/static/app.js`
-- `tests/test_dashboard.py`
-- `feedback/implementation_report.md`
-
-Der Branch ist sauber vergleichbar: `ahead_by=1`, `behind_by=0`, `compare_status=ahead`.
-
-## Fachliche Bewertung
-
-Die zentrale Anforderung war, im Flow „Vorgang aus Mail erstellen“ ein manuell erfassbares To-Do auch dann zu ermöglichen, wenn `analysis.todos` leer ist.
-
-Der Diff in `banking_dashboard/static/app.js` erweitert `createMailReviewEntityList(...)` für den Typ `todo` so, dass:
-
-- bei leerer To-Do-Analyse kein blockierender Leerzustand entsteht,
-- stattdessen „Keine To-Do-Vorschläge.“ angezeigt wird,
-- direkt eine leere To-Do-Zeile über die bestehende `createTodoReviewRow`/Row-Factory gerendert wird,
-- über „To-Do hinzufügen“ weitere leere To-Do-Zeilen erzeugt werden können,
-- bestehende To-Do-Vorschläge unverändert gerendert bleiben.
-
-Aus dem nachgeladenen Kontext ergibt sich, dass `createTodoReviewRow(...)` dieselben Felder wie bestehende Vorschläge nutzt:
-
-- `title`
-- `description`
-- `due_date`
-- `priority`
-- `enabled`
-
-`readMailVorgangReviewForm(...)` sammelt alle `[data-review-type="todo"]`-Rows weiterhin über `readReviewRows(form, "todo")` und schreibt sie in den bestehenden Import-Payload unter `todos`. Damit fließen manuell hinzugefügte Zeilen in denselben Importpfad ein wie Analysevorschläge.
-
-## Backend-Bewertung
-
-Eine Backend-Änderung war nicht zwingend nötig. Die vorhandene Methode `_mail_vorgang_import(...)` verarbeitet `payload["todos"]` bereits defensiv:
-
-- nicht-Objekte oder deaktivierte Einträge werden übersprungen,
-- leere bzw. whitespace-only Titel werden ignoriert,
-- gültige To-Dos werden per `create_todo(...)` angelegt,
-- `vorgangs_ids: [vorgangs_id]` verknüpft das neue To-Do mit dem neu erzeugten Vorgang,
-- `priority` wird über `_priority_or_normal(...)` normalisiert,
-- `due_date` wird über die bestehende To-Do-Validierung verarbeitet.
-
-Damit sind die Akzeptanzkriterien zur Anlage in `todos` und zur Verknüpfung über `todo_vorgaenge` erfüllt.
+Der UI-Flow ist ausreichend: Bereits bestehende Vorgangsverknüpfungen werden angezeigt, neue Kandidaten können ausgewählt werden, doppelte Verknüpfungen werden herausgefiltert beziehungsweise backendseitig idempotent behandelt, und nach erfolgreichem POST wird die Detailansicht aktualisiert.
 
 ## Tests
 
-In `tests/test_dashboard.py` wurde ein HTTP-Test ergänzt, der den relevanten Fall abdeckt:
+Laut Implementation Report wurde `tests/test_dashboard.py` erfolgreich ausgeführt mit `92 passed, 4 skipped`. Die im Diff sichtbaren Tests decken die zentralen Akzeptanzkriterien ab.
 
-- Mailanalyse liefert keine To-Do-Vorschläge (`analysis["todos"] = []`),
-- Import-Payload enthält ein manuelles To-Do mit Titel,
-- zusätzlich enthält der Payload eine leere To-Do-Zeile,
-- der Import liefert genau ein To-Do zurück,
-- das To-Do hat die erwartete Priorität,
-- das To-Do ist mit dem neu erzeugten Vorgang verknüpft,
-- der Vorgang enthält das To-Do ebenfalls in seinen Entitäten.
-
-Laut Implementation Report wurde `tests/test_dashboard.py` erfolgreich ausgeführt: 88 passed, 4 skipped.
-
-## Hinweise
-
-Der nachgeladene vollständige Inhalt von `banking_dashboard/static/app.js` zeigt an der relevanten Stelle noch die alte Version von `createMailReviewEntityList(...)`, während der GitHub-Diff die Änderung enthält. Da der GitHub-Diff laut Review-Regeln maßgeblich für die tatsächlich geänderten Stellen ist und der übrige Kontext aus der Datei zur Prüfung der Helper ausreicht, wurde die Entscheidung auf Basis des Diffs getroffen.
-
-## Blockierende Probleme
+## Blockierende Punkte
 
 Keine.
 
-## Nicht-blockierende Vorschläge
+## Nicht-blockierende Hinweise
 
-- Ein gezielter Frontend-/DOM-Test für den neuen To-Do-Leerzustand und den Button „To-Do hinzufügen“ wäre sinnvoll, ist aber nicht zwingend für die Abnahme.
+- Ein zusätzlicher HTTP-Test für eine unbekannte Transaktions-ID wäre als Absicherung nützlich.
+- Eine explizit sichtbare Erfolgsmeldung in der UI kann später verbessert werden, falls der vorhandene Statushinweis nicht ausreichend auffällt.
