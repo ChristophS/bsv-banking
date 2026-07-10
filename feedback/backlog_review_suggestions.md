@@ -1,2 +1,3 @@
-- API-Semantik für `klassifikationsstatus`, `transaktions_klassifikationsstatus`, `split_klassifikationsstatus` und `gesamt_klassifikationsstatus` kurz dokumentieren.
-- Prüfen, ob die Detail-API langfristig auch bei unsplitteten Transaktionen explizite `split_klassifikationsstatus: null` / `gesamt_klassifikationsstatus`-Werte liefern soll, um Frontend-Verbraucher zu vereinfachen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
