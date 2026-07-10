@@ -1,3 +1,3 @@
-- API-Payload-Validierung für Split-Speicherung robuster machen, insbesondere für nicht-Objekt-Payloads, zusätzliche Felder und ungültige Typen.
-- Umgang mit clientseitig gelieferten `split_id`-Werten härten, z. B. fremde IDs ablehnen oder IDs konsequent serverseitig neu erzeugen.
-- Frontend-Betragsfelder mit expliziter Eingabevalidierung versehen, statt ungültige Werte still auf 0 Cent zu normalisieren.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
