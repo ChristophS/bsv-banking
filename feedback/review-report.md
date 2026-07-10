@@ -8,55 +8,56 @@
 
 ## Begründung
 
-Der nachgeladene Kontext zeigt, dass die geforderte Split-Editor-Funktionalität inklusive API, Persistenz, UI und Tests im aktuellen Branch vorhanden ist; der GitHub-Compare enthält allerdings nur den Implementation Report.
+Der Diff ist für die fachliche und technische Prüfung ausreichend aussagekräftig; Branch-Zustand ist sauber und die Änderungen erfüllen die geforderten Split-Klassifikations- und Statusableitungsanforderungen.
 
 ## Zusammenfassung
 
-Akzeptiert: Die Transaktionsdetailansicht enthält einen nutzbaren Split-Editor mit Laden, Anlegen, Bearbeiten, Entfernen, Summenanzeige und Speicherung über die bestehende Split-Persistenz. API-/Server-Anbindung und Tests sind im nachgeladenen Kontext nachvollziehbar vorhanden; der Branch ist sauber ahead ohne behind.
+Die Umsetzung ergänzt eine zentrale Aggregation des Klassifikationsstatus für Split-Zeilen, serialisiert Split-Klassifikationsstatus in den Server-Ausgaben und ergänzt Tests für Persistenz, unklassifizierte, teilweise und vollständig klassifizierte Split-Fälle sowie Detail-API-Ausgaben. Die Lösung bleibt innerhalb der bestehenden Transaktions-/Split-/Klassifikationsarchitektur und ist akzeptiert.
 
-# Review Report
+## Review-Ergebnis
 
-## Ergebnis
+**Entscheidung:** Accepted
 
-**Accepted:** true
+## Prüfung gegen das Arbeitspaket
 
-## Geprüfter Umfang
+Die Umsetzung adressiert die Kernanforderungen des Arbeitspakets:
 
-- Arbeitspaket: Split-Editor im Dashboard für einfache Teilbetragsaufteilung
-- GitHub Compare: sauberer Branch-Zustand, `ahead_by=1`, `behind_by=0`
-- Tatsächlicher Diff: nur `feedback/implementation_report.md`
-- Nachgeladener Kontext: relevante Server-, Frontend-, Persistenz- und Testdateien
+- Split-Zeilen werden über die bestehende `classification_status`-Logik fachlich wie klassifizierbare Objekte behandelt.
+- Mit `aggregate_classification_status()` wurde eine zentrale Statusableitung für Split-Listen ergänzt.
+- Die Ableitung unterscheidet die geforderten Zustände:
+  - vollständig unklassifiziert,
+  - teilweise beziehungsweise unvollständig klassifiziert,
+  - vollständig klassifiziert.
+- Die Transaktionsdetailausgabe liefert für Transaktionen mit Splits zusätzliche Statuswerte:
+  - `split_klassifikationsstatus`,
+  - `gesamt_klassifikationsstatus`,
+  - zusätzlich bleibt der bisherige `klassifikationsstatus` erhalten und wird als `transaktions_klassifikationsstatus` gespiegelt.
+- Einzelne Split-Zeilen werden mit `klassifikationsstatus` und `classification_status` serialisiert.
+- Der separate Split-Endpunkt liefert ebenfalls einen abgeleiteten `split_klassifikationsstatus`.
 
-## Bewertung gegen die Anforderungen
+## Architektur- und Scope-Prüfung
 
-Die im zusätzlichen Repo-Kontext sichtbare Implementierung erfüllt die fachlichen Akzeptanzkriterien:
+Die Änderung bleibt im bestehenden Modell aus Transaktionen, Splits und Klassifikationslogik. Es werden keine neuen fachlichen Hauptstrukturen eingeführt und keine direkten Beleg-/Rechnungs- oder externen Dienstintegrationen ergänzt. Der Scope bleibt damit passend zum Arbeitspaket.
 
-- `DashboardDataStore.transaction_detail()` liefert vorhandene Split-Daten als `splits` mit.
-- `GET /api/transactions/{id}/splits` stellt Split-Daten separat bereit.
-- `PUT /api/transactions/{id}/splits` ersetzt Split-Zeilen und deckt dadurch Anlegen, Bearbeiten und Entfernen ab.
-- Die Persistenz nutzt die vorhandene `transaction_splits`-Struktur und `replace_transaction_splits()` mit Savepoint/atomarem Austausch.
-- Die Summenvalidierung erfolgt serverseitig: nicht leere Split-Listen müssen exakt dem Transaktionsbetrag entsprechen; leere Listen sind erlaubt, um Splits vollständig zu löschen.
-- In `app.js` ist ein Split-Editor in der Transaktionsdetailansicht eingebunden, der Zeilen mit Betrag, Beschreibung, Klassifikationsfeldern und optionaler Vorgangs-ID bearbeitet.
-- Die UI zeigt Originalbetrag, Split-Summe und Differenz an und unterscheidet ausgeglichene und nicht ausgeglichene Summen visuell.
-- Clientseitige Validierung erkennt leere oder ungültige Euro-Beträge vor dem Speichern.
-- Tests in `tests/test_dashboard.py` und `tests/test_transactions.py` decken Laden, Speichern, Entfernen, Summentests, HTTP-Endpunkte und einen Browser-Flow ab.
+Dass `database.py` und `models.py` nicht geändert wurden, ist auf Basis des Diffs plausibel, da die fachlichen Split-Felder bereits im bestehenden `TransactionSplit`-Modell und in der Persistenz vorhanden zu sein scheinen und nun getestet beziehungsweise in der Statusableitung verwendet werden.
 
-## Hinweise zum Diff
+## Testabdeckung
 
-Der GitHub-Diff enthält keine fachlichen Codeänderungen, sondern nur den aktualisierten Implementation Report. Auf Basis des nachgeladenen Kontextes ist aber nachvollziehbar, dass die geforderte Funktionalität im aktuellen Branch vorhanden ist. Dies ist kein technischer Blocker, sollte in künftigen Reports aber noch deutlicher als bereits vorhandene Funktionalität ausgewiesen werden.
+Die Tests wurden sinnvoll erweitert:
 
-## Projektregeln
+- Persistenz der Split-Klassifikationsfelder wird geprüft.
+- Aggregation für unklassifizierte Split-Listen wird geprüft.
+- Aggregation für teilweise klassifizierte Split-Listen wird geprüft.
+- Aggregation für vollständig klassifizierte Split-Listen wird geprüft.
+- Die Dashboard-/Server-Detailausgabe inklusive abgeleiteter Statuswerte wird geprüft.
 
-- Keine Secrets oder produktiven Daten erkennbar geändert.
-- Keine externen Banking-, DFBnet-, Microsoft-Graph-, Mail- oder Login-Aktionen in den Tests erforderlich; externe Dienste werden mit Fakes/Mocks abgedeckt.
-- Keine fachliche Status- oder Rechnungslogik aus Splits abgeleitet.
-- Keine grundlegende neue Architektur eingeführt.
+Die im Implementation Report genannten Testläufe sind plausibel und decken die relevanten Bereiche ab.
 
-## Blockierende Probleme
+## Nicht blockierende Hinweise
 
-Keine.
+- Die neuen Gesamtstatusfelder werden in `transaction_detail` nur bei vorhandenen Splits ergänzt. Das bewahrt bestehendes Verhalten, könnte aber für Frontend-Verbraucher später als stabiler API-Vertrag mit expliziten `null`- oder Statuswerten auch bei unsplitteten Transaktionen dokumentiert oder vereinheitlicht werden.
+- Da `klassifikationsstatus` bewusst die bestehende Transaktionsklassifikation bleibt und `gesamt_klassifikationsstatus` den Split-Status abbildet, wäre eine kurze Dokumentation dieser Semantik hilfreich.
 
-## Nicht blockierende Vorschläge
+## Fazit
 
-- Künftige Reports sollten klarer zwischen neu geänderten Dateien und bereits vorhandener Funktionalität unterscheiden.
-- Optional könnte die UI das Speichern nicht ausgeglichener nicht leerer Split-Listen direkt blockieren oder den serverseitigen Zwang zur exakten Summe noch deutlicher kommunizieren.
+Keine blockierenden Probleme festgestellt. Die Akzeptanzkriterien sind erfüllt.
