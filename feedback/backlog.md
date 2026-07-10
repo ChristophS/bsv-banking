@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Bleibt als größeres Hauptthema bestehen. Das nächste Arbeitspaket liefert nur die kleine technische Grundlage für Lesen/Speichern vorhandener Splits.
+**Grund:** Das ist das größere Hauptthema, aber deutlich umfangreicher als ein kleines, kontrolliertes Arbeitspaket. Der Migrationstest ist der klar abgrenzbare nächste Schritt.
 
 **Feedback:**
 
@@ -16,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiger Mail-/Dokumentenworkflow, fachlich getrennt vom aktuellen kleinen Split-Grundlagenpaket.
+**Grund:** Eigenständiger Mail-/Dokumentenworkflow mit separatem UI- und Datenfluss; nicht Teil des kleinen Migrationspakets.
 
 **Feedback:**
 
@@ -26,28 +26,8 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Neues Modul mit erheblichem Konzeptions- und Integrationsaufwand; nicht klein genug für das nächste kontrollierte Arbeitspaket.
+**Grund:** Größeres neues Modul mit erheblichem Konzeptions- und Integrationsaufwand; bewusst nicht in dieses kleine Paket aufnehmen.
 
 **Feedback:**
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
-
-## 4. Expliziten Migrationstest für Schema-Version 13 auf 14 ergänzen
-
-**Priorität:** niedrig
-
-**Grund:** Sinnvoller Qualitätspunkt, aber nachrangig gegenüber der Nutzbarkeit der Split-Grundlage im Dashboard.
-
-**Feedback:**
-
-- Review-Hinweis zur Absicherung der Migration auf `transaction_splits`.
-
-## 5. Prüfen, ob TransactionSplit created_at und updated_at enthalten soll
-
-**Priorität:** niedrig
-
-**Grund:** Modellkonsistenzfrage bleibt relevant, ist aber kleiner Nachfolgepunkt nach dem ersten nutzbaren API-/UI-Roundtrip.
-
-**Feedback:**
-
-- Review-Hinweis zur Vollständigkeit des Datentyps gegenüber der Persistenz.
