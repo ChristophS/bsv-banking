@@ -1,2 +1,3 @@
-- Optional einen Frontend-/Flow-Test ergänzen, der den Force-Refresh der Link-Kandidaten direkt im Mail-Vorgangsdialog prüft.
-- Optional den Lade- und Fehlerzustand für das Nachladen der Transaktionskandidaten im Dialog sichtbarer machen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
