@@ -8,53 +8,51 @@
 
 ## Begründung
 
-Der GitHub-Compare-Diff erfüllt die Kernanforderung durch einen erzwungenen frischen Abruf der Link-Kandidaten im Mail-Vorgangsanlegen; der ergänzte Test deckt die Server-Aktualität des Kandidaten-Endpunkts ab.
+Der Diff ist für die fachliche Prüfung ausreichend und erfüllt die Anforderungen ohne erkennbare blockierende Probleme.
 
 ## Zusammenfassung
 
-Im Mail-Flow zum Vorgangsanlegen wird die Kandidatenliste laut maßgeblichem GitHub-Diff jetzt mit `loadLinkCandidates(true)` frisch vom Server geladen. Die bestehende Import-/Verknüpfungslogik bleibt unverändert, und ein HTTP-Test sichert ab, dass `/api/vorgaenge/link-candidates` neue Transaktionen nachträglich reflektiert. Daher ist die Umsetzung akzeptiert.
+Die Umsetzung ersetzt die missverständliche Beschriftung, ergänzt eine obere und untere Aktionsleiste mit identischer Submit-Logik, aktualisiert die Button-Texte live abhängig vom Abschluss-Häkchen und lässt den bestehenden Import-Payload einschließlich completed unverändert. Der Branch ist sauber vergleichbar und die ergänzten Tests decken die zentrale UI-Logik ab.
 
-# Review Report
+## Review-Ergebnis
 
-## Ergebnis
-
-**Accepted:** true
+**Accepted:** Ja
 
 ## Geprüfte Anforderungen
 
-- Der Mail-Flow zum Vorgangsanlegen soll Transaktionskandidaten frisch vom Server laden.
-- Die bestehende Verknüpfungslogik über `links.transaction_ids` und `POST /api/mail/<id>/vorgang-import` soll unverändert bleiben.
-- Mindestens ein Test soll absichern, dass Kandidatenlisten nach einem neuen Import nicht auf einem alten Snapshot festhängen.
+- Die alte Beschriftung `Bestätigt importieren` wurde aus dem Mail-Vorgang-Import entfernt.
+- Die primäre Aktion wird abhängig vom Zustand von `vorgang_completed` beschriftet:
+  - ohne Abschluss: `Vorgang anlegen`
+  - mit Abschluss: `Vorgang abschließen`
+- Es gibt nun zwei Aktionsleisten im Formular, oben und unten, beide mit Submit-Buttons derselben Formular-Submit-Logik.
+- Die obere Aktionsleiste ist zusätzlich als sticky Bereich gestaltet und damit besser erreichbar.
+- Die Beschriftung wird bei Änderung des Abschluss-Häkchens live über `updateMailVorgangImportActions(form)` aktualisiert.
+- Der bestehende Request-Flow bleibt erhalten: `submitMailVorgangImport` verwendet weiterhin das Formular und damit den bestehenden Payload-Aufbau über `readMailVorgangReviewForm(form)`, einschließlich `completed` aus `form.elements.vorgang_completed.checked`.
+- Sekundäre Aktionen bleiben als `secondary-action` optisch und strukturell von der primären Aktion getrennt.
 
-## Bewertung
+## Technische Bewertung
 
-Der maßgebliche GitHub-Compare-Diff ändert in `banking_dashboard/static/app.js` innerhalb von `startMailVorgangReview()` den Kandidatenabruf von:
+Die Änderung ist gezielt frontendseitig umgesetzt und greift nicht in Backend-Validierung, Import-Fachlogik oder andere Mail-Aktionen ein. Die Einführung von `createMailVorgangImportActions`, `mailVorgangImportSubmitLabel` und `updateMailVorgangImportActions` ist nachvollziehbar und vermeidet doppelte Submit-Implementierungen. Beim Absenden werden beide Submit-Buttons deaktiviert und bei Fehlern wieder freigegeben; Statusanzeigen werden ebenfalls für beide Aktionsleisten aktualisiert.
 
-```js
-loadLinkCandidates()
-```
+Die CSS-Erweiterung ist auf `.mail-vorgang-import-actions` beschränkt und verursacht keinen offensichtlichen Scope Creep.
 
-auf:
+## Tests
 
-```js
-loadLinkCandidates(true)
-```
+Der ergänzte Test in `tests/test_dashboard.py` prüft die zentralen Akzeptanzkriterien sinnvoll:
 
-Die bestehende Funktion `loadLinkCandidates(force = false)` unterstützt diesen Force-Parameter bereits und umgeht bei `true` den vorhandenen Frontend-Cache. Damit wird beim Öffnen bzw. Starten der Mail-Vorgangsprüfung ein frischer Abruf von `/api/vorgaenge/link-candidates` ausgelöst. Das entspricht dem Kern des Arbeitspakets.
+- zwei Aktionsleisten vorhanden,
+- initiale Labels `Vorgang anlegen`,
+- Live-Wechsel auf `Vorgang abschließen`,
+- `completed` wird weiterhin aus dem Formular übernommen,
+- alte Beschriftung ist nicht mehr vorhanden.
 
-Die Importlogik und das Lesen/Übermitteln von `links.transaction_ids` wurden laut Diff nicht verändert. Es gibt daher keine sichtbare Verschlechterung der bestehenden Mail-Import-Verknüpfung.
-
-In `tests/test_dashboard.py` wurde ein Test ergänzt, der den Kandidaten-Endpunkt vor und nach dem Einfügen einer neuen Transaktion abfragt und sicherstellt, dass die neue Transaktion anschließend in `candidates.transactions` enthalten ist. Damit ist zumindest serverseitig abgesichert, dass der Endpunkt keinen alten Snapshot liefert und der neue Frontend-Force-Refresh aktuelle Daten erhalten kann.
-
-## Hinweise
-
-Der zusätzlich nachgeladene vollständige Inhalt von `banking_dashboard/static/app.js` war an der zentralen Stelle nicht konsistent mit dem GitHub-Compare-Diff. Da die Review-Regeln den `github_diff_patch` als maßgebliche Quelle für die tatsächlich geänderten Stellen festlegen, wurde die fachliche Bewertung auf Basis des GitHub-Diffs durchgeführt.
+Laut Implementation Report wurden `tests/test_dashboard.py` und `node --check banking_dashboard/static/app.js` erfolgreich ausgeführt.
 
 ## Blockierende Probleme
 
 Keine.
 
-## Nicht blockierende Vorschläge
+## Nicht-blockierende Hinweise
 
-- Ein dedizierter Frontend- oder Mail-Flow-Test könnte zusätzlich prüfen, dass `startMailVorgangReview()` tatsächlich `loadLinkCandidates(true)` nutzt.
-- Falls später UI-Feinschliff geplant ist, könnte der Lade-/Fehlerzustand für das Nachladen der Transaktionskandidaten im Dialog noch expliziter angezeigt werden; aktuell ist der globale Ablauf über Button-Status und Fehler-Toast ausreichend.
+- Die tatsächliche visuelle/sticky Erreichbarkeit ist nicht per Screenshot-Test abgesichert, aber durch die obere Aktionsleiste und CSS plausibel erfüllt.
+- Da der Browser-Test bei fehlendem Playwright/Chromium übersprungen wird, könnte eine zusätzliche leichtere DOM-/JS-Absicherung die Regressionserkennung verbessern, ist aber für dieses Arbeitspaket nicht zwingend.
