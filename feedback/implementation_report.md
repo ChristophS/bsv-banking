@@ -2,38 +2,53 @@
 
 ## Branchname
 
-agent2/rework-20260710-220256
+agent2/rework-20260710-221529
 
 ## Geaenderte Dateien
 
+- transaction_store/database.py
+- banking_dashboard/server.py
 - banking_dashboard/static/app.js
 - banking_dashboard/static/index.html
-- banking_dashboard/static/styles.css
 - tests/test_dashboard.py
 - feedback/implementation_report.md
 
 ## Umgesetzte Punkte
 
-- Der Split-Editor in der Transaktionsdetailansicht zeigt die Summenlogik nun
-  explizit als getrennte UI-Werte fuer Originalbetrag, Split-Summe und
-  Differenz.
-- Die bestehende Split-Editor-Interaktion nutzt weiter die vorhandene
-  Detail-API und den bestehenden `PUT /api/transactions/<id>/splits`-Pfad.
-- Ein Dialog-Status mit `aria-live` wurde ergaenzt, damit Split-Fehler und
-  Speicherstatus im Detaildialog eindeutig angebunden sind.
-- Die Darstellung der Split-Summe wurde responsiv gestylt und bleibt in der
-  bestehenden Detailansicht abgegrenzt.
-- Der Browser-nahe Dashboard-Test prueft jetzt zusaetzlich die sichtbaren
-  Summenfelder und das Entfernen einer Split-Zeile mit anschliessender
-  Persistenz.
+- Die bestehende Split-Persistenz bleibt unveraendert die fachliche Grundlage
+  fuer den Dashboard-Split-Flow.
+- Der Dashboard-GET-Endpunkt `/api/transactions/{id}/splits` liefert neben
+  den Split-Zeilen jetzt auch den Originalbetrag der Transaktion in Cent und
+  als Betragstext, damit der Split-Editor die Summenpruefung explizit gegen
+  den Transaktionsbetrag absichern kann.
+- Der vorhandene Split-Editor im Transaktionsdetail kann vorhandene
+  Split-Zeilen jetzt explizit ueber den Split-GET-Endpunkt neu laden. Damit
+  sind Laden, Bearbeiten, Hinzufuegen, Entfernen und Speichern im
+  Dashboard-Flow nachweisbar ueber die Dashboard-API angebunden.
+- Der Transaktionsdetail-Dialog hat einen expliziten statischen Host-Marker
+  fuer den dynamisch gerenderten Split-Editor.
+- Die serverseitige Summenvalidierung fuer
+  `replace_transaction_splits(...)` meldet bei falscher Split-Summe jetzt
+  konkret den erwarteten Transaktionsbetrag, die aktuelle Split-Summe und die
+  Differenz in Cent.
+- Der vorhandene Dashboard-API-Test prueft jetzt Laden und Speichern ueber
+  die Split-Endpunkte, die konkrete Fehlermeldung bei ungueltiger Split-Summe
+  und weiterhin, dass bestehende Splits nach dem `400`-Fehler unveraendert
+  erhalten bleiben.
+- Der browsernahe Test prueft den Split-Editor im Transaktionsdetail inklusive
+  Neuladen ueber die Split-API, Bearbeiten, Hinzufuegen, Entfernen,
+  Validierungsfehlern und Persistenz.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neue Persistenzarchitektur angelegt.
-- Keine fachliche Klassifikation einzelner Split-Zeilen erweitert.
-- Keine Vorschlagslisten oder neuen Zuordnungsfluesse fuer Splits eingefuehrt.
+- Keine neue Split-Architektur und kein Umbau der bestehenden Tabellen oder
+  Services.
+- Keine neue UI-Navigation, Rechnungs-, Beleg-, Mail- oder
+  Dokument-Zuordnungslogik.
 - Keine externen Dienste, echten Logins, Banking-Aktionen oder produktiven
   Daten verwendet.
+- Die im Arbeitsbaum bereits vorhandene Aenderung an `feedback/Review-report.md`
+  wurde gemaess Auftrag nicht bearbeitet.
 
 ## Ausgefuehrte Tests
 
@@ -45,36 +60,39 @@ agent2/rework-20260710-220256
 
 ## Bekannte Einschraenkungen
 
-- Das Speichern der Splits erfolgt weiterhin gesammelt als vollstaendiges
-  Ersetzen aller Split-Zeilen einer Transaktion.
-- Leere Split-Listen sind weiterhin erlaubt und entfernen alle Splits.
-- Die Split-Summe muss bei nicht leerer Split-Liste exakt dem
-  Transaktionsbetrag entsprechen.
-- Die Browser-Interaktion ist im Test an Playwright gekoppelt; wenn Playwright
-  oder Chromium lokal fehlen, wird dieser Teil wie bisher uebersprungen.
+- Das Speichern ersetzt die Split-Liste einer Transaktion gesammelt.
+- Eine leere Split-Liste ist erlaubt und entfernt alle Splits.
+- Bei nicht leerer Split-Liste muss die Summe exakt dem Transaktionsbetrag in
+  Cent entsprechen.
+- Der browsernahe UI-Test wird uebersprungen, wenn Playwright oder Chromium
+  lokal nicht verfuegbar sind.
 
 ## Hinweise fuer den Review-Agenten
 
-- `feedback/next_task.md` wurde gelesen und nicht bearbeitet.
-- `feedback/agent2_review_request.md` wurde gelesen und nicht bearbeitet.
-- Vor Arbeitsbeginn waren `feedback/Review-report.md` geaendert sowie
-  `feedback/agent2_prompt.md` und `feedback/agent2_review_request.md`
-  untracked; diese Dateien wurden nicht bearbeitet.
-- Es wurden keine `.env`-Dateien, Secrets, Datenbanken ausserhalb der
-  temporaeren Testdatenbanken, externen Dienste oder echte Login-/Banking-
-  Aktionen verwendet.
+- `feedback/next_task.md` und `feedback/agent2_review_request.md` wurden
+  gelesen und nicht geaendert.
+- `feedback/agent2_prompt.md`, `feedback/backlog.md` und Review-Report-Dateien
+  wurden nicht bearbeitet.
+- Der vorherige Review-Blocker war, dass der massgebliche Compare keinen
+  Dashboard-Split-Editor-Flow belegte. Diese Nachbesserung enthaelt jetzt
+  nachvollziehbare Code- und Testaenderungen in `banking_dashboard/server.py`,
+  `banking_dashboard/static/app.js`, `banking_dashboard/static/index.html`
+  und `tests/test_dashboard.py`.
 
 ## Nachbesserung nach Review
 
-- Der blockierende Review-Punkt zu fehlenden UI-Aenderungen wurde adressiert:
-  diese Nachbesserung enthaelt konkrete Aenderungen an
-  `banking_dashboard/static/app.js`, `banking_dashboard/static/index.html` und
-  `banking_dashboard/static/styles.css`.
-- Die Akzeptanzkriterien zur sichtbaren Summenlogik sind nun im DOM
-  nachvollziehbar: Originalbetrag, Split-Summe und Differenz werden separat
-  gerendert und im Browser-Test geprueft.
-- Die geforderten Dashboard-Aktionen bleiben ueber den bestehenden Editor
-  verfuegbar; der Test weist Anlegen, Bearbeiten, Backend-Fehleranzeige und
-  Loeschen einer Split-Zeile nach.
-- Die vorhandene serverseitige Validierung aus der vorherigen Nachbesserung
-  wurde beibehalten und nicht durch neue Parallelstrukturen ersetzt.
+- Das blockierende Compare-Problem wurde lokal nachvollzogen: Der sichtbare
+  Arbeitsbaum-Diff enthielt vor dieser Nacharbeit keine Dashboard-Dateien.
+- Zur Korrektur wurde eine kleine fachliche Nachbesserung in den relevanten
+  Dashboard-Split-Code eingebracht, sodass der Branch-Diff den API-/UI-Flow
+  direkt belegt.
+- Der Split-Editor im Transaktionsdetail laedt vorhandene Split-Zeilen jetzt
+  bei Bedarf explizit ueber `/api/transactions/{id}/splits` neu.
+- Der Split-Leseendpunkt liefert den Originalbetrag mit, damit die fachliche
+  Summenpruefung gegen die Transaktion im API-Flow eindeutig nachvollziehbar
+  ist.
+- Die Nachbesserung konkretisiert den Validierungsfehler fuer ungueltige
+  Split-Summen mit Erwartungswert, aktueller Summe und Differenz.
+- Die Tests fuer den Dashboard-API- und UI-nahen Flow sichern Laden,
+  Speichern, Hinzufuegen, Entfernen, Validierungsfehler und fehlende
+  Teilpersistenz bei fehlerhaften Requests ab.

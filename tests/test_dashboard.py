@@ -2649,6 +2649,9 @@ class DashboardHTTPTests(unittest.TestCase):
         ) as response:
             payload = json.load(response)
             self.assertEqual(payload["transaction_id"], "tx_newer")
+            self.assertEqual(payload["amount_minor"], 2500)
+            self.assertEqual(payload["betrag_cent"], 2500)
+            self.assertEqual(payload["betrag"], "25.00")
             self.assertEqual(
                 payload["splits"][0]["amount_minor"],
                 1500,
@@ -2708,6 +2711,12 @@ class DashboardHTTPTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as invalid_error:
             urlopen(invalid_request, timeout=5)
         self.assertEqual(invalid_error.exception.code, 400)
+        error_payload = json.loads(
+            invalid_error.exception.read().decode("utf-8")
+        )
+        self.assertIn("Erwartet: 2500 Cent", error_payload["error"])
+        self.assertIn("Split-Summe: 2499 Cent", error_payload["error"])
+        self.assertIn("Differenz: -1 Cent", error_payload["error"])
         with urlopen(
             self.base_url + "/api/transactions/tx_newer",
             timeout=5,
@@ -4343,6 +4352,21 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     expect(
                         editor.locator("[data-split-summary='difference']")
                     ).to_contain_text("Differenz")
+                    expect(
+                        editor.locator("[data-split-amount]").first()
+                    ).to_have_value("15,00")
+                    with page.expect_response(
+                        lambda response: (
+                            response.request.method == "GET"
+                            and response.url.endswith(
+                                "/api/transactions/tx_newer/splits"
+                            )
+                        )
+                    ):
+                        editor.locator(
+                            "button",
+                            has_text="Splits neu laden",
+                        ).click()
                     expect(
                         editor.locator("[data-split-amount]").first()
                     ).to_have_value("15,00")

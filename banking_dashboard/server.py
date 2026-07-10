@@ -521,10 +521,15 @@ class DashboardDataStore:
         if not cleaned_id:
             raise ValueError("Transaktions-ID fehlt.")
         with closing(self._connect()) as connection:
-            if connection.execute(
-                "SELECT 1 FROM transactions WHERE transaction_id = ?",
+            transaction = connection.execute(
+                """
+                SELECT amount, amount_minor
+                FROM transactions
+                WHERE transaction_id = ?
+                """,
                 (cleaned_id,),
-            ).fetchone() is None:
+            ).fetchone()
+            if transaction is None:
                 raise LookupError("Transaktion nicht gefunden.")
             split_items = list_transaction_splits(connection, cleaned_id)
             splits = [
@@ -532,6 +537,9 @@ class DashboardDataStore:
             ]
         return {
             "transaction_id": cleaned_id,
+            "amount_minor": int(transaction["amount_minor"]),
+            "betrag_cent": int(transaction["amount_minor"]),
+            "betrag": str(transaction["amount"] or ""),
             "splits": splits,
             "split_klassifikationsstatus": (
                 aggregate_classification_status(split_items).value
