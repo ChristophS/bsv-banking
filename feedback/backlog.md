@@ -6,7 +6,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Der größere fachliche Ausbau zu mehreren Rechnungen, Teilrechnungen und mehrstufigen Zuordnungen bleibt bewusst separat. Das aktuelle Paket deckt nur den kleinen bestehenden Split-Workflow für eine einzelne Transaktion ab.
+**Grund:** Größeres fachliches Ausbauziel mit mehreren Zuordnungsfällen; bleibt bewusst nach dem kleinen Split-Workflow separat.
 
 **Feedback:**
 
