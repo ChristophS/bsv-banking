@@ -707,6 +707,60 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual(hidden, [])
         self.assertEqual(empty, [])
 
+    def test_vorgaenge_prioritize_open_before_completed(self):
+        connection = connect_database(self.database_path)
+        try:
+            connection.execute(
+                """
+                UPDATE vorgaenge
+                SET status = 'abgeschlossen',
+                    aktualisiert_am = '2026-06-12T08:00:00+00:00'
+                WHERE vorgangs_id = 'vorgang_tx_newer'
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        rows = self.store.list_vorgaenge()
+
+        self.assertEqual(
+            [row["vorgangs_id"] for row in rows],
+            ["vorgang_tx_older", "vorgang_tx_newer"],
+        )
+        self.assertEqual(rows[0]["status"], "in_bearbeitung")
+        self.assertEqual(rows[1]["status"], "abgeschlossen")
+
+    def test_vorgaenge_search_prioritizes_open_before_completed(self):
+        connection = connect_database(self.database_path)
+        try:
+            connection.execute(
+                """
+                UPDATE vorgaenge
+                SET status = 'abgeschlossen',
+                    aktualisiert_am = '2026-06-12T08:00:00+00:00'
+                WHERE vorgangs_id = 'vorgang_tx_newer'
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        rows = self.store.list_vorgaenge(search="Verein")
+        hidden = self.store.list_vorgaenge(
+            search="Verein",
+            hide_completed=True,
+        )
+
+        self.assertEqual(
+            [row["vorgangs_id"] for row in rows],
+            ["vorgang_tx_older", "vorgang_tx_newer"],
+        )
+        self.assertEqual(
+            [row["vorgangs_id"] for row in hidden],
+            ["vorgang_tx_older"],
+        )
+
     def test_classification_update_recalculates_both_statuses(self):
         completed = self.store.update_transaction_classification(
             "tx_newer",
@@ -2195,6 +2249,30 @@ class DashboardHTTPTests(unittest.TestCase):
             "tx_newer",
             {"transaktionstyp": "Vergütung"},
         )
+        with urlopen(
+            self.base_url + "/api/vorgaenge",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [row["vorgangs_id"] for row in payload["vorgaenge"]],
+                ["vorgang_tx_older", "vorgang_tx_newer"],
+            )
+            self.assertEqual(
+                [row["status"] for row in payload["vorgaenge"]],
+                ["in_bearbeitung", "abgeschlossen"],
+            )
+
+        with urlopen(
+            self.base_url + "/api/vorgaenge?search=Verein",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [row["vorgangs_id"] for row in payload["vorgaenge"]],
+                ["vorgang_tx_older", "vorgang_tx_newer"],
+            )
+
         with urlopen(
             self.base_url + "/api/transactions?hide_completed_vorgaenge=true",
             timeout=5,

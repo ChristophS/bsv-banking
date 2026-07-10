@@ -1025,6 +1025,10 @@ class DashboardDataStore:
                     v.erstellt_am,
                     v.aktualisiert_am
                 ORDER BY
+                    CASE
+                        WHEN v.status = 'abgeschlossen' THEN 1
+                        ELSE 0
+                    END,
                     COALESCE(MAX(n.datum), '') DESC,
                     v.aktualisiert_am DESC,
                     v.vorgangs_id
