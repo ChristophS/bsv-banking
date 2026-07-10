@@ -4171,6 +4171,30 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         editor.locator("[data-split-amount]").first()
                     ).to_have_value("1500")
                     expect(editor).to_contain_text("Spielbetrieb")
+                    type_options = editor.locator(
+                        "[data-split-type]"
+                    ).first().evaluate(
+                        """
+                        input => [
+                          ...document.getElementById(
+                            input.getAttribute("list")
+                          ).options
+                        ].map(option => option.value)
+                        """
+                    )
+                    top_options = editor.locator(
+                        "[data-split-top]"
+                    ).first().evaluate(
+                        """
+                        input => [
+                          ...document.getElementById(
+                            input.getAttribute("list")
+                          ).options
+                        ].map(option => option.value)
+                        """
+                    )
+                    self.assertIn("Ausgabe", type_options)
+                    self.assertIn("Spielbetrieb", top_options)
 
                     editor.locator("[data-split-amount]").first().fill("1000")
                     editor.locator("button", has_text="Zeile hinzufuegen").click()
@@ -4181,7 +4205,22 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     ).fill("API Teil 2")
                     second_row.locator("[data-split-type]").fill("Einnahme")
                     second_row.locator("[data-split-top]").fill("Spielbetrieb")
+                    sub_options = second_row.locator(
+                        "[data-split-sub]"
+                    ).evaluate(
+                        """
+                        input => [
+                          ...document.getElementById(
+                            input.getAttribute("list")
+                          ).options
+                        ].map(option => option.value)
+                        """
+                    )
+                    self.assertIn("Eintritt", sub_options)
                     second_row.locator("[data-split-sub]").fill("Eintritt")
+                    expect(
+                        second_row.locator("[data-split-sphere]")
+                    ).to_have_value("Zweckbetrieb")
                     second_row.locator(
                         "[data-split-professional]"
                     ).fill("Browser-Test")

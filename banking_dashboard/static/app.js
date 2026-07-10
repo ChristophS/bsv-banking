@@ -4797,10 +4797,13 @@ function configureClassificationEditorFields(form) {
 }
 
 function configureClassificationFields(form, names) {
-  const transactionType = form.elements[names.transactionType];
-  const topCategory = form.elements[names.topCategory];
-  const subCategory = form.elements[names.subCategory];
-  const sphere = form.elements[names.sphere];
+  const field = (name) => (
+    form.elements?.[name] || form.querySelector(`[name="${name}"]`)
+  );
+  const transactionType = field(names.transactionType);
+  const topCategory = field(names.topCategory);
+  const subCategory = field(names.subCategory);
+  const sphere = field(names.sphere);
   if (!transactionType || !topCategory || !subCategory || !sphere) {
     return;
   }
@@ -9348,16 +9351,19 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
         "Transaktionstyp",
         split.transaction_type ?? split.transaktionstyp ?? "",
         "type",
+        "transaction_type",
       ),
       splitInput(
         "Oberkategorie",
         split.top_category ?? split.oberkategorie ?? "",
         "top",
+        "top_category",
       ),
       splitInput(
         "Unterkategorie",
         split.sub_category ?? split.unterkategorie ?? "",
         "sub",
+        "sub_category",
       ),
       splitSphereField(split.sphere ?? split.sphaere ?? ""),
       splitInput(
@@ -9388,6 +9394,7 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     });
     row.append(meta, removeButton);
     rows.append(row);
+    configureSplitClassificationFields(row);
     updateSummary();
   };
 
@@ -9465,7 +9472,16 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
   target.append(section);
 }
 
-function splitInput(label, value, key) {
+function configureSplitClassificationFields(row) {
+  configureClassificationFields(row, {
+    transactionType: "transaction_type",
+    topCategory: "top_category",
+    subCategory: "sub_category",
+    sphere: "sphere",
+  });
+}
+
+function splitInput(label, value, key, name = "") {
   const field = document.createElement("label");
   field.className = "split-field";
   const fieldLabel = document.createElement("span");
@@ -9475,6 +9491,9 @@ function splitInput(label, value, key) {
   input.type = "text";
   input.value = value || "";
   input.autocomplete = "off";
+  if (name) {
+    input.name = name;
+  }
   input.dataset[`split${key[0].toUpperCase()}${key.slice(1)}`] = "true";
   field.append(fieldLabel, input);
   return field;
@@ -9487,6 +9506,7 @@ function splitSphereField(value) {
   fieldLabel.className = "detail-label";
   fieldLabel.textContent = "Sphaere";
   const select = document.createElement("select");
+  select.name = "sphere";
   select.dataset.splitSphere = "true";
   const blank = document.createElement("option");
   blank.value = "";

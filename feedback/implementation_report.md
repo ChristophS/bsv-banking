@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260710-200239
+agent2/codex-20260710-204908
 
 ## Geaenderte Dateien
 
@@ -12,22 +12,19 @@ agent2/codex-20260710-200239
 
 ## Umgesetzte Punkte
 
-- Vorhandene Transaktions-Splits werden in der bestehenden Transaktionsdetailansicht angezeigt und ueber den vorhandenen dynamischen Split-Editor bearbeitbar gemacht.
-- Split-Zeilen koennen bearbeitet, hinzugefuegt und entfernt werden.
-- Das Speichern gueltiger Split-Listen nutzt `PUT /api/transactions/<id>/splits` und rendert nach erfolgreichem Speichern die vom Backend zurueckgegebenen Split-Daten neu.
-- Split-Betraege werden im UI als ganzzahlige Cent-Werte gelesen und gesendet.
-- Leere oder nicht ganzzahlige Split-Betraege werden im Split-Bereich sichtbar gemeldet.
-- Nicht ausgeglichene Split-Summen werden bereits vor dem Speichern im Split-Bereich als Fehler angezeigt und der PUT-Request wird in diesem Fall nicht ausgefuehrt.
-- Die Summenanzeige fuer Originalbetrag, Split-Summe und Differenz bleibt sichtbar.
-- Neue Split-Zeilen werden mit leeren Klassifikationsfeldern angelegt.
-- Ein Browser-Test deckt Anzeigen, Bearbeiten, Hinzufuegen, Speichern, lokale Betragsvalidierung, lokale Summenvalidierung ohne PUT und unveraenderte Persistenz nach dem Fehler ab.
-- Bestehende API-Tests decken weiterhin Laden, Speichern, Entfernen und serverseitige Validierungsfehler der Split-Schnittstelle ab.
+- Split-Klassifikationsfelder nutzen jetzt die bestehende `configureClassificationFields`-Logik der normalen Transaktionsklassifikation.
+- Die allgemeine Klassifikations-Konfiguration kann neben echten Formularen auch dynamisch erzeugte Container wie Split-Zeilen anhand der vorhandenen `name`-Attribute konfigurieren.
+- Split-Felder fuer Transaktionstyp, Oberkategorie, Unterkategorie und Sphaere erhalten die noetige Anbindung an die bestehenden Klassifikationsoptionen aus `/api/classification-options`.
+- Transaktionstyp und Oberkategorie erhalten Datalist-Vorschlaege aus den bestehenden Klassifikationsquellen.
+- Unterkategorie-Vorschlaege werden in Split-Zeilen passend zur Oberkategorie aktualisiert.
+- Die Sphaere in Split-Zeilen nutzt die bestehenden Sphaerenoptionen und uebernimmt den vorhandenen Default fuer die gewaehlte Ober-/Unterkategorie-Kombination.
+- Der bestehende Split-Browser-Test prueft jetzt zusaetzlich Datalist-Vorschlaege, abhaengige Unterkategorie-Vorschlaege und den Sphaeren-Default.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung an `banking_dashboard/static/index.html`, weil die Detailansicht bereits dynamisch gerendert wird und kein statischer Container erforderlich war.
-- Keine Backend-Aenderung an `banking_dashboard/server.py`, `transaction_store/database.py` oder `transaction_store/models.py`, weil der vorhandene Split-Endpunkt und die Persistenzlogik ausreichten.
-- Keine Bearbeitung von `vorgangs_id` ueber Auswahlfelder; vorhandene Werte werden als Textfeld angezeigt und erhalten beziehungsweise mitsendbar gemacht.
+- Keine Aenderung an `banking_dashboard/server.py`, weil der vorhandene Endpunkt `/api/classification-options` bereits im Transaktionsdetail-Flow geladen wird und die benoetigten Daten liefert.
+- Keine Aenderung an `banking_dashboard/static/index.html`, weil der Split-Editor dynamisch gerendert wird.
+- Keine Aenderung an `transaction_store/database.py` oder `transaction_store/models.py`, weil keine neue Split-Persistenz oder Datenmodell-Aenderung Teil des Arbeitspakets ist.
 - Keine echten Banking-, Mail-, Microsoft-Graph-, DFBnet- oder externen Login-Aktionen.
 
 ## Ausgefuehrte Tests
@@ -40,16 +37,15 @@ agent2/codex-20260710-200239
 
 ## Bekannte Einschraenkungen
 
-- Die Split-Betraege werden bewusst als Cent-Ganzzahlen eingegeben, nicht als Euro-Dezimalwerte.
-- Die UI zeigt `vorgangs_id` weiterhin als freies Textfeld; eine fachliche Vorgangsauswahl ist nicht Teil dieses Arbeitspakets.
+- Die Vorschlagsdaten stammen weiterhin aus der bestehenden Klassifikationsoptionen-Quelle; es wurde keine separate Split-Historie als neue fachliche Vorschlagsquelle eingefuehrt.
+- Die Sphaere bleibt in Split-Zeilen optional, analog zur bisherigen Split-Eingabe.
 
 ## Hinweise fuer den Review-Agenten
 
 - Vor Beginn waren bereits Aenderungen an `feedback/Review-report.md` und ein untracked `feedback/agent2_prompt.md` im Arbeitsbaum vorhanden; diese Dateien wurden nicht bearbeitet.
-- Der zentrale Frontend-Test ist `DashboardTransactionBrowserTests.test_transaction_split_editor_updates_and_shows_errors`.
-- Der Test prueft jetzt auch, dass eine nicht passende Split-Summe lokal abgefangen wird und keinen weiteren `PUT /api/transactions/<id>/splits` ausloest.
-- Die serverseitige Atomaritaet bei unpassender Split-Summe bleibt in den bestehenden Store- und HTTP-Tests abgesichert.
+- Die zentrale Frontend-Aenderung liegt in `configureClassificationFields` und `configureSplitClassificationFields`.
+- Der relevante Browser-Test ist `DashboardTransactionBrowserTests.test_transaction_split_editor_updates_and_shows_errors`.
 
 ## Nachbesserung nach Review
 
-- Nicht zutreffend; es lag keine `feedback/agent2_review_request.md` vor.
+- Nicht zutreffend; es lag keine inhaltliche `feedback/agent2_review_request.md` vor.
