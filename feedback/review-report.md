@@ -8,38 +8,65 @@
 
 ## Begründung
 
-Der Diff ist ausreichend aussagekräftig; der neue Test deckt die geforderten Migrationsaspekte für Schema-Version 13 auf 14 fachlich ab.
+Die Umsetzung erfüllt die fachlichen Muss-Anforderungen auf Basis des GitHub-Diffs; Branch-Zustand ist sauber und es sind passende UI-/API-Tests ergänzt.
 
 ## Zusammenfassung
 
-Akzeptiert: Es wurde ein gezielter unittest für die Migration von Schema-Version 13 auf 14 ergänzt, der Versionserhöhung, Existenz und Spalten der Tabelle transaction_splits, Foreign Keys, Index sowie Erhalt bestehender Kernobjekte prüft.
+Der Split-Editor ist in der Transaktionsdetailansicht nutzbar, zeigt vorhandene Splits an, erlaubt Bearbeiten/Hinzufügen/Entfernen und speichert über den bestehenden PUT-Endpunkt. Cent-Beträge werden als Ganzzahlen verarbeitet, lokale Betragsfehler und Backend-Validierungsfehler werden sichtbar angezeigt. Keine blockierenden Probleme gefunden.
 
-## Review-Ergebnis
+# Review Report
 
-**Entscheidung:** Accepted
+## Ergebnis
 
-## Geprüfte Anforderungen
+**Accepted:** true
 
-- Es wurde ein automatisierter Test in `tests/test_transactions.py` ergänzt.
-- Der Test erzeugt eine temporäre SQLite-Datenbank, befüllt sie mit Account, Transaktion, Vorgang und Transaktion-Vorgang-Verknüpfung, entfernt anschließend `transaction_splits` und setzt `schema_info.version` auf `13`.
-- Danach wird die normale Öffnungs-/Initialisierungslogik über `connect_database(path)` erneut ausgeführt.
-- Der Test prüft, dass `schema_info.version` nach der Migration auf `14` steht.
-- Der Test prüft, dass `transaction_splits` existiert.
-- Der Test prüft die erwarteten Spalten einschließlich `split_id`, `transaction_id`, `amount_minor`, `description`, `transaction_type`, `top_category`, `sub_category`, `sphere`, `professional_description`, `vorgangs_id`, `created_at` und `updated_at`.
-- Der Test prüft per `PRAGMA foreign_key_list(transaction_splits)` die Beziehungen für `transaction_id` zu `transactions(transaction_id)` und `vorgangs_id` zu `vorgaenge(vorgangs_id)`.
-- Der Soll-Punkt zum Index `idx_transaction_splits_transaction_id` wurde ebenfalls umgesetzt.
-- Der Test prüft zusätzlich, dass bestehende Kernobjekte nach der Migration erhalten bleiben.
+## Geprüfter Umfang
 
-## Technische Bewertung
+Geändert wurden laut GitHub Compare:
 
-Die Änderung ist auf den erwarteten Scope beschränkt: Es wurde nur ein Test ergänzt, keine Produktivlogik, keine UI, keine externen Dienste und keine fachfremden Umbauten. Der Branch-Zustand ist laut Compare sauber (`ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner und GitHub Compare).
+- `banking_dashboard/static/app.js`
+- `tests/test_dashboard.py`
+- `feedback/implementation_report.md`
 
-Der Ansatz, den v13-Zustand aus einer aktuellen Testdatenbank abzuleiten, `transaction_splits` zu entfernen und die Version zurückzusetzen, ist für das konkrete Ziel ausreichend: Der Test schlägt fehl, wenn die Migration die Split-Tabelle nicht erstellt, die Version nicht anhebt oder die erwartete Struktur nicht bereitstellt.
+Der Branch ist sauber gegenüber `main`: `ahead_by=1`, `behind_by=0`, keine Abweichungen zwischen Runner-Validierung und GitHub Compare.
 
-## Blockierende Probleme
+## Fachliche Bewertung gegen das Arbeitspaket
 
-Keine.
+### Erfüllte Muss-Anforderungen
 
-## Nicht-blockierende Hinweise
+- Vorhandene Splits werden weiterhin aus `transaction.splits` in der Transaktionsdetailansicht gerendert.
+- Split-Zeilen enthalten Betrag, Beschreibung und Klassifikationsfelder inklusive Transaktionstyp, Oberkategorie, Unterkategorie, Sphäre, fachlicher Beschreibung und Vorgangs-ID.
+- Split-Zeilen können bearbeitet, hinzugefügt und über den bestehenden Entfernen-Button entfernt werden.
+- Das Speichern verwendet weiterhin `PUT /api/transactions/<id>/splits`.
+- Nach erfolgreichem Speichern werden die vom Backend zurückgegebenen Split-Daten in den Editor übernommen und neu gerendert.
+- Backend-Validierungsfehler werden jetzt im Split-Bereich über `.form-error` angezeigt und zusätzlich weiterhin über den allgemeinen Fehler-Toast gemeldet.
+- Die bisherige Float-/Euro-Parsing-Logik wurde für Split-Eingaben durch eine ganzzahlige Cent-Validierung ersetzt.
+- Leere und nicht ganzzahlige Beträge werden lokal sichtbar abgewiesen.
 
-- Eine noch historisch exaktere v13-Testfixture könnte langfristig sinnvoll sein, ist aber für dieses Arbeitspaket nicht erforderlich.
+### Tests
+
+Der neue Playwright-basierte Browser-Test deckt zentrale Akzeptanzkriterien ab:
+
+- Anzeigen vorhandener Splits
+- Bearbeiten vorhandener Split-Beträge
+- Hinzufügen einer neuen Split-Zeile
+- Speichern über den Split-Endpunkt
+- Persistenzprüfung nach erneutem API-Laden
+- lokale Fehlermeldung bei leerem Betrag
+- Backend-400 bei unpassender Split-Summe und sichtbare Fehlermeldung
+- keine Persistenzänderung nach fehlgeschlagenem Save
+
+Laut Implementation Report wurde `pytest tests/test_dashboard.py` erfolgreich ausgeführt: 102 Tests bestanden, 6 übersprungen.
+
+## Nicht blockierende Hinweise
+
+- Der neue Browser-Test prüft das Entfernen bestehender Split-Zeilen nicht explizit. Die UI-Funktion ist vorhanden, aber ein dedizierter Test wäre sinnvoll.
+- Für extreme Eingaben könnte zusätzlich geprüft werden, dass Cent-Beträge innerhalb von `Number.MAX_SAFE_INTEGER` liegen, bevor sie als JSON-Zahl gesendet werden.
+
+## Kontext-Hinweis
+
+Die nachgeladene vollständige `app.js`/`tests/test_dashboard.py` wirkte im Split-Bereich nicht vollständig deckungsgleich mit dem GitHub-Diff. Für die Entscheidung war das nicht blockierend, da der GitHub-Diff gemäß Review-Regeln maßgeblich ist und ausreichend Kontext zur Integration vorhanden war.
+
+## Schlussbewertung
+
+Keine blockierenden fachlichen oder technischen Probleme gefunden. Die Umsetzung erfüllt das Arbeitspaket und kann akzeptiert werden.
