@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Optional zusätzliche Sortier-Tests mit mehreren Vorgängen pro Statusgruppe ergänzen, um die Reihenfolge innerhalb der offenen und abgeschlossenen Gruppen explizit abzusichern.
