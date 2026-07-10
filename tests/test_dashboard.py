@@ -2774,6 +2774,62 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual(1, len(vorgang["mails"]))
         self.assertEqual([], vorgang["transaktionen"])
 
+    def test_mail_import_creates_manual_todo_without_analysis_suggestions(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+
+        analysis_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-analysis",
+            data=b"",
+            method="POST",
+        )
+        with urlopen(analysis_request, timeout=5) as response:
+            analysis = json.load(response)["analysis"]
+        analysis["todos"] = []
+
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": analysis["vorgang"],
+                    "documents": [],
+                    "todos": [
+                        {
+                            "enabled": True,
+                            "title": "Manuell nachfassen",
+                            "description": "Ohne Analysevorschlag erfasst.",
+                            "due_date": "2026-07-15",
+                            "priority": "hoch",
+                        },
+                        {
+                            "enabled": True,
+                            "title": "   ",
+                            "description": "Leere Zeile ignorieren.",
+                            "due_date": "",
+                            "priority": "normal",
+                        },
+                    ],
+                    "termine": [],
+                    "links": {},
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(import_request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            imported = json.load(response)
+
+        self.assertEqual(1, len(imported["todos"]))
+        todo = imported["todos"][0]
+        self.assertEqual("Manuell nachfassen", todo["title"])
+        self.assertEqual("hoch", todo["priority"])
+        self.assertEqual([imported["vorgang"]["vorgangs_id"]], todo["vorgangs_ids"])
+        self.assertEqual(
+            [todo["todo_id"]],
+            [item["todo_id"] for item in imported["vorgang"]["todos"]],
+        )
+
     def test_mail_import_rejects_unknown_transaction_link(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
             inbox_id = json.load(response)["messages"][0]["id"]
