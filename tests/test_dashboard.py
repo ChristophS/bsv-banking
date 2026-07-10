@@ -855,6 +855,40 @@ class DashboardDataStoreTests(unittest.TestCase):
             ["split_tx_newer_1"],
         )
 
+    def test_invalid_transaction_split_payload_keeps_existing_splits(self):
+        with self.assertRaises(ValueError):
+            self.store.replace_transaction_splits(
+                "tx_newer",
+                {
+                    "splits": [
+                        {
+                            "betrag_cent": 2500,
+                            "transaction_id": "tx_older",
+                        }
+                    ]
+                },
+            )
+
+        self.assertEqual(
+            [split["split_id"] for split in self.store.transaction_detail(
+                "tx_newer"
+            )["splits"]],
+            ["split_tx_newer_1"],
+        )
+
+        with self.assertRaises(ValueError):
+            self.store.replace_transaction_splits(
+                "tx_newer",
+                {"splits": [{"betrag_cent": 2500, "unexpected": "x"}]},
+            )
+
+        self.assertEqual(
+            [split["split_id"] for split in self.store.transaction_detail(
+                "tx_newer"
+            )["splits"]],
+            ["split_tx_newer_1"],
+        )
+
     def test_transaction_splits_can_be_removed(self):
         result = self.store.replace_transaction_splits(
             "tx_newer",
@@ -2708,6 +2742,55 @@ class DashboardHTTPTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as duplicate_id_error:
             urlopen(duplicate_id_request, timeout=5)
         self.assertEqual(duplicate_id_error.exception.code, 400)
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [split["betrag_cent"] for split in payload["splits"]],
+                [1000, 1500],
+            )
+
+        mismatched_transaction_request = Request(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            data=json.dumps(
+                {
+                    "splits": [
+                        {
+                            "transaction_id": "tx_older",
+                            "betrag_cent": 2500,
+                        },
+                    ]
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with self.assertRaises(HTTPError) as mismatched_error:
+            urlopen(mismatched_transaction_request, timeout=5)
+        self.assertEqual(mismatched_error.exception.code, 400)
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+            self.assertEqual(
+                [split["betrag_cent"] for split in payload["splits"]],
+                [1000, 1500],
+            )
+
+        unknown_field_request = Request(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            data=json.dumps(
+                {"splits": [{"betrag_cent": 2500, "unexpected": "x"}]}
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with self.assertRaises(HTTPError) as unknown_field_error:
+            urlopen(unknown_field_request, timeout=5)
+        self.assertEqual(unknown_field_error.exception.code, 400)
         with urlopen(
             self.base_url + "/api/transactions/tx_newer/splits",
             timeout=5,

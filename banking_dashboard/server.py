@@ -97,6 +97,35 @@ CLASSIFICATION_FIELDS = {
     "sphaere": "sphere",
     "fachliche_beschreibung": "professional_description",
 }
+TRANSACTION_SPLIT_PAYLOAD_FIELDS = {
+    "split_id",
+    "transaction_id",
+    "transaktions_id",
+    "sort_order",
+    "reihenfolge",
+    "amount_minor",
+    "betrag_cent",
+    "betrag",
+    "description",
+    "beschreibung",
+    "transaction_type",
+    "transaktionstyp",
+    "top_category",
+    "oberkategorie",
+    "sub_category",
+    "unterkategorie",
+    "sphere",
+    "sphaere",
+    "professional_description",
+    "fachliche_beschreibung",
+    "vorgangs_id",
+    "created_at",
+    "erstellt_am",
+    "updated_at",
+    "aktualisiert_am",
+    "klassifikationsstatus",
+    "classification_status",
+}
 MAX_CLASSIFICATION_FIELD_LENGTH = 2000
 MAX_JSON_BODY_SIZE = 64 * 1024
 MAX_VORGANG_TITLE_LENGTH = 300
@@ -7096,6 +7125,20 @@ def _transaction_splits_from_payload(
     for index, item in enumerate(raw_splits, start=1):
         if not isinstance(item, dict):
             raise ValueError(f"Split {index} muss ein Objekt sein.")
+        unknown_fields = sorted(
+            set(item) - TRANSACTION_SPLIT_PAYLOAD_FIELDS
+        )
+        if unknown_fields:
+            raise ValueError(
+                f"Split {index} enthaelt unbekannte Felder: "
+                + ", ".join(unknown_fields)
+            )
+        for id_field in ("transaction_id", "transaktions_id"):
+            item_transaction_id = str(item.get(id_field) or "").strip()
+            if item_transaction_id and item_transaction_id != transaktions_id:
+                raise ValueError(
+                    f"Split {index} gehoert nicht zu dieser Transaktion."
+                )
         raw_amount = item.get("betrag_cent", item.get("amount_minor"))
         try:
             amount_minor = int(raw_amount)
