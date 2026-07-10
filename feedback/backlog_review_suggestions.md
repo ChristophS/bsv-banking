@@ -1,3 +1,2 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Expliziten Migrationstest ergänzen, der bei einer bestehenden Schema-Version-13-Datenbank prüft, dass `transaction_splits` nach der Migration vorhanden ist.
+- Prüfen, ob `TransactionSplit` künftig `created_at` und `updated_at` enthalten soll, falls der Datentyp als vollständige Abbildung der Split-Persistenz verwendet wird.
