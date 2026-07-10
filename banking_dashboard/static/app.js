@@ -78,7 +78,10 @@ const state = {
 
 const elements = {
   tabs: [...document.querySelectorAll("[data-tab]")],
+  dashboardPanel: document.querySelector("#dashboard-panel"),
   overviewCards: document.querySelector("#overview-cards"),
+  syncAll: document.querySelector("#sync-all"),
+  dashboardRefreshStatus: document.querySelector("#dashboard-refresh-status"),
   transactionPanel: document.querySelector("#transactions-panel"),
   vorgaengePanel: document.querySelector("#vorgaenge-panel"),
   terminePanel: document.querySelector("#termine-panel"),
@@ -474,6 +477,7 @@ elements.completionRuleSearch.addEventListener("input", () => {
   }, 220);
 });
 elements.refreshTransactions.addEventListener("click", requestRefresh);
+elements.syncAll.addEventListener("click", requestRefresh);
 elements.mailRefresh.addEventListener("click", () => loadMails(true));
 elements.mailDeleteSpam.addEventListener("click", deleteSpamMails);
 elements.mailDeleteSelected.addEventListener("click", deleteSelectedMails);
@@ -565,6 +569,7 @@ elements.entityDialog.addEventListener("click", (event) => {
 });
 
 function activateTab(name) {
+  const isDashboard = name === "dashboard";
   const isTransactions = name === "transactions";
   const isVorgaenge = name === "vorgaenge";
   const isTodos = name === "todos";
@@ -572,6 +577,7 @@ function activateTab(name) {
   const isBudget = name === "budget";
   const isMail = name === "mail";
   const isOtherTasks = name === "other-tasks";
+  elements.dashboardPanel.hidden = false;
   elements.transactionPanel.hidden = !isTransactions;
   elements.vorgaengePanel.hidden = !isVorgaenge;
   elements.todoPanel.hidden = !isTodos;
@@ -5365,7 +5371,7 @@ function resetCompletionRuleForm() {
 }
 
 async function requestRefresh() {
-  elements.refreshTransactions.disabled = true;
+  setRefreshControlsDisabled(true);
   setRefreshStatus("Aktualisierung wird gestartet");
   try {
     const response = await fetch("/api/refresh", {
@@ -5377,8 +5383,10 @@ async function requestRefresh() {
     renderRefreshStatus(payload);
     scheduleRefreshPoll();
   } catch (error) {
-    elements.refreshTransactions.disabled = false;
-    setRefreshStatus(error.message, "error");
+    const payload = await loadRefreshStatus();
+    if (payload?.status !== "running") {
+      setRefreshStatus(error.message, "error");
+    }
     showError(error.message);
   }
 }
@@ -5396,30 +5404,33 @@ async function loadRefreshStatus() {
     if (payload.status === "running") {
       scheduleRefreshPoll();
     }
+    return payload;
   } catch (error) {
-    elements.refreshTransactions.disabled = false;
+    setRefreshControlsDisabled(false);
     setRefreshStatus(error.message, "error");
+    return null;
   }
 }
 
 function renderRefreshStatus(payload) {
   if (!payload.available) {
-    elements.refreshTransactions.disabled = true;
+    setRefreshControlsDisabled(true);
     setRefreshStatus("Keine Bankkonfiguration für Aktualisierungen gefunden.");
     return;
   }
   if (payload.status === "running") {
-    elements.refreshTransactions.disabled = true;
+    setRefreshControlsDisabled(true);
     setRefreshStatus(payload.message);
     return;
   }
-  elements.refreshTransactions.disabled = false;
+  setRefreshControlsDisabled(false);
   if (payload.status === "completed") {
     const newCount = payload.result?.new_transactions ?? 0;
     setRefreshStatus(
       `${payload.message} ${newCount} neue Transaktionen.`,
       "success",
     );
+    loadOverview();
     loadTransactions();
     state.vorgaengeLoaded = false;
     if (!elements.vorgaengePanel.hidden) {
@@ -5434,15 +5445,31 @@ function renderRefreshStatus(payload) {
   }
   if (payload.status === "failed") {
     setRefreshStatus(payload.message, "error");
+    loadOverview();
     return;
   }
   setRefreshStatus("");
 }
 
 function setRefreshStatus(message, type = "") {
-  elements.refreshStatus.textContent = message;
-  elements.refreshStatus.className =
-    type ? `is-${type}` : "";
+  for (const target of [
+    elements.refreshStatus,
+    elements.dashboardRefreshStatus,
+  ]) {
+    target.textContent = message;
+    const baseClass =
+      target === elements.dashboardRefreshStatus
+        ? "dashboard-refresh-status"
+        : "";
+    target.className = [baseClass, type ? `is-${type}` : ""]
+      .filter(Boolean)
+      .join(" ");
+  }
+}
+
+function setRefreshControlsDisabled(disabled) {
+  elements.refreshTransactions.disabled = disabled;
+  elements.syncAll.disabled = disabled;
 }
 
 async function loadPlayerPremiumStatus() {

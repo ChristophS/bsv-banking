@@ -30,6 +30,17 @@
         type="button"
         role="tab"
         aria-selected="true"
+        aria-controls="dashboard-panel"
+        id="dashboard-tab"
+        data-tab="dashboard"
+      >
+        Start
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
         aria-controls="transactions-panel"
         id="transactions-tab"
         data-tab="transactions"
@@ -104,8 +115,35 @@
       </button>
     </nav>
 
-    <section class="overview-strip" aria-label="Vorgangsübersicht">
-      <div class="overview-cards" id="overview-cards"></div>
+    <section
+      class="panel dashboard-panel"
+      id="dashboard-panel"
+      role="tabpanel"
+      aria-labelledby="dashboard-tab"
+    >
+      <div class="panel-heading dashboard-heading">
+        <div>
+          <p class="eyebrow">Startseite</p>
+          <h2>Übersicht</h2>
+          <p class="panel-description">
+            Aktuelle offene Vorgänge, Aufgaben, Mails, Dokumente und Termine.
+          </p>
+        </div>
+        <div class="dashboard-sync">
+          <button class="primary-action" id="sync-all" type="button">
+            Alles synchronisieren
+          </button>
+          <span
+            class="dashboard-refresh-status"
+            id="dashboard-refresh-status"
+            aria-live="polite"
+          ></span>
+        </div>
+      </div>
+
+      <section class="overview-strip" aria-label="Vorgangsübersicht">
+        <div class="overview-cards" id="overview-cards"></div>
+      </section>
     </section>
 
     <section
@@ -113,6 +151,7 @@
       id="transactions-panel"
       role="tabpanel"
       aria-labelledby="transactions-tab"
+      hidden
     >
       <div class="panel-heading">
         <div>

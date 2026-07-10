@@ -175,8 +175,47 @@ button {
   box-shadow: 0 12px 35px rgba(30, 50, 41, 0.05);
 }
 
+.dashboard-panel {
+  margin-bottom: 18px;
+}
+
+.dashboard-heading {
+  align-items: center;
+}
+
+.dashboard-sync {
+  display: flex;
+  min-width: min(100%, 360px);
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 9px;
+  text-align: right;
+}
+
+.dashboard-sync .primary-action {
+  width: 100%;
+  max-width: 240px;
+}
+
+.dashboard-refresh-status {
+  min-height: 18px;
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.dashboard-refresh-status.is-error {
+  color: #9d3030;
+}
+
+.dashboard-refresh-status.is-success {
+  color: var(--green-800);
+}
+
 .overview-strip {
-  margin: 0 0 18px;
+  margin: 0;
+  padding: 0 30px 30px;
 }
 
 .overview-cards {
@@ -4461,7 +4500,22 @@ th[aria-sort="descending"] .sort-indicator {
 
   .panel-heading {
     align-items: flex-start;
+    flex-direction: column;
     padding: 23px 20px 20px;
+  }
+
+  .dashboard-sync {
+    width: 100%;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .dashboard-sync .primary-action {
+    max-width: none;
+  }
+
+  .overview-strip {
+    padding: 0 20px 20px;
   }
 
   .toolbar {

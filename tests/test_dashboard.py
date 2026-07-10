@@ -4004,6 +4004,16 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     )
                     page.goto(base_url, wait_until="networkidle")
 
+                    expect(page.locator("#dashboard-tab")).to_have_class(
+                        re.compile("is-active")
+                    )
+                    expect(page.locator("#dashboard-panel")).to_be_visible()
+                    expect(page.locator("#transactions-panel")).to_be_hidden()
+                    expect(page.locator("#sync-all")).to_have_text(
+                        "Alles synchronisieren"
+                    )
+                    expect(page.locator(".overview-card")).to_have_count(7)
+
                     page.locator(
                         "[data-overview-key='open_vorgaenge']"
                     ).click()
