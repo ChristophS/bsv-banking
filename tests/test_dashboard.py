@@ -44,7 +44,7 @@ class FakeDashboardMailBackend:
             "folderName": "Posteingang",
             "category": "",
             "isRead": False,
-            "attachmentCount": 1,
+            "attachmentCount": 2,
             "attachments": [
                 {
                     "attachmentIndex": 1,
@@ -52,6 +52,13 @@ class FakeDashboardMailBackend:
                     "contentType": "application/pdf",
                     "size": 17,
                     "text": "Rechnung 42,00 EUR",
+                },
+                {
+                    "attachmentIndex": 2,
+                    "filename": "zahlungsziel.txt",
+                    "contentType": "text/plain",
+                    "size": 24,
+                    "text": "Zahlungsziel 2026-06-30",
                 }
             ],
         }
@@ -65,8 +72,14 @@ class FakeDashboardMailBackend:
         return dict(self.message)
 
     def read_attachment(self, entry_id, attachment_index):
-        if entry_id != "mail-1" or attachment_index != 1:
+        if entry_id != "mail-1" or attachment_index not in {1, 2}:
             raise LookupError("Anhang wurde nicht gefunden.")
+        if attachment_index == 2:
+            return MailAttachmentContent(
+                content=b"Zahlungsziel 2026-06-30",
+                content_type="text/plain",
+                filename="zahlungsziel.txt",
+            )
         return MailAttachmentContent(
             content=b"%PDF-1.4 Rechnung",
             content_type="application/pdf",
@@ -105,6 +118,18 @@ class FakeMailVorgangAnalyzer:
                     "recipient": "BSV Viktoria Bielstein",
                     "description": "Stromrechnung",
                     "confidence": 0.9,
+                    "enabled": True,
+                },
+                {
+                    "attachment_index": 2,
+                    "category": "sonstige_dokumente",
+                    "filename": "zahlungsziel.txt",
+                    "document_date": "",
+                    "amount": "",
+                    "issuer": "Stadtwerke",
+                    "recipient": "BSV Viktoria Bielstein",
+                    "description": "Zahlungsziel",
+                    "confidence": 0.7,
                     "enabled": True,
                 }
             ],
@@ -2850,11 +2875,27 @@ class DashboardHTTPTests(unittest.TestCase):
             ["tx_newer"],
             [item["transaktions_id"] for item in vorgang["transaktionen"]],
         )
-        self.assertEqual(1, len(imported["documents"]))
-        document = imported["documents"][0]
-        self.assertEqual("rechnungen", document["kategorie"])
-        self.assertIn("Rechnungen", document["dateipfad"])
-        self.assertTrue(Path(document["dateipfad"]).exists())
+        self.assertEqual(2, len(imported["documents"]))
+        documents_by_name = {
+            Path(document["dateipfad"]).name: document
+            for document in imported["documents"]
+        }
+        self.assertEqual(
+            {"rechnung.pdf", "zahlungsziel.txt"},
+            set(documents_by_name),
+        )
+        self.assertEqual("rechnungen", documents_by_name["rechnung.pdf"]["kategorie"])
+        self.assertIn("Rechnungen", documents_by_name["rechnung.pdf"]["dateipfad"])
+        self.assertEqual(
+            "sonstige_dokumente",
+            documents_by_name["zahlungsziel.txt"]["kategorie"],
+        )
+        self.assertIn(
+            "Sonstige Dokumente",
+            documents_by_name["zahlungsziel.txt"]["dateipfad"],
+        )
+        for document in imported["documents"]:
+            self.assertTrue(Path(document["dateipfad"]).exists())
         self.assertEqual(1, len(imported["todos"]))
         self.assertEqual("hoch", imported["todos"][0]["priority"])
         self.assertEqual(1, len(imported["termine"]))
@@ -3028,7 +3069,7 @@ class DashboardHTTPTests(unittest.TestCase):
             },
             imported["direct_completion"],
         )
-        self.assertEqual(1, len(imported["documents"]))
+        self.assertEqual(2, len(imported["documents"]))
         self.assertEqual(["tx_newer"], [
             item["transaktions_id"] for item in vorgang["transaktionen"]
         ])
