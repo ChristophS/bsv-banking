@@ -20,6 +20,7 @@ from banking_readonly.config import (
 )
 from transaction_store.classification import (
     ClassificationStatus,
+    aggregate_classification_status,
     can_be_auto_classified,
     classification_status,
     requires_manual_classification_review,
@@ -369,6 +370,67 @@ class DatabaseConnectionTests(unittest.TestCase):
                         )
                     ],
                     [(1, 1000), (2, 1500)],
+                )
+            finally:
+                connection.close()
+
+    def test_transaction_split_classification_fields_are_persisted(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                connection.execute(
+                    """
+                    INSERT INTO accounts (
+                        account_id, provider, account_name, account_number
+                    ) VALUES ('acct_test', 'test', 'Testkonto', 'DE001')
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transactions (
+                        transaction_id, fingerprint, occurrence, provider,
+                        account_id, account_name, account_number,
+                        booking_date, value_date, counterparty, amount,
+                        currency, booking_text, purpose, amount_minor,
+                        counterparty_account, creditor_id,
+                        mandate_reference, source_info, first_seen_at,
+                        raw_fields_json
+                    ) VALUES (
+                        'tx_split', 'fp_split', 1, 'test', 'acct_test',
+                        'Testkonto', 'DE001', '2026-06-10', '2026-06-10',
+                        'Partner', '25.00', 'EUR', 'Ueberweisung',
+                        'Zweck', 2500, '', '', '', 'Testquelle',
+                        '2026-06-10T10:00:00+00:00', '{}'
+                    )
+                    """
+                )
+                replace_transaction_splits(
+                    connection,
+                    "tx_split",
+                    [
+                        TransactionSplit(
+                            "",
+                            "tx_split",
+                            2500,
+                            transaction_type="Einnahme",
+                            top_category="Spielbetrieb",
+                            sub_category="Eintritt",
+                            sphere="Zweckbetrieb",
+                            professional_description="Ticketverkauf",
+                        ),
+                    ],
+                )
+
+                split = list_transaction_splits(connection, "tx_split")[0]
+
+                self.assertEqual(split.transaction_type, "Einnahme")
+                self.assertEqual(split.top_category, "Spielbetrieb")
+                self.assertEqual(split.sub_category, "Eintritt")
+                self.assertEqual(split.sphere, "Zweckbetrieb")
+                self.assertEqual(
+                    classification_status(split),
+                    ClassificationStatus.FULLY_CLASSIFIED,
                 )
             finally:
                 connection.close()
@@ -822,6 +884,63 @@ class ClassificationTests(unittest.TestCase):
             ClassificationStatus.INCOMPLETELY_CLASSIFIED,
         )
         self.assertFalse(can_be_auto_classified(transaction))
+
+    def test_unclassified_split_collection_is_unclassified(self):
+        splits = [
+            TransactionSplit("split_1", "tx", 1000),
+            TransactionSplit("split_2", "tx", 1500),
+        ]
+
+        self.assertEqual(
+            aggregate_classification_status(splits),
+            ClassificationStatus.UNCLASSIFIED,
+        )
+
+    def test_partially_classified_split_collection_is_incomplete(self):
+        splits = [
+            TransactionSplit(
+                "split_1",
+                "tx",
+                1000,
+                transaction_type="Einnahme",
+                top_category="Spielbetrieb",
+                sub_category="Eintritt",
+                sphere="Zweckbetrieb",
+            ),
+            TransactionSplit("split_2", "tx", 1500),
+        ]
+
+        self.assertEqual(
+            aggregate_classification_status(splits),
+            ClassificationStatus.INCOMPLETELY_CLASSIFIED,
+        )
+
+    def test_fully_classified_split_collection_is_fully_classified(self):
+        splits = [
+            TransactionSplit(
+                "split_1",
+                "tx",
+                1000,
+                transaction_type="Einnahme",
+                top_category="Spielbetrieb",
+                sub_category="Eintritt",
+                sphere="Zweckbetrieb",
+            ),
+            TransactionSplit(
+                "split_2",
+                "tx",
+                1500,
+                transaction_type="Ausgabe",
+                top_category="Material",
+                sub_category="Trikots",
+                sphere="Zweckbetrieb",
+            ),
+        ]
+
+        self.assertEqual(
+            aggregate_classification_status(splits),
+            ClassificationStatus.FULLY_CLASSIFIED,
+        )
 
 
 class TransactionPipelineTests(unittest.TestCase):

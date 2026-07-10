@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Mapping
+from typing import Iterable, Mapping
 
 
 class ClassificationStatus(str, Enum):
@@ -61,6 +61,22 @@ def classification_status(transaction: object) -> ClassificationStatus:
     if all(not value for value in values.values()):
         return ClassificationStatus.UNCLASSIFIED
     if all(values[field] for field in REQUIRED_CLASSIFICATION_FIELDS):
+        return ClassificationStatus.FULLY_CLASSIFIED
+    return ClassificationStatus.INCOMPLETELY_CLASSIFIED
+
+
+def aggregate_classification_status(
+    items: Iterable[object],
+) -> ClassificationStatus:
+    statuses = [classification_status(item) for item in items]
+    if not statuses:
+        return ClassificationStatus.UNCLASSIFIED
+    if all(status is ClassificationStatus.UNCLASSIFIED for status in statuses):
+        return ClassificationStatus.UNCLASSIFIED
+    if all(
+        status is ClassificationStatus.FULLY_CLASSIFIED
+        for status in statuses
+    ):
         return ClassificationStatus.FULLY_CLASSIFIED
     return ClassificationStatus.INCOMPLETELY_CLASSIFIED
 
