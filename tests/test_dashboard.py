@@ -780,6 +780,70 @@ class DashboardDataStoreTests(unittest.TestCase):
             "unvollstaendig_klassifiziert",
         )
 
+    def test_split_responses_derive_each_classification_status(self):
+        original = self.store.transaction_detail("tx_newer")
+        original_classification = {
+            field: original[field]
+            for field in (
+                "transaktionstyp",
+                "oberkategorie",
+                "unterkategorie",
+                "sphaere",
+                "fachliche_beschreibung",
+                "klassifikationsstatus",
+            )
+        }
+
+        response = self.store.replace_transaction_splits(
+            "tx_newer",
+            {
+                "splits": [
+                    {"amount_minor": 500},
+                    {
+                        "amount_minor": 500,
+                        "transaction_type": "Einnahme",
+                    },
+                    {
+                        "amount_minor": 500,
+                        "professional_description": "Nur Beschreibung",
+                    },
+                    {
+                        "amount_minor": 1000,
+                        "transaction_type": "Einnahme",
+                        "top_category": "Spielbetrieb",
+                        "sub_category": "Eintritt",
+                        "sphere": "Zweckbetrieb",
+                    },
+                ]
+            },
+        )
+
+        expected_statuses = [
+            "unklassifiziert",
+            "unvollstaendig_klassifiziert",
+            "unvollstaendig_klassifiziert",
+            "vollstaendig_klassifiziert",
+        ]
+        self.assertEqual(
+            [
+                split["klassifikationsstatus"]
+                for split in response["transaction"]["splits"]
+            ],
+            expected_statuses,
+        )
+        read_response = self.store.transaction_splits("tx_newer")
+        self.assertEqual(
+            [split["klassifikationsstatus"] for split in read_response["splits"]],
+            expected_statuses,
+        )
+        self.assertEqual(
+            {
+                field: response["transaction"][field]
+                for field in original_classification
+            },
+            original_classification,
+        )
+
     def test_transaction_splits_can_be_replaced_with_valid_sum(self):
         result = self.store.replace_transaction_splits(
             "tx_newer",
