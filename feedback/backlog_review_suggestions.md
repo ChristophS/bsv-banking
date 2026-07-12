@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+Für ein späteres Arbeitspaket sollten die fachlich verpflichtenden Adressfelder, insbesondere Land, Anrede und Namensaufteilung, verbindlich festgelegt werden. Bei der späteren Erstellung von Spendenbescheinigungen sollte außerdem ein unveränderlicher Adress-Snapshot pro Bescheinigung vorgesehen werden.
