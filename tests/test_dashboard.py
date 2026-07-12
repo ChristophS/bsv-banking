@@ -2800,6 +2800,43 @@ class DashboardHTTPTests(unittest.TestCase):
         self.thread.join(timeout=5)
         self.temporary_directory.cleanup()
 
+    def test_balance_correction_api_validates_persists_and_is_idempotent(self):
+        payload = {
+            "account_id": "acct_test",
+            "balance_minor": 12345,
+            "balance_as_of": "2026-06-10",
+            "reason": "Kontoauszug manuell geprueft",
+        }
+        request = Request(
+            self.base_url + "/api/balance-corrections",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 201)
+            created = json.load(response)["correction"]
+        self.assertEqual(created["balance_minor"], 12345)
+        self.assertEqual(created["account_number"], "DE001")
+        self.assertTrue(created["is_manual"])
+
+        with urlopen(request, timeout=5) as response:
+            duplicate = json.load(response)["correction"]
+        self.assertEqual(duplicate["correction_id"], created["correction_id"])
+        with urlopen(self.base_url + "/api/balance-corrections", timeout=5) as response:
+            listed = json.load(response)
+        self.assertEqual(listed["count"], 1)
+
+        invalid = Request(
+            self.base_url + "/api/balance-corrections",
+            data=json.dumps({**payload, "balance_minor": "12345"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(invalid, timeout=5)
+        self.assertEqual(caught.exception.code, 400)
+
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
         with closing(connect_database(database_path)) as connection:

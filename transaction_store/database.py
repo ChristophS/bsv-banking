@@ -27,7 +27,7 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 18
+SCHEMA_VERSION = 19
 BELEGE_DIRECTORY_ENV = "BSV_BELEGE_DIR"
 VORGANG_STATUS_IN_PROGRESS = "in_bearbeitung"
 VORGANG_STATUS_COMPLETED = "abgeschlossen"
@@ -240,6 +240,80 @@ def connect_database(path: Path) -> sqlite3.Connection:
         connection = _open_database(path)
     protect_file(path)
     return connection
+
+
+def create_manual_balance_correction(
+    connection: sqlite3.Connection,
+    account_id: str,
+    balance_minor: int,
+    balance_as_of: str,
+    reason: str,
+) -> sqlite3.Row:
+    cleaned_account_id = str(account_id or "").strip()
+    cleaned_date = str(balance_as_of or "").strip()
+    cleaned_reason = str(reason or "").strip()
+    if not cleaned_account_id:
+        raise ValueError("Kontoangabe fehlt.")
+    if isinstance(balance_minor, bool) or not isinstance(balance_minor, int):
+        raise ValueError("Der korrigierte Saldo muss als Integer-Centwert angegeben werden.")
+    try:
+        datetime.strptime(cleaned_date, "%Y-%m-%d")
+    except ValueError as exc:
+        raise ValueError("Der Stichtag muss ein gueltiges Datum im Format JJJJ-MM-TT sein.") from exc
+    if not cleaned_reason:
+        raise ValueError("Begruendung fehlt.")
+    account = connection.execute(
+        "SELECT account_id FROM accounts WHERE account_id = ?", (cleaned_account_id,)
+    ).fetchone()
+    if account is None:
+        raise LookupError("Konto wurde nicht gefunden.")
+    existing = connection.execute(
+        "SELECT * FROM manual_balance_corrections WHERE account_id = ? AND balance_as_of = ?",
+        (cleaned_account_id, cleaned_date),
+    ).fetchone()
+    if existing is not None:
+        if int(existing["balance_minor"]) == balance_minor and str(existing["reason"]) == cleaned_reason:
+            return existing
+        raise ValueError("Fuer dieses Konto und diesen Stichtag besteht bereits eine andere Korrektur.")
+    correction_id = f"balance_correction_{uuid4().hex}"
+    connection.execute(
+        """
+        INSERT INTO manual_balance_corrections (
+            correction_id, account_id, balance_minor, balance_as_of, reason,
+            created_at, source, is_manual, confirmed
+        ) VALUES (?, ?, ?, ?, ?, ?, 'manual_balance_correction', 1, 1)
+        """,
+        (correction_id, cleaned_account_id, balance_minor, cleaned_date,
+         cleaned_reason, datetime.now(timezone.utc).isoformat()),
+    )
+    return connection.execute(
+        "SELECT * FROM manual_balance_corrections WHERE correction_id = ?", (correction_id,)
+    ).fetchone()
+
+
+def list_manual_balance_corrections(connection: sqlite3.Connection) -> list[sqlite3.Row]:
+    return connection.execute(
+        """
+        SELECT c.*, a.provider, a.account_name, a.account_number
+        FROM manual_balance_corrections AS c
+        JOIN accounts AS a ON a.account_id = c.account_id
+        ORDER BY c.balance_as_of DESC, c.created_at DESC
+        """
+    ).fetchall()
+
+
+def manual_balance_correction_for(
+    connection: sqlite3.Connection, provider: str, account_number: str, balance_as_of: str
+) -> sqlite3.Row | None:
+    return connection.execute(
+        """
+        SELECT c.* FROM manual_balance_corrections AS c
+        JOIN accounts AS a ON a.account_id = c.account_id
+        WHERE a.provider = ? AND a.account_number = ? AND c.balance_as_of = ?
+          AND c.confirmed = 1
+        """,
+        (provider, account_number, balance_as_of),
+    ).fetchone()
 
 
 def _open_database(path: Path) -> sqlite3.Connection:
@@ -1128,6 +1202,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
                 15: _migrate_v15_to_v16,
                 16: _migrate_v16_to_v17,
                 17: _migrate_v17_to_v18,
+                18: _migrate_v18_to_v19,
             }
             while version < SCHEMA_VERSION:
                 migration = migrations.get(version)
@@ -1148,6 +1223,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
         _create_termin_tables(connection)
         _create_transaction_split_table(connection)
         _create_donation_recipients_table(connection)
+        _create_manual_balance_corrections_table(connection)
         _create_vorgang_triggers(connection)
         _enforce_vorgang_completion_invariant(connection)
         _recreate_normalized_view(connection)
@@ -1516,6 +1592,30 @@ def _migrate_v16_to_v17(connection: sqlite3.Connection) -> None:
 def _migrate_v17_to_v18(connection: sqlite3.Connection) -> None:
     _create_donation_recipients_table(connection)
     connection.execute("UPDATE schema_info SET version = 18")
+
+
+def _migrate_v18_to_v19(connection: sqlite3.Connection) -> None:
+    _create_manual_balance_corrections_table(connection)
+    connection.execute("UPDATE schema_info SET version = 19")
+
+
+def _create_manual_balance_corrections_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS manual_balance_corrections (
+            correction_id TEXT PRIMARY KEY CHECK (TRIM(correction_id) <> ''),
+            account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE RESTRICT,
+            balance_minor INTEGER NOT NULL,
+            balance_as_of TEXT NOT NULL CHECK (TRIM(balance_as_of) <> ''),
+            reason TEXT NOT NULL CHECK (TRIM(reason) <> ''),
+            created_at TEXT NOT NULL,
+            source TEXT NOT NULL CHECK (source = 'manual_balance_correction'),
+            is_manual INTEGER NOT NULL CHECK (is_manual = 1),
+            confirmed INTEGER NOT NULL CHECK (confirmed = 1),
+            UNIQUE(account_id, balance_as_of)
+        )
+        """
+    )
 
 
 def _create_donation_recipients_table(

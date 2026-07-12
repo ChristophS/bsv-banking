@@ -1,4 +1,5 @@
 import csv
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -30,6 +31,7 @@ from transaction_store.classification import (
 from transaction_store import database as database_module
 from transaction_store.database import (
     connect_database,
+    create_manual_balance_correction,
     create_donation_recipient,
     donation_certificate_data,
     list_donation_recipients,
@@ -83,7 +85,7 @@ class DatabaseConnectionTests(unittest.TestCase):
             finally:
                 connection.close()
 
-        self.assertEqual(version, 18)
+        self.assertEqual(version, 19)
         self.assertEqual(
             columns,
             [
@@ -126,7 +128,7 @@ class DatabaseConnectionTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    18,
+                    19,
                 )
                 self.assertEqual(
                     migrated.execute(
@@ -430,7 +432,7 @@ class DatabaseConnectionTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    18,
+                    19,
                 )
                 columns = {
                     row["name"]
@@ -509,7 +511,7 @@ class DatabaseConnectionTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    18,
+                    19,
                 )
                 self.assertIsNotNone(
                     migrated.execute(
@@ -1285,6 +1287,53 @@ class ClassificationTests(unittest.TestCase):
 
 
 class TransactionPipelineTests(unittest.TestCase):
+    def test_matching_manual_balance_correction_unblocks_snapshot_without_changing_raw_data(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            export_dir = root / "exports"
+            first_run = export_dir / "20260610T070000_000001Z"
+            corrected_run = export_dir / "20260610T080000_000002Z"
+            original_row = volksbank_row()
+            write_csv(first_run / "hauptkonto.csv", VOLKSBANK_HEADERS, [original_row])
+            store_root = root / "data" / "transactions"
+            summary = import_existing_exports([app_config(export_dir)], store_root)
+
+            write_csv(corrected_run / "hauptkonto.csv", VOLKSBANK_HEADERS, [original_row])
+            write_balance_snapshot(
+                corrected_run,
+                "volksbank",
+                {"DE31384621350101206017": AccountBalanceObservation(
+                    account_name="Hauptkonto",
+                    account_number="DE31384621350101206017",
+                    balance=Decimal("200.00"),
+                    currency="EUR",
+                    captured_at=datetime(2026, 6, 10, 12, 0, tzinfo=timezone.utc),
+                )},
+            )
+            with self.assertRaises(TransactionParseError):
+                import_existing_exports([app_config(export_dir)], store_root)
+
+            connection = connect_database(summary.database_path)
+            try:
+                account_id = connection.execute("SELECT account_id FROM accounts").fetchone()[0]
+                create_manual_balance_correction(
+                    connection, account_id, 10000, "2026-06-10", "Kontoauszug manuell geprueft"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            import_existing_exports([app_config(export_dir)], store_root)
+            self.assertEqual(
+                list(csv.reader((corrected_run / "hauptkonto.csv").open(encoding="utf-8-sig"), delimiter=";"))[1],
+                original_row,
+            )
+            manifests = list((store_root / "archive" / "manifests").rglob("*.json"))
+            corrected_manifest = next(path for path in manifests if "20260610T080000" in path.name)
+            payload = json.loads(corrected_manifest.read_text(encoding="utf-8"))
+            self.assertEqual(payload["files"][0]["observed_account_balance"], "200.00")
+            self.assertEqual(payload["files"][0]["manual_balance_correction"]["balance"], "100.00")
+
     def test_sparkasse_snapshot_backfills_entire_overlapping_history(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -2086,7 +2135,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    18,
+                    19,
                 )
                 row = migrated.execute(
                     "SELECT * FROM normalized_transactions"
@@ -2274,7 +2323,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    18,
+                    19,
                 )
                 self.assertEqual(
                     [

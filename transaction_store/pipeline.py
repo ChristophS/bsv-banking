@@ -5,8 +5,10 @@ import hashlib
 import json
 import os
 import shutil
+from dataclasses import replace
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -19,6 +21,7 @@ from .database import (
     NORMALIZED_COLUMNS,
     connect_database,
     import_parsed_file,
+    manual_balance_correction_for,
     recalculate_account_balances,
     transaction_count,
     transaction_rows,
@@ -175,7 +178,7 @@ def _ingest_runs(
     runs = source_files = parsed_rows = new_transactions = existing = 0
     try:
         for run_dir in sorted(run_dirs):
-            parsed_files = _parse_run(config, run_dir, accounts)
+            parsed_files = _parse_run(config, run_dir, accounts, connection)
             if not parsed_files:
                 continue
             run_summary = _archive_and_import_run(
@@ -487,6 +490,7 @@ def _parse_run(
     config: AppConfig,
     run_dir: Path,
     accounts: dict[str, AccountDefinition],
+    connection=None,
 ) -> tuple[ParsedFile, ...]:
     observations = load_balance_snapshot(run_dir, config.provider)
     expected_numbers = {account.number for account in accounts.values()}
@@ -510,13 +514,29 @@ def _parse_run(
                     f"Kontoname in der Kontostandsdatei passt nicht zu "
                     f"{filename}."
                 )
-            parsed.append(
-                parse_export(
+            balance_as_of = observation.captured_at.date().isoformat()
+            correction = (
+                manual_balance_correction_for(
+                    connection, account.provider, account.number, balance_as_of
+                ) if connection is not None else None
+            )
+            effective_balance = (
+                Decimal(int(correction["balance_minor"])) / Decimal(100)
+                if correction is not None else observation.balance
+            )
+            parsed_file = parse_export(
                     path,
                     account,
-                    account_balance=observation.balance,
-                    balance_as_of=observation.captured_at.date().isoformat(),
+                    account_balance=effective_balance,
+                    balance_as_of=balance_as_of,
                     balance_currency=observation.currency,
+                )
+            parsed.append(
+                replace(
+                    parsed_file,
+                    observed_account_balance=observation.balance,
+                    manual_balance_correction_id=(str(correction["correction_id"]) if correction else None),
+                    manual_balance_correction_reason=(str(correction["reason"]) if correction else None),
                 )
             )
         else:
@@ -585,6 +605,17 @@ def _archive_and_import_run(
                 ),
                 "balance_currency": parsed.balance_currency,
                 "balance_as_of": parsed.balance_as_of,
+                "observed_account_balance": (
+                    format(parsed.observed_account_balance, ".2f")
+                    if parsed.observed_account_balance is not None else None
+                ),
+                "manual_balance_correction": (
+                    {"correction_id": parsed.manual_balance_correction_id,
+                     "balance": format(parsed.account_balance, ".2f"),
+                     "balance_as_of": parsed.balance_as_of,
+                     "reason": parsed.manual_balance_correction_reason}
+                    if parsed.manual_balance_correction_id else None
+                ),
             }
         )
 
