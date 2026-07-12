@@ -8,40 +8,34 @@
 
 ## Zusammenfassung
 
-Die Dokumentation erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Sie grenzt lokale Stammdaten und Bescheinigungslogik klar von einer optionalen DFBnet-Lesequelle ab, beschreibt Sicherheitsgrenzen, Risiken, Entscheidungskriterien sowie einen isolierten read-only Adapter ohne produktive Implementierung oder neue Entitätsbeziehungen.
+Die Umsetzung erfüllt die Muss-Anforderungen: manuelle Korrekturen werden separat und auditierbar persistiert, der lokale API-Flow validiert Konto, Betrag, Datum und Begründung, passende bestätigte Korrekturen werden nur stichtags- und kontogenau verwendet, und beobachtete Banksalden sowie Quelldateien bleiben getrennt erhalten. Die relevanten Regressionstests und API-Tests sind ergänzt. Der GitHub-Branch ist zwei Commits vor main und enthält keine fehlenden Vergleichsänderungen.
 
-# Technischer Review
+## Review-Ergebnis
 
-## Ergebnis
+**Entscheidung: Angenommen**
 
-**Accepted:** Ja
+### Erfüllte Anforderungen
 
-## Geprüfter Umfang
+- Die Migration auf Schema-Version 19 legt eine separate Tabelle `manual_balance_corrections` an.
+- Die Korrektur enthält Kontoidentität, Integer-Centbetrag, Stichtag, Begründung, Erstellzeitpunkt, Quelle, Kennzeichnung als manuelle Korrektur und Bestätigungsstatus.
+- Eine fachlich identische Korrektur ist idempotent; eine abweichende Korrektur für dasselbe Konto und denselben Stichtag wird abgelehnt.
+- Der API-Endpunkt `POST /api/balance-corrections` verlangt genau die Pflichtfelder `account_id`, `balance_minor`, `balance_as_of` und `reason`.
+- Unbekannte Konten, ungültige Datumswerte, fehlende Begründungen und Nicht-Integer-Centbeträge werden kontrolliert als Client- oder Not-Found-Fehler beantwortet.
+- `GET /api/balance-corrections` stellt die gespeicherten Korrekturen einschließlich Kontoidentität und Auditfeldern abrufbar bereit.
+- Der Import sucht ausschließlich nach einer bestätigten Korrektur mit passendem Provider, passender Kontonummer und exakt passendem Stichtag.
+- Der beobachtete Banksaldo und der lokale Vergleichsanker werden getrennt geführt. Das Manifest weist beide Werte getrennt aus.
+- Die archivierte CSV-Datei und ihre Rohfelder werden nicht verändert.
+- Ohne passende Korrektur bleibt die bestehende Volksbank-Saldoabweichung ein Validierungsfehler.
+- Die Tests decken den Abbruch ohne Korrektur, den erfolgreichen Import mit Korrektur, die Unverändertheit der CSV-Daten, die getrennten Manifestwerte sowie API-Validierung und Idempotenz ab.
 
-Der GitHub-Compare-Stand ist konsistent: Der Branch ist gegenüber `main` um einen Commit voraus, nicht hinterher, und enthält ausschließlich die erwarteten Änderungen an `README.md` und `feedback/implementation_report.md`. Die Änderungen bleiben dokumentarisch; es wurden keine produktiven DFBnet-, Datenbank-, Vorgangs-, Beleg- oder Adresskomponenten verändert.
+### Architektur- und Scope-Prüfung
 
-## Erfüllte Muss-Anforderungen
+Die Umsetzung führt eine separate lokale Korrektur-Faktentabelle ein und verändert weder Vorgänge noch bestehende N:M-Verknüpfungen. Es gibt keine echte Banking-Aktion und keine externen Dienstaufrufe in den neuen Tests. Die Änderung bleibt innerhalb des Arbeitspakets.
 
-- Die bestehende DFBnet-Spielerprämienintegration wurde anhand des geladenen Quellcodes als Referenz für Sicherheits- und Isolationsmuster bewertet. Dokumentiert sind das separate Browserprofil, lokal geladene Credentials, geschützte Laufzeitverzeichnisse, deaktivierte Downloads, gekapselte Fehlerbehandlung und maskierte Loginfelder in Fehler-Screenshots.
-- Die Dokumentation benennt die für Bescheinigungsentwürfe benötigten Vereins- und Steuerdaten und stellt klar, dass diese lokal fachlich verbindlich gepflegt werden müssen.
-- DFBnet wird ausdrücklich nicht als Quelle für Spendenempfänger, steuerliche Nachweise oder die lokale Bescheinigungslogik verwendet.
-- Vorgänge bleiben das zentrale fachliche Objekt; direkte Beziehungen zwischen DFBnet-Daten und Empfänger-, Transaktions-, Vorgangs- oder Belegtabellen werden ausgeschlossen.
-- Ein späterer Adapter ist als getrennte read-only-Schnittstelle mit Snapshot-DTO beschrieben. Der Adapter soll keine Datenbankmodelle kennen, keine Bescheinigungen erzeugen und nicht direkt in den Store schreiben.
-- Die Dokumentation beschreibt manuelle Abweichungsklärung sowie einen bewusst ausgelösten, feldweisen und protokollierten Import als mögliche spätere Option.
-- Risiken wie instabile Selektoren, geänderte Anmeldung, Nichtverfügbarkeit, unvollständige oder veraltete Daten und fehlende fachliche Autorität werden benannt.
-- Klare Go-/No-Go-Kriterien für eine spätere Implementierung sind enthalten.
-- Fixtures, Mocks und Fakes sowie das ausdrückliche Verbot echter Credentials, produktiver Logins, Netzwerkanfragen und DFBnet-Schreibaktionen für spätere Tests sind festgelegt.
+### Branch- und Vergleichsprüfung
 
-## Architektur- und Sicherheitsprüfung
+Der Branch ist laut GitHub Compare `ahead` mit zwei Commits und nicht hinter `main`. `missing_from_github_compare` ist leer. Die zusätzlichen GitHub-Änderungen an `banking_dashboard/server.py` und `tests/test_dashboard.py` gehören fachlich zur API-Umsetzung und sind durch den GitHub-Diff nachvollziehbar.
 
-Die bestehende Implementierung in `banking_dashboard/player_premiums.py` führt zwar einen DFBnet-Login durch und schreibt lokale Ergebnisdateien, enthält aber keine dokumentierte DFBnet-Schreibaktion. Sie verwendet ein separates persistentes Profil, lokal geladene Credentials, `accept_downloads=False`, geschützte Laufzeitpfade sowie maskierte Zugangsfelder in Fehler-Screenshots. Die neue Dokumentation behandelt diese Implementierung korrekt nur als Sicherheitsreferenz und überträgt weder ihre Selektoren noch ihre Ergebnisstruktur auf Spendenbescheinigungen.
+### Optionale Verbesserungen
 
-Die vorgeschlagene spätere Schnittstelle ist ausreichend isoliert beschrieben und umgeht weder bestehende Tabellen noch die Vorgangs- und Belegarchitektur. Es wird keine neue fachliche Grundarchitektur eingeführt.
-
-## Tests und Änderungsumfang
-
-Für ein rein dokumentarisches Arbeitspaket sind keine neuen Anwendungstests erforderlich. Der Agent hat die bestehenden DFBnet-Unit-Tests ausgeführt, Whitespace-Fehler ausgeschlossen und keine externen Aktionen durchgeführt. Die tatsächlichen Änderungen entsprechen dem Bericht und dem GitHub-Diff.
-
-## Fazit
-
-Die Umsetzung ist als technische Entscheidungsvorlage belastbar und erfüllt den geforderten Scope. Eine produktive DFBnet-Integration wurde nicht vorzeitig implementiert, und die fachliche Verantwortung für Spendenempfänger und Bescheinigungsgrundlagen bleibt nachvollziehbar lokal.
+Die API könnte Stringtypen strenger validieren und konkurrierende Inserts explizit behandeln. Außerdem sollte der Runner künftig sämtliche im GitHub-Compare geänderten Dateien validieren, insbesondere Dashboard-Server und Dashboard-Tests.
