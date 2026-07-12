@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260712-194543`
+`agent2/codex-20260712-210116`
 
 ## Geänderte Dateien
 
@@ -12,37 +12,36 @@
 
 ## Umgesetzte Punkte
 
-- Die bestehende Fehlerbehandlung für `GET /api/transactions/<transaktions_id>` durch Regressionstests für eine leere und eine unbekannte Transaktions-ID abgesichert.
-- `POST /api/transactions/<transaktions_id>/vorgaenge` akzeptiert ausschließlich ein JSON-Objekt mit genau dem Feld `vorgangs_id` und einer nichtleeren Zeichenkette.
-- `null`, Zahlen, Leerzeichenwerte, zusätzliche oder fehlende Felder und ungültiges JSON liefern eindeutige JSON-Fehler mit HTTP 400.
-- Unbekannte Transaktionen und Vorgänge liefern eindeutige JSON-Fehler mit HTTP 404.
-- Nach jeder abgelehnten Verknüpfungsanfrage wird in der temporären SQLite-Datenbank geprüft, dass keine neue N:M-Zuordnung entstanden ist.
-- Das vorhandene idempotente Verhalten über `INSERT OR IGNORE` bleibt erhalten; der HTTP-Test prüft zusätzlich, dass die doppelte Anfrage genau einen Zuordnungseintrag erzeugt.
+- Vorgangs-API-Eingaben validieren `title`, `description` und `vorgangstyp` jetzt konsistent als Textfelder, statt fremde Datentypen still in Text umzuwandeln.
+- Vorgangs-Verknüpfungslisten akzeptieren nur noch Text-IDs; Listen mit Zahlen, `null` oder anderen Datentypen liefern HTTP 400 mit verständlicher JSON-Fehlermeldung.
+- `POST /api/belege/<beleg_id>/vorgaenge` verlangt für `vorgangs_id` eine nichtleere Zeichenkette und unterscheidet Validierungsfehler (HTTP 400) von unbekannten Objekten (HTTP 404).
+- `DELETE /api/belege/<beleg_id>/vorgaenge/<vorgangs_id>` prüft neben dem Beleg nun auch den Vorgang. Ein unbekannter Vorgang liefert HTTP 404 und verändert bestehende Verknüpfungen nicht.
+- HTTP-Regressionstests decken gültige Beleg-Verknüpfungen, ungültige Vorgangseingaben, unbekannte Vorgänge bei Änderung und Löschung sowie ungültige und unbekannte Beleg-Verknüpfungen ab.
+- Tests prüfen nach abgelehnten Erstellungs- und Verknüpfungsanfragen ausdrücklich, dass keine Vorgänge oder Zuordnungen teilweise persistiert wurden.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Änderungen am Datenmodell, an Tabellen oder an der Persistenzarchitektur.
-- Keine Änderungen an anderen API-Endpunkten oder UI-Komponenten.
-- Keine externen Dienste, echten Logins, produktiven Daten oder Browser-Automationen verwendet.
+- Keine neuen Beleg-Erstellungs-, Änderungs- oder Löschendpunkte eingeführt, da Belege in der vorhandenen Architektur aus dem lokalen Belegverzeichnis katalogisiert werden und das Arbeitspaket keinen Architekturumbau verlangt.
+- Keine Änderungen an Datenmodell, Tabellen, externen Integrationen oder UI-Komponenten.
 
 ## Ausgeführte Tests
 
 - `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `git diff --check`
+- `git diff --check -- banking_dashboard/server.py tests/test_dashboard.py`
 
 ## Testergebnis
 
-- Dashboard-Testlauf: 126 bestanden, 6 übersprungen, 0 fehlgeschlagen (132 gesammelt).
-- Diff-Prüfung: siehe abschließende Ausführung.
+- Dashboard-Testlauf: 129 bestanden, 6 übersprungen, 0 fehlgeschlagen (135 gesammelt).
+- Diff-Prüfung: bestanden; lediglich vorhandene Git-Hinweise zur künftigen LF/CRLF-Konvertierung.
 
 ## Bekannte Einschränkungen
 
-- Die sechs übersprungenen Tests sind vorhandene optionale Browsertests; dieses Arbeitspaket benötigt keine Browserausführung.
-- Die leere Detail-ID folgt der bestehenden Konvention mit HTTP 400, eine nicht auflösbare ID mit HTTP 404.
+- Die sechs übersprungenen Tests sind vorhandene optionale Browsertests; für dieses Arbeitspaket waren keine Browser- oder externen Dienstaufrufe erforderlich.
+- Das Entfernen einer bereits nicht vorhandenen Verknüpfung zwischen zwei existierenden Objekten bleibt wie bisher idempotent erfolgreich.
 
 ## Hinweise für den Review-Agenten
 
-- Die Änderung ist bewusst auf die Payload-Prüfung im Transaktion-Vorgang-POST-Flow begrenzt; die Store-Methode validiert IDs und Entitäten bereits vor dem ersten schreibenden SQL-Statement.
-- Die vorhandenen Fremdschlüssel und `INSERT OR IGNORE` bleiben unverändert.
+- Das bestehende Fehlerformat `{"error": "..."}` sowie die Statuskonvention HTTP 400 für Eingabevalidierung und HTTP 404 für unbekannte Fachobjekte wurden beibehalten.
+- Die bestehende Vorgangs-, Beleg- und N:M-Verknüpfungsarchitektur blieb unverändert.
 - Es lag keine Datei `feedback/agent2_review_request.md` vor; umgesetzt wurde die Erstaufgabe aus `feedback/next_task.md`.
 - Die bereits vorhandene Änderung an `feedback/Review-report.md` und die bereitgestellte unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
