@@ -16,7 +16,7 @@ Lokale Testbaseline für die Dashboard- und Transaktionspfade ausführen und Bef
 
 ## Ziel
 
-Den aktuellen Zustand der vorhandenen Unit-Tests lokal reproduzierbar feststellen, dabei nur eindeutig nachweisbare kleine Fehler in Dashboard- und Transaktionskern beheben und alle übrigen Befunde sauber als Folgeaufgaben festhalten.
+Den aktuellen Zustand der vorhandenen Unit-Tests lokal reproduzierbar feststellen und dabei nur eindeutig nachweisbare kleine Fehler in Dashboard- oder Transaktionskern beheben; alle übrigen Befunde sauber als Folgeaufgaben festhalten.
 
 ## Relevante Dateien
 
@@ -41,15 +41,16 @@ Den aktuellen Zustand der vorhandenen Unit-Tests lokal reproduzierbar feststelle
 - tests/ zur Reproduktion und Absicherung konkreter Befunde
 - banking_dashboard/server.py für lokale API-, Validierungs- oder Dashboard-Datenflüsse
 - transaction_store/database.py für eindeutig nachweisbare Persistenz- oder Integritätsfehler
+- transaction_store/classification.py und transaction_store/rules.py für eindeutig testbare Klassifikations- oder Statusinkonsistenzen
 - feedback/Review-report.md für die knappe Dokumentation der Testbaseline und offener Befunde
 
 ## Muss umgesetzt werden
 
-- Die vollständige lokale Unit-Test-Suite mit python -m unittest discover -s tests -v ausführen; keine echten Banking-, Microsoft-Graph-, DFBnet-, Mail- oder OpenAI-Aktionen auslösen.
+- Die vollständige lokale Unit-Test-Suite mit `python -m unittest discover -s tests -v` ausführen; keine echten Banking-, Microsoft-Graph-, DFBnet-, Mail- oder OpenAI-Aktionen auslösen.
 - Fehlgeschlagene Tests in reproduzierbare Fehler, Umgebungsprobleme und erwartete Testanpassungen unterscheiden.
 - Höchstens kleine, klar reproduzierbare Fehler im lokalen Dashboard- oder Transaktionskern beheben, wenn Ursache und erwartetes Verhalten durch bestehende Tests oder Architekturregeln eindeutig belegt sind.
 - Für jede Codekorrektur einen passenden Regressionstest ergänzen oder einen vorhandenen Test gezielt präzisieren.
-- Eine kurze Testbaseline mit ausgeführten Tests, Ergebnis und nicht innerhalb dieses Pakets lösbaren Befunden in feedback/Review-report.md festhalten.
+- Eine kurze Testbaseline mit ausgeführten Tests, Ergebnis und nicht innerhalb dieses Pakets lösbaren Befunden in `feedback/Review-report.md` festhalten.
 
 ## Soll umgesetzt werden
 
@@ -64,6 +65,7 @@ Den aktuellen Zustand der vorhandenen Unit-Tests lokal reproduzierbar feststelle
 - Keine Migration oder grundlegende Umstrukturierung bestehender Tabellen ohne konkreten, testbaren Befund.
 - Keine echten externen Logins, Netzwerkanfragen, Browserprofile, Downloads, Mailaktionen oder DFBnet-Aktionen.
 - Keine Bearbeitung umfangreicher Folgeprobleme, die erst aus dem Testlauf entstehen; diese werden als getrennte Backlog-Punkte geplant.
+- Keine Umsetzung der ausstehend geplanten Kassierer-Usability-Verbesserungen.
 
 ## Akzeptanzkriterien
 
@@ -79,6 +81,7 @@ Den aktuellen Zustand der vorhandenen Unit-Tests lokal reproduzierbar feststelle
 - Fehler nur dort korrigieren, wo ein eindeutiger reproduzierbarer Widerspruch zwischen Test, API-Vertrag oder bestehender Vorgangsarchitektur vorliegt.
 - Bei unklarer fachlicher Erwartung keine stillschweigende Verhaltensänderung vornehmen, sondern eine offene Frage oder einen Backlog-Befund dokumentieren.
 - Die Auswertung soll insbesondere sicherstellen, dass lokale Validierungs- und Fehlerpfade keine unkontrollierten Serverfehler erzeugen.
+- Vorgänge bleiben die zentrale fachliche Einheit; bestehende N:M-Verknüpfungen zwischen Transaktionen, Vorgängen, Belegen, Mails, To-Dos und Terminen dürfen nicht durch direkte Ersatzbeziehungen umgangen werden.
 
 ## Manuelle Testhinweise
 
