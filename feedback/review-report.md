@@ -8,30 +8,30 @@
 
 ## Zusammenfassung
 
-Die Split-API validiert Cent-Beträge nun strikt als echte Ganzzahlen und weist Floats, numerische Strings sowie Booleans mit HTTP 400 beziehungsweise ValueError zurück. Die Persistenzvalidierung erfolgt zusätzlich vor dem atomaren Austausch. Bestehende Validierungen, Fehlerabbildungen, Split-Summen- und Vorgangsreferenzprüfungen bleiben erhalten und werden durch passende HTTP- und Persistenztests abgesichert. Der GitHub-Compare ist sauber und enthält keine unerwarteten Dateien.
+Die beiden API-Flows erfüllen die Muss-Anforderungen. Die Payload-Prüfung für vorgangs_id ist strikt, ungültige JSON-Inhalte und IDs werden gemäß bestehender Handler-Konvention als 400 beziehungsweise 404 beantwortet, und abgelehnte Verknüpfungen schreiben keine Zuordnung. Das idempotente Verhalten bleibt erhalten und wird durch lokale SQLite-Regressionstests abgesichert.
 
 ## Review-Ergebnis
 
-### Entscheidung
-
-**Akzeptiert.**
+**Entscheidung: Angenommen**
 
 ### Geprüfte Anforderungen
 
-- Der bestehende GET-/PUT-Flow für `/api/transactions/<id>/splits` verwendet weiterhin die vorhandene Split-Persistenz.
-- Leere Transaktions-IDs werden als fachlicher Fehler behandelt; unbekannte Transaktionen führen zu HTTP 404.
-- Ungültiges JSON, unbekannte Split-Felder und widersprüchliche Transaktions-IDs werden als HTTP 400 mit JSON-Fehlernachricht abgelehnt.
-- Cent-Beträge werden im Request-Handler strikt auf echte Integer geprüft. Floats, numerische Strings und Booleans werden nicht mehr still konvertiert.
-- Die gleiche Typprüfung wurde in `transaction_store.database.replace_transaction_splits` ergänzt und erfolgt vor dem Schreibvorgang.
-- Split-Summen, Vorgangsreferenzen und doppelte Split-IDs werden weiterhin über die bestehende Persistenzlogik geprüft.
-- Der eigentliche Austausch der Split-Zeilen bleibt durch Savepoint und die bestehende Transaktion atomar.
-- Tests prüfen erfolgreiche Speicherung, ungültiges JSON, unbekannte Transaktionen, leere IDs, ungültige Cent-Typen sowie unveränderte Splits nach abgelehnten Requests.
-- Die Änderungen umgehen weder Vorgangs- noch N:M-Verknüpfungsstrukturen und führen keine externen Aktionen aus.
+- `GET /api/transactions/<id>` liefert für eine fehlende ID 400 mit JSON-Fehlerobjekt und für unbekannte Transaktionen 404.
+- `POST /api/transactions/<id>/vorgaenge` akzeptiert ausschließlich ein Objekt mit exakt `vorgangs_id`.
+- `vorgangs_id` wird auf Stringtyp und nichtleeren Inhalt geprüft; `null`, Zahlen und Leerzeichenwerte werden mit 400 abgelehnt.
+- Ungültiges JSON sowie zusätzliche oder fehlende Payload-Felder werden mit 400 behandelt.
+- Unbekannte Transaktionen und Vorgänge werden über die bestehende `LookupError`-Konvention mit 404 beantwortet.
+- Die Store-Methode prüft beide Entitäten vor dem INSERT. Abgelehnte Anfragen erzeugen daher keine neue N:M-Zuordnung.
+- `INSERT OR IGNORE` und das bestehende idempotente Verhalten bleiben unverändert.
 
-### Diff- und Branch-Prüfung
+### Tests
 
-Der GitHub-Compare ist `ahead` mit einem Commit, nicht hinter `main`, und enthält keine fehlenden oder unerwarteten Dateien. Die Änderungen liegen in den erwarteten Produktions- und Testdateien sowie im Implementierungsbericht. Es gibt keinen erkennbaren Scope Creep oder einen unbrauchbaren Branch-Zustand.
+Die ergänzten lokalen Dashboard-Regressionstests verwenden eine temporäre SQLite-Datenbank und prüfen HTTP-Status, JSON-Fehlerobjekte, fehlende Persistenzänderungen sowie doppelte gültige Verknüpfungen. Der gemeldete Testlauf umfasst 126 erfolgreiche Tests und 6 vorhandene optionale Browser-Skips ohne Fehler. Es werden keine externen Dienste oder produktiven Daten verwendet.
 
-### Nicht blockierende Hinweise
+### Scope und Architektur
 
-Die Aliasfelder `betrag_cent` und `amount_minor` werden weiterhin nach der etablierten Priorität ausgewertet; eine zusätzliche Konfliktprüfung bei gleichzeitig gesetzten Aliasfeldern wäre lediglich eine optionale Härtung. Ebenso könnte ein zusätzlicher Test die vollständige Antwortstruktur des erfolgreichen PUT noch expliziter gegen alle etablierten Feldnamen prüfen. Beides verhindert die Freigabe nicht.
+Die Änderung ist auf die Payload-Validierung im genannten POST-Flow und die zugehörigen Regressionstests begrenzt. Datenmodell, Tabellen, Fremdschlüssel und Persistenzarchitektur wurden nicht verändert. Die bestehende Vorgangsverknüpfung über `transaktion_vorgaenge` bleibt erhalten.
+
+### Hinweise
+
+Der bereitgestellte vollständige Dateikontext zeigt an der entsprechenden Stelle noch die ältere `str(payload["vorgangs_id"])`-Variante, während der tatsächliche GitHub-Diff die neue Typ- und Leerwertprüfung enthält. Gemäß Quellenpriorität wurde für die Bewertung der tatsächliche GitHub-Diff herangezogen. Dieser Kontextabgleich sollte bei der nächsten automatischen Dateiladung konsistent sein, stellt auf Basis des geprüften Diffs jedoch keinen funktionalen Blocker dar.
