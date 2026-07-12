@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Der nachgeladene Kontext bestätigt die Migrationsreihenfolge, die bestehende Inbox-/Vorgangsarchitektur und die Test-Fixture. Die Umsetzung erfüllt die fachlichen Anforderungen ohne direkte Beleg-Transaktions-Beziehung.
+Die nachgeladenen Dateien bestätigen die vorhandene Schema- und Trigger-Grundlage sowie die 400/404-Fehlerbehandlung. Der Diff implementiert die API vollständig innerhalb der vorgangsbasierten Verknüpfungen und der Branch ist sauber vor main.
 
 ## Zusammenfassung
 
-Akzeptiert: Mail-Dokumente werden über einen opaken Bezug auf bestehende transaktion_vorgaenge-Einträge einem bereits mit dem Vorgang verknüpften Transaktionsbezug zugeordnet. Validierung, idempotentes Speichern, Auslesen und Migration sind vorhanden; die Tests decken den Zwei-Dokumente-/Zwei-Transaktionen-Fall sowie zentrale Fehlerfälle ab.
+Die GET-/PUT-API für Mail-Dokumentzuordnungen wurde mit strikter Payload- und Kontextvalidierung umgesetzt. Sie verwendet ausschließlich vorgang_belege und transaktion_vorgaenge samt opaker bezugs_id, ohne eine direkte Transaktion-Beleg-Beziehung einzuführen.
 
 # Review Report
 
@@ -22,44 +22,51 @@ Akzeptiert: Mail-Dokumente werden über einen opaken Bezug auf bestehende transa
 
 ## Geprüfter Umfang
 
-- Arbeitspaket: vorgangsbasierte Grundlage zur Zuordnung von Mail-Dokumenten zu Transaktionsbezügen
-- Maßgeblicher Commit: `31503eb18d720a2ca460793a0f849c367f39cc84`
-- Branch-Zustand: `ahead` um 2 Commits, nicht hinter `main`
+- `banking_dashboard/server.py`
+- `tests/test_dashboard.py`
+- Nachgeladener Kontext aus `transaction_store/database.py`
+- GitHub-Compare-Status: Branch ist `ahead` um 2 Commits und nicht hinter `main`.
 
 ## Umsetzung
 
-Die Umsetzung ergänzt eine interne Zuordnungsrepräsentation im `InboxMailStore`:
+Die neue API ist unter folgendem bestehenden Vorgangsnamensraum abgegrenzt:
 
-- `assign_document_transaction_reference(...)` prüft Mail, Anhang, Vorgang, Transaktion, Mail-Vorgangs-Verknüpfung, Beleg-Vorgangs-Verknüpfung und die vorhandene Verknüpfung in `transaktion_vorgaenge`.
-- In `vorgang_belege` wird keine Transaktions-ID gespeichert. Stattdessen referenziert `vorgangsbezug_id` einen opaken `bezugs_id` der vorhandenen Tabelle `transaktion_vorgaenge`.
-- Beim Auslesen wird die Transaktions-ID ausschließlich per Join über den Vorgang und dessen vorhandene Transaktionsverknüpfung aufgelöst.
-- Der eindeutige partielle Index auf `(mail_inbox_id, mail_attachment_index)` verhindert mehrere Belegzuordnungen für dasselbe Mail-Dokument und ermöglicht idempotentes Wiederholen derselben Speicherung.
-- Der Lösch-Trigger entfernt einen nicht mehr auflösbaren Vorgangsbezug, wenn die zugehörige `transaktion_vorgaenge`-Zeile gelöscht wird.
+- `GET /api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen`
+- `PUT /api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen`
 
-## Architektur- und Datenintegritätsbewertung
+Der lesende Endpunkt liefert den Vorgang, dessen verknüpfte Transaktionen einschließlich lesbarer Transaktionsinformationen, die über `vorgang_belege` verfügbaren Dokumente sowie die aktuell über `vorgangsbezug_id` aufgelösten Transaktionszuordnungen.
 
-Die vorgangsbasierte Architektur wird eingehalten:
+Der schreibende Endpunkt validiert:
 
-- Es wurde keine direkte Beleg-Transaktions- oder Mail-Anhang-Transaktions-Tabelle eingeführt.
-- Die persistierte Dokumentzuordnung enthält keinen Wert aus `transactions.transaction_id`.
-- Eine angebotene bzw. gespeicherte Transaktion ist nur über einen existierenden Datensatz in `transaktion_vorgaenge` für den gewählten Vorgang erreichbar.
-- Die Migration auf Schema-Version 17 ergänzt die benötigten Spalten, hinterlegt fehlende opake Bezugs-IDs für Bestandsverknüpfungen und entfernt die zuvor beanstandete direkte Spalte `transaktionsbezug_id`, falls sie in einer Version-16-Datenbank vorhanden ist.
+- den adressierten Vorgang,
+- erlaubte Top-Level- und Elementfelder,
+- Payload- und URL-Vorgangs-ID auf Widerspruch,
+- Typ und Inhalt der Zuordnungsliste,
+- Beleg-IDs einschließlich Zugehörigkeit zum Vorgang,
+- Transaktions-IDs einschließlich Existenz und Zugehörigkeit zum Vorgang,
+- doppelt übermittelte Beleg-IDs.
+
+`ValueError` wird im PUT-Handler als HTTP 400 und `LookupError` als HTTP 404 zurückgegeben. Damit entsprechen die neuen Endpunkte der etablierten Fehlerstruktur.
+
+## Architektur und Persistenz
+
+Die Zuordnung wird nicht als direkte Beziehung zwischen `transactions` und `belege` persistiert. Stattdessen wird ausschließlich `vorgang_belege.vorgangsbezug_id` auf die opake, eindeutige `transaktion_vorgaenge.bezugs_id` gesetzt. Der GET-Endpunkt löst die fachlich benötigte Transaktions-ID erst über den Join im Vorgangskontext auf.
+
+Der nachgeladene Datenbankkontext bestätigt:
+
+- `transaktion_vorgaenge.bezugs_id` wird nachinitialisiert und eindeutig indiziert.
+- `vorgang_belege` enthält keine direkte `transaktions_id`-Spalte.
+- Der bestehende Löschtrigger leert nur den abhängigen opaken Vorgangsbezug, wenn der zugrunde liegende Transaktion-Vorgang-Link entfernt wird.
+
+Die Anpassung der Link-Ersetzung ist fachlich erforderlich: Unveränderte Transaktion- und Beleglinks werden nicht mehr gelöscht und erneut erstellt. Dadurch bleiben stabile `bezugs_id`-Werte und gespeicherte Dokumentauswahlen bei einem Vorgangs-Update erhalten. Entfernte Transaktionslinks lösen weiterhin den vorgesehenen Trigger zur Bereinigung ihrer Dokumentbezüge aus.
 
 ## Tests
 
-Die ergänzten Tests verwenden SQLite-Testdaten und lokale Mail-Fixtures. Sie decken insbesondere ab:
+Die ergänzten Dashboard-Tests decken erfolgreichen Abruf und Änderung, idempotentes erneutes Speichern, unbekannte Beleg- und Transaktions-IDs, kontextfremde Transaktionen, widersprüchliche Vorgangs-IDs, unbekannte Payload-Felder, die Unverändertheit nach fehlerhaften Requests sowie die Abwesenheit einer direkten `transaktions_id` in `vorgang_belege` ab. Ein weiterer Regressionstest prüft die Erhaltung der auflösbaren Zuordnung nach `update_vorgang`.
 
-- zwei Anhänge derselben Mail,
-- zwei unterschiedliche Belege,
-- zwei unterschiedliche, mit demselben Vorgang verknüpfte Transaktionen,
-- idempotentes Wiederholen einer gültigen Zuordnung,
-- unbekannte Mail-Dokumente, Vorgänge und Transaktionen,
-- das Fehlen einer direkten Spalte `transaktionsbezug_id`,
-- das Auslesen der Transaktions-ID ausschließlich über den opaken Vorgangsbezug,
-- das Verhalten nach Entfernen einer `transaktion_vorgaenge`-Verknüpfung.
+Laut Umsetzungsbericht laufen die Dashboard-, Mail- und Transaktionstests lokal ohne produktive Daten oder externe Dienste. Die Änderungen enthalten keine externen Banking-, Mail-, Graph- oder Login-Aktionen.
 
-Der Implementierungsbericht dokumentiert zudem erfolgreiche Testläufe für Mail-Integration, Dashboard und Migrations-/Transaktionstests. Die im Diff sichtbaren Änderungen und der geladene Kontext sind damit konsistent.
+## Nicht-blockierende Hinweise
 
-## Fazit
-
-Die Akzeptanzkriterien des Teilpakets sind erfüllt. Die Lösung schafft eine auslesbare, serverseitig validierte und idempotente Grundlage für die spätere API- und UI-Umsetzung, ohne die zentrale Vorgangsarchitektur zu umgehen.
+- Ein expliziter Test für einen nicht vorhandenen Vorgang würde die Testabdeckung der Anforderung noch vollständiger sichtbar machen.
+- Die partielle PUT-Semantik für nicht gesendete Belege sollte für künftige API-Clients dokumentiert werden.
