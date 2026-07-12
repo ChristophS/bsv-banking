@@ -1002,6 +1002,145 @@ class InboxMailStore:
             connection.commit()
         return self.linked_vorgaenge(inbox_id)
 
+    def assign_document_transaction_reference(
+        self,
+        inbox_id: str,
+        attachment_index: int,
+        beleg_id: str,
+        vorgangs_id: str,
+        transaktions_id: str,
+    ) -> dict[str, Any]:
+        """Assign a mail document through existing Vorgang link tables only."""
+        cleaned_beleg_id = str(beleg_id or "").strip()
+        cleaned_vorgangs_id = str(vorgangs_id or "").strip()
+        cleaned_transaction_id = str(transaktions_id or "").strip()
+        if attachment_index < 1:
+            raise ValueError("Ungueltiges Mail-Dokument.")
+        with self._lock, closing(self._connect()) as connection:
+            self._require_message(connection, inbox_id)
+            if connection.execute(
+                """
+                SELECT 1 FROM inbox_attachments
+                WHERE inbox_id = ? AND attachment_index = ?
+                """,
+                (inbox_id, attachment_index),
+            ).fetchone() is None:
+                raise LookupError("Mail-Dokument wurde nicht gefunden.")
+            if connection.execute(
+                "SELECT 1 FROM vorgaenge WHERE vorgangs_id = ?",
+                (cleaned_vorgangs_id,),
+            ).fetchone() is None:
+                raise LookupError("Vorgang wurde nicht gefunden.")
+            if connection.execute(
+                "SELECT 1 FROM transactions WHERE transaction_id = ?",
+                (cleaned_transaction_id,),
+            ).fetchone() is None:
+                raise LookupError("Transaktion wurde nicht gefunden.")
+            if connection.execute(
+                """
+                SELECT 1 FROM inbox_vorgaenge
+                WHERE inbox_id = ? AND vorgangs_id = ?
+                """,
+                (inbox_id, cleaned_vorgangs_id),
+            ).fetchone() is None:
+                raise ValueError("Die Mail gehoert nicht zum ausgewaehlten Vorgang.")
+            if connection.execute(
+                """
+                SELECT 1 FROM transaktion_vorgaenge
+                WHERE transaktions_id = ? AND vorgangs_id = ?
+                """,
+                (cleaned_transaction_id, cleaned_vorgangs_id),
+            ).fetchone() is None:
+                raise ValueError(
+                    "Der Transaktionsbezug gehoert nicht zum ausgewaehlten Vorgang."
+                )
+            link = connection.execute(
+                """
+                SELECT 1 FROM vorgang_belege
+                WHERE vorgangs_id = ? AND beleg_id = ?
+                """,
+                (cleaned_vorgangs_id, cleaned_beleg_id),
+            ).fetchone()
+            if link is None:
+                if connection.execute(
+                    "SELECT 1 FROM belege WHERE beleg_id = ?",
+                    (cleaned_beleg_id,),
+                ).fetchone() is None:
+                    raise LookupError("Beleg wurde nicht gefunden.")
+                raise ValueError("Der Beleg gehoert nicht zum ausgewaehlten Vorgang.")
+            try:
+                connection.execute(
+                    """
+                    UPDATE vorgang_belege
+                    SET mail_inbox_id = ?, mail_attachment_index = ?,
+                        transaktionsbezug_id = ?
+                    WHERE vorgangs_id = ? AND beleg_id = ?
+                    """,
+                    (
+                        inbox_id,
+                        attachment_index,
+                        cleaned_transaction_id,
+                        cleaned_vorgangs_id,
+                        cleaned_beleg_id,
+                    ),
+                )
+                connection.commit()
+            except sqlite3.IntegrityError as exc:
+                connection.rollback()
+                raise ValueError(
+                    "Das Mail-Dokument ist bereits einem anderen Beleg zugeordnet."
+                ) from exc
+        return self._document_transaction_reference(
+            inbox_id, attachment_index, cleaned_vorgangs_id
+        )
+
+    def _document_transaction_reference(
+        self,
+        inbox_id: str,
+        attachment_index: int,
+        vorgangs_id: str,
+    ) -> dict[str, Any]:
+        matches = [
+            item
+            for item in self.document_transaction_references(inbox_id)
+            if item["attachment_index"] == attachment_index
+            and item["vorgangs_id"] == vorgangs_id
+        ]
+        if not matches:
+            raise LookupError("Dokumentzuordnung wurde nicht gefunden.")
+        return matches[0]
+
+    def document_transaction_references(
+        self,
+        inbox_id: str,
+    ) -> list[dict[str, Any]]:
+        with self._lock, closing(self._connect()) as connection:
+            self._require_message(connection, inbox_id)
+            rows = connection.execute(
+                """
+                SELECT vb.beleg_id, vb.vorgangs_id, vb.mail_attachment_index,
+                       vb.transaktionsbezug_id
+                FROM vorgang_belege AS vb
+                JOIN transaktion_vorgaenge AS tv
+                  ON tv.vorgangs_id = vb.vorgangs_id
+                 AND tv.transaktions_id = vb.transaktionsbezug_id
+                WHERE vb.mail_inbox_id = ?
+                  AND vb.mail_attachment_index IS NOT NULL
+                ORDER BY vb.mail_attachment_index, vb.vorgangs_id
+                """,
+                (inbox_id,),
+            ).fetchall()
+        return [
+            {
+                "inbox_id": inbox_id,
+                "attachment_index": int(row["mail_attachment_index"]),
+                "beleg_id": str(row["beleg_id"]),
+                "vorgangs_id": str(row["vorgangs_id"]),
+                "transaktions_id": str(row["transaktionsbezug_id"]),
+            }
+            for row in rows
+        ]
+
     def _update_message(
         self,
         inbox_id: str,

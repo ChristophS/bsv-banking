@@ -19,7 +19,7 @@ from .classification import SQL_CLASSIFICATION_STATUS_EXPRESSION
 from .models import ParsedFile, ParsedTransaction, TransactionSplit
 
 
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 BELEGE_DIRECTORY_ENV = "BSV_BELEGE_DIR"
 VORGANG_STATUS_IN_PROGRESS = "in_bearbeitung"
 VORGANG_STATUS_COMPLETED = "abgeschlossen"
@@ -948,6 +948,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
                 12: _migrate_v12_to_v13,
                 13: _migrate_v13_to_v14,
                 14: _migrate_v14_to_v15,
+                15: _migrate_v15_to_v16,
             }
             while version < SCHEMA_VERSION:
                 migration = migrations.get(version)
@@ -1310,6 +1311,11 @@ def _migrate_v14_to_v15(connection: sqlite3.Connection) -> None:
     connection.execute("UPDATE schema_info SET version = 15")
 
 
+def _migrate_v15_to_v16(connection: sqlite3.Connection) -> None:
+    _create_document_tables(connection)
+    connection.execute("UPDATE schema_info SET version = 16")
+
+
 def _create_transaction_split_table(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
@@ -1551,6 +1557,39 @@ def _create_document_tables(connection: sqlite3.Connection) -> None:
         """
         CREATE INDEX IF NOT EXISTS idx_vorgang_belege_beleg_id
             ON vorgang_belege(beleg_id)
+        """
+    )
+    _add_columns_if_missing(
+        connection,
+        "vorgang_belege",
+        {
+            "mail_inbox_id": "TEXT NOT NULL DEFAULT ''",
+            "mail_attachment_index": (
+                "INTEGER CHECK (mail_attachment_index IS NULL "
+                "OR mail_attachment_index > 0)"
+            ),
+            "transaktionsbezug_id": "TEXT NOT NULL DEFAULT ''",
+        },
+    )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_vorgang_belege_mail_dokument
+            ON vorgang_belege(mail_inbox_id, mail_attachment_index)
+            WHERE mail_inbox_id <> '' AND mail_attachment_index IS NOT NULL
+        """
+    )
+    connection.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS
+            trg_transaktion_vorgang_document_reference_delete
+        AFTER DELETE ON transaktion_vorgaenge
+        BEGIN
+            UPDATE vorgang_belege
+            SET transaktionsbezug_id = ''
+            WHERE vorgangs_id = OLD.vorgangs_id
+              AND transaktionsbezug_id = OLD.transaktions_id;
+        END
         """
     )
 
