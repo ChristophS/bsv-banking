@@ -7929,6 +7929,7 @@ function renderVorgangWorkspace(
 
   details.append(createVorgangStatusEditor(vorgang));
   details.append(createVorgangMetadataEditor(vorgang, suggestionsPayload));
+  details.append(createDonationCertificateAction(vorgang));
   details.append(createMailDocumentAssignmentEditor(vorgang, assignmentPayload));
   appendDetailSection("Vorgang", [
     detailField("Vorgangs-ID", vorgang.vorgangs_id, true, true),
@@ -7971,6 +7972,35 @@ function renderVorgangWorkspace(
     details.append(heading);
     renderTransactionContent(transaction, details);
   }
+}
+
+function createDonationCertificateAction(vorgang) {
+  const section = mailElement("section", "detail-section");
+  section.append(mailElement("h3", "", "Spendenbescheinigung"));
+  const form = mailElement("form", "vorgang-edit-form");
+  const recipient = formTextField("Empfänger-ID", "recipient_id", "", true);
+  const actions = mailElement("div", "vorgang-form-actions");
+  const button = mailElement("button", "primary-action", "Entwurf erzeugen");
+  button.type = "submit";
+  actions.append(button);
+  form.append(recipient, actions);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    button.disabled = true;
+    try {
+      await requestJson(
+        `/api/vorgaenge/${encodeURIComponent(vorgang.vorgangs_id)}/spendenbescheinigung`,
+        {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({recipient_id: form.elements.recipient_id.value})},
+      );
+      await loadVorgangWorkspace(vorgang.vorgangs_id, "Spendenbescheinigung erzeugt");
+    } catch (error) {
+      elements.detailDialogStatus.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+  section.append(form);
+  return section;
 }
 
 function createMailDocumentAssignmentEditor(vorgang, payload) {

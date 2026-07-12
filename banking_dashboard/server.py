@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import html
 import mimetypes
 import re
 import sqlite3
@@ -68,6 +69,7 @@ from transaction_store.database import (
     TERMIN_STATUS_PLANNED,
     configured_belege_directory,
     connect_database,
+    donation_certificate_data,
     list_transaction_splits,
     replace_transaction_splits,
     sync_belege_directory,
@@ -2957,6 +2959,98 @@ class DashboardDataStore:
         if result is None:
             raise RuntimeError("Beleg konnte nicht geladen werden.")
         return result
+
+    def create_donation_certificate(
+        self,
+        vorgangs_id: str,
+        recipient_id: str,
+    ) -> dict[str, Any]:
+        with closing(self._connect()) as connection:
+            data = donation_certificate_data(
+                connection, vorgangs_id, recipient_id
+            )
+        created_at = datetime.now().astimezone()
+        created_text = created_at.isoformat()
+        safe_vorgang = re.sub(r"[^A-Za-z0-9._-]+", "_", data.vorgangs_id)
+        filename = (
+            f"spendenbescheinigung_{safe_vorgang}_"
+            f"{created_at.strftime('%Y%m%dT%H%M%S%f%z')}.html"
+        )
+        def format_minor(amount_minor: int) -> str:
+            sign = "-" if amount_minor < 0 else ""
+            absolute = abs(amount_minor)
+            return f"{sign}{absolute // 100}.{absolute % 100:02d}"
+
+        amount = f"{format_minor(data.amount_minor)} EUR"
+        address = "<br>".join(
+            html.escape(part)
+            for part in (
+                data.recipient.name,
+                data.recipient.address_addition,
+                " ".join(filter(None, (data.recipient.street, data.recipient.house_number))),
+                " ".join(filter(None, (data.recipient.postal_code, data.recipient.city))),
+                data.recipient.country,
+            )
+            if part
+        )
+        transaction_rows = "".join(
+            "<tr>"
+            f"<td>{html.escape(item.booking_date)}</td>"
+            f"<td>{html.escape(item.transaction_id)}</td>"
+            f"<td>{html.escape(item.counterparty)}</td>"
+            f"<td>{html.escape(item.purpose)}</td>"
+            f"<td>{format_minor(item.amount_minor)} {html.escape(item.currency)}</td>"
+            "</tr>"
+            for item in data.transactions
+        ) or '<tr><td colspan="5">Keine zugeordneten Transaktionen</td></tr>'
+        content = (
+            "<!doctype html><html lang=\"de\"><meta charset=\"utf-8\">"
+            "<title>Entwurf Spendenbescheinigung</title>"
+            "<style>body{font-family:sans-serif;max-width:900px;margin:3rem auto;line-height:1.5}"
+            "table{border-collapse:collapse;width:100%}th,td{border:1px solid #aaa;padding:.4rem;text-align:left}</style>"
+            "<body><h1>Entwurf einer Spendenbescheinigung</h1>"
+            "<p><strong>Hinweis:</strong> Lokaler Entwurf; keine steuerrechtlich geprüfte Vorlage.</p>"
+            f"<p><strong>Erstellt:</strong> {html.escape(created_text)}<br>"
+            f"<strong>Vorgang:</strong> {html.escape(data.vorgangs_id)} – {html.escape(data.title)}<br>"
+            f"<strong>Empfänger-ID:</strong> {html.escape(data.recipient.recipient_id)}</p>"
+            f"<h2>Empfänger</h2><p>{address}</p>"
+            f"<h2>Betrag</h2><p><strong>{amount}</strong></p>"
+            "<h2>Einbezogene Transaktionen</h2><table><thead><tr>"
+            "<th>Datum</th><th>ID</th><th>Beteiligter</th><th>Zweck</th><th>Betrag</th>"
+            f"</tr></thead><tbody>{transaction_rows}</tbody></table></body></html>"
+        ).encode("utf-8")
+        try:
+            beleg = self.create_document_from_bytes(
+                content=content,
+                filename=filename,
+                content_type="text/html; charset=utf-8",
+                metadata={
+                    "category": "spendenbescheinigungen",
+                    "filename": filename,
+                    "document_date": created_at.date().isoformat(),
+                    "amount": amount,
+                    "recipient": data.recipient.name,
+                    "description": f"Lokaler Entwurf fuer Vorgang {data.vorgangs_id}",
+                },
+                vorgangs_id=data.vorgangs_id,
+                source_reference=(
+                    f"donation-certificate:{data.recipient.recipient_id}"
+                ),
+            )
+        except Exception:
+            # create_document_from_bytes writes before cataloguing. Its database
+            # transaction rolls back on failure; remove the matching draft too.
+            failed_path = (
+                self.belege_directory
+                / DOCUMENT_CATEGORY_LABELS["spendenbescheinigungen"]
+                / filename
+            )
+            try:
+                failed_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
+        return {"beleg": beleg, "amount_minor": data.amount_minor}
 
     @staticmethod
     def _beleg_links(
@@ -6228,6 +6322,24 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                             self._read_json_body()
                         )
                     },
+                    status=HTTPStatus.CREATED,
+                )
+                return
+            certificate_suffix = "/spendenbescheinigung"
+            if (
+                parsed.path.startswith("/api/vorgaenge/")
+                and parsed.path.endswith(certificate_suffix)
+            ):
+                vorgangs_id = unquote(
+                    parsed.path[len("/api/vorgaenge/"):-len(certificate_suffix)]
+                ).strip("/")
+                payload = self._read_json_body()
+                if set(payload) != {"recipient_id"}:
+                    raise ValueError("Das Feld recipient_id ist erforderlich.")
+                self._json_response(
+                    self.server.data_store.create_donation_certificate(
+                        vorgangs_id, str(payload["recipient_id"])
+                    ),
                     status=HTTPStatus.CREATED,
                 )
                 return

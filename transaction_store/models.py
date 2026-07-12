@@ -80,3 +80,22 @@ class DonationRecipient:
     country: str = ""
     created_at: str = ""
     updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class DonationCertificateTransaction:
+    transaction_id: str
+    booking_date: str
+    counterparty: str
+    purpose: str
+    amount_minor: int
+    currency: str
+
+
+@dataclass(frozen=True)
+class DonationCertificateData:
+    vorgangs_id: str
+    title: str
+    recipient: DonationRecipient
+    transactions: tuple[DonationCertificateTransaction, ...]
+    amount_minor: int

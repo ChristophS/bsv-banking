@@ -2800,6 +2800,83 @@ class DashboardHTTPTests(unittest.TestCase):
         self.thread.join(timeout=5)
         self.temporary_directory.cleanup()
 
+    def test_donation_certificate_api_creates_cent_exact_linked_html(self):
+        database_path = self.server.data_store.database_path
+        with closing(connect_database(database_path)) as connection:
+            connection.execute(
+                """
+                INSERT INTO donation_recipients (
+                    recipient_id, name, address_addition, street,
+                    house_number, postal_code, city, country,
+                    created_at, updated_at
+                ) VALUES (
+                    'recipient_1', 'Erika Beispiel', '', 'Testweg',
+                    '7', '51674', 'Wiehl', 'Deutschland',
+                    '2026-07-12T10:00:00Z', '2026-07-12T10:00:00Z'
+                )
+                """
+            )
+            connection.commit()
+
+        endpoint = self.base_url + "/api/vorgaenge/vorgang_tx_newer/spendenbescheinigung"
+        request = Request(
+            endpoint,
+            data=json.dumps({"recipient_id": "recipient_1"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            result = json.load(response)
+        with closing(sqlite3.connect(database_path)) as connection:
+            expected_minor = connection.execute(
+                """
+                SELECT t.amount_minor FROM transactions AS t
+                JOIN transaktion_vorgaenge AS tv
+                  ON tv.transaktions_id = t.transaction_id
+                WHERE tv.vorgangs_id = 'vorgang_tx_newer'
+                """
+            ).fetchone()[0]
+        self.assertEqual(expected_minor, result["amount_minor"])
+        beleg = result["beleg"]
+        self.assertEqual("automatic", beleg["quelle"])
+        self.assertEqual("spendenbescheinigungen", beleg["kategorie"])
+        self.assertEqual(["vorgang_tx_newer"], beleg["vorgangs_ids"])
+        content = Path(beleg["dateipfad"]).read_text(encoding="utf-8")
+        self.assertIn("Erika Beispiel", content)
+        self.assertIn("vorgang_tx_newer", content)
+        self.assertIn(f"{expected_minor / 100:.2f} EUR", content)
+
+        with closing(connect_database(database_path)) as connection:
+            link = connection.execute(
+                "SELECT vorgangs_id FROM vorgang_belege WHERE beleg_id = ?",
+                (beleg["beleg_id"],),
+            ).fetchall()
+        self.assertEqual([("vorgang_tx_newer",)], [tuple(row) for row in link])
+
+    def test_donation_certificate_api_rejects_unknown_ids_without_changes(self):
+        database_path = self.server.data_store.database_path
+        before_files = set(self.server.data_store.belege_directory.rglob("*"))
+        for vorgangs_id, recipient_id in (
+            ("vorgang_tx_newer", "recipient_missing"),
+            ("vorgang_missing", "recipient_missing"),
+        ):
+            request = Request(
+                self.base_url + f"/api/vorgaenge/{vorgangs_id}/spendenbescheinigung",
+                data=json.dumps({"recipient_id": recipient_id}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(HTTPError) as raised:
+                urlopen(request, timeout=5)
+            self.assertIn(raised.exception.code, {400, 404})
+        with closing(connect_database(database_path)) as connection:
+            count = connection.execute(
+                "SELECT COUNT(*) FROM belege WHERE quelle = 'automatic'"
+            ).fetchone()[0]
+        self.assertEqual(0, count)
+        self.assertEqual(before_files, set(self.server.data_store.belege_directory.rglob("*")))
+
     def test_mail_document_assignment_api_validates_vorgang_context(self):
         database_path = self.server.data_store.database_path
         with closing(connect_database(database_path)) as connection:

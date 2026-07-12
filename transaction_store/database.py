@@ -18,6 +18,8 @@ from banking_readonly.security import ensure_private_directory, protect_file
 
 from .classification import SQL_CLASSIFICATION_STATUS_EXPRESSION
 from .models import (
+    DonationCertificateData,
+    DonationCertificateTransaction,
     DonationRecipient,
     ParsedFile,
     ParsedTransaction,
@@ -133,6 +135,60 @@ def list_donation_recipients(
         """
     ).fetchall()
     return [_donation_recipient_from_row(row) for row in rows]
+
+
+def donation_certificate_data(
+    connection: sqlite3.Connection,
+    vorgangs_id: str,
+    recipient_id: str,
+) -> DonationCertificateData:
+    cleaned_vorgangs_id = str(vorgangs_id or "").strip()
+    cleaned_recipient_id = str(recipient_id or "").strip()
+    if not cleaned_vorgangs_id:
+        raise ValueError("Vorgangs-ID fehlt.")
+    if not cleaned_recipient_id:
+        raise ValueError("Empfaenger-ID fehlt.")
+    vorgang = connection.execute(
+        "SELECT vorgangs_id, titel FROM vorgaenge WHERE vorgangs_id = ?",
+        (cleaned_vorgangs_id,),
+    ).fetchone()
+    if vorgang is None:
+        raise LookupError("Vorgang wurde nicht gefunden.")
+    recipient_row = connection.execute(
+        "SELECT * FROM donation_recipients WHERE recipient_id = ?",
+        (cleaned_recipient_id,),
+    ).fetchone()
+    if recipient_row is None:
+        raise LookupError("Spendenempfaenger wurde nicht gefunden.")
+    rows = connection.execute(
+        """
+        SELECT t.transaction_id, t.booking_date, t.counterparty, t.purpose,
+               t.amount_minor, t.currency
+        FROM transaktion_vorgaenge AS tv
+        JOIN transactions AS t ON t.transaction_id = tv.transaktions_id
+        WHERE tv.vorgangs_id = ?
+        ORDER BY t.booking_date, t.transaction_id
+        """,
+        (cleaned_vorgangs_id,),
+    ).fetchall()
+    transactions = tuple(
+        DonationCertificateTransaction(
+            transaction_id=str(row["transaction_id"]),
+            booking_date=str(row["booking_date"]),
+            counterparty=str(row["counterparty"]),
+            purpose=str(row["purpose"]),
+            amount_minor=int(row["amount_minor"]),
+            currency=str(row["currency"]),
+        )
+        for row in rows
+    )
+    return DonationCertificateData(
+        vorgangs_id=str(vorgang["vorgangs_id"]),
+        title=str(vorgang["titel"]),
+        recipient=_donation_recipient_from_row(recipient_row),
+        transactions=transactions,
+        amount_minor=sum(item.amount_minor for item in transactions),
+    )
 
 
 def _normalize_donation_recipient(
