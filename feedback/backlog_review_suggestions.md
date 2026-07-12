@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+Für eine spätere Iteration kann ein Playwright-Test ergänzt werden, der das Formular mit einem lokalen Fake-Server vollständig ausfüllt, den POST-Payload prüft, die Erfolgsaktualisierung der Liste verifiziert und ungültige Centbeträge beziehungsweise leere Begründungen im Browser testet.
