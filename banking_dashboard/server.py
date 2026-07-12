@@ -2882,18 +2882,26 @@ class DashboardDataStore:
         beleg_id: str,
         vorgangs_id: str,
     ) -> dict[str, Any]:
+        cleaned_vorgangs_id = str(vorgangs_id or "").strip()
+        if not cleaned_vorgangs_id:
+            raise ValueError("Vorgangs-ID fehlt.")
         with closing(self._connect(writable=True)) as connection:
             if connection.execute(
                 "SELECT 1 FROM belege WHERE beleg_id = ?",
                 (beleg_id,),
             ).fetchone() is None:
                 raise LookupError("Beleg wurde nicht gefunden.")
+            if connection.execute(
+                "SELECT 1 FROM vorgaenge WHERE vorgangs_id = ?",
+                (cleaned_vorgangs_id,),
+            ).fetchone() is None:
+                raise LookupError("Vorgang wurde nicht gefunden.")
             connection.execute(
                 """
                 DELETE FROM vorgang_belege
                 WHERE beleg_id = ? AND vorgangs_id = ?
                 """,
-                (beleg_id, str(vorgangs_id or "").strip()),
+                (beleg_id, cleaned_vorgangs_id),
             )
             connection.commit()
         result = self.beleg_detail(beleg_id)
@@ -3841,6 +3849,9 @@ class DashboardDataStore:
         *,
         require_title: bool,
     ) -> dict[str, Any]:
+        for field in ("title", "description", "vorgangstyp"):
+            if field in payload and not isinstance(payload[field], str):
+                raise ValueError(f"Das Feld {field} muss Text enthalten.")
         title = str(payload.get("title") or "").strip()
         vorgangstyp = str(payload.get("vorgangstyp") or "").strip()
         if require_title and not title:
@@ -3904,6 +3915,8 @@ class DashboardDataStore:
     ) -> list[str]:
         if not isinstance(raw_values, list):
             raise ValueError(f"{field_name} muss eine Liste sein.")
+        if any(not isinstance(value, str) for value in raw_values):
+            raise ValueError(f"{field_name} darf nur Text-IDs enthalten.")
         values = list(
             dict.fromkeys(
                 str(value or "").strip()
@@ -6426,11 +6439,16 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     raise ValueError(
                         "Das Feld vorgangs_id ist erforderlich."
                     )
+                vorgangs_id = payload["vorgangs_id"]
+                if not isinstance(vorgangs_id, str) or not vorgangs_id.strip():
+                    raise ValueError(
+                        "Das Feld vorgangs_id muss eine nichtleere ID enthalten."
+                    )
                 self._json_response(
                     {
                         "beleg": self.server.data_store.link_beleg_vorgang(
                             beleg_parts[0],
-                            str(payload["vorgangs_id"]),
+                            vorgangs_id,
                         )
                     }
                 )

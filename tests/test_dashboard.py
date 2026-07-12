@@ -4893,6 +4893,106 @@ class DashboardHTTPTests(unittest.TestCase):
                 json.load(response)["beleg"]["vorgangs_ids"],
             )
 
+    def test_vorgang_api_rejects_invalid_input_without_persistence(self):
+        before = len(self.server.data_store.list_vorgaenge())
+        for payload, expected_error in (
+            ({"title": 123}, "Das Feld title muss Text enthalten."),
+            (
+                {"title": "Ungueltig", "beleg_ids": [123]},
+                "beleg_ids darf nur Text-IDs enthalten.",
+            ),
+            (
+                {"title": "Ungueltig", "unbekannt": True},
+                "Unbekannte Felder fuer den Vorgang.",
+            ),
+        ):
+            with self.subTest(payload=payload):
+                request = Request(
+                    self.base_url + "/api/vorgaenge",
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=5)
+                self.assertEqual(400, caught.exception.code)
+                self.assertEqual(
+                    {"error": expected_error},
+                    json.load(caught.exception),
+                )
+                self.assertEqual(
+                    before,
+                    len(self.server.data_store.list_vorgaenge()),
+                )
+
+    def test_vorgang_api_returns_404_for_unknown_update_and_delete(self):
+        requests = (
+            Request(
+                self.base_url + "/api/vorgaenge/vorgang_missing",
+                data=json.dumps({"title": "Fehlt"}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="PATCH",
+            ),
+            Request(
+                self.base_url + "/api/vorgaenge/vorgang_missing",
+                method="DELETE",
+            ),
+        )
+        for request in requests:
+            with self.subTest(method=request.method):
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=5)
+                self.assertEqual(404, caught.exception.code)
+                self.assertEqual(
+                    {"error": "Vorgang nicht gefunden."},
+                    json.load(caught.exception),
+                )
+
+    def test_beleg_link_api_rejects_invalid_links_without_changes(self):
+        endpoint = self.base_url + "/api/belege/beleg_1/vorgaenge"
+        for payload, status, expected_error in (
+            ({"vorgangs_id": 123}, 400,
+             "Das Feld vorgangs_id muss eine nichtleere ID enthalten."),
+            ({"vorgangs_id": "vorgang_missing"}, 404,
+             "Vorgang wurde nicht gefunden."),
+        ):
+            with self.subTest(payload=payload):
+                request = Request(
+                    endpoint,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=5)
+                self.assertEqual(status, caught.exception.code)
+                self.assertEqual(
+                    {"error": expected_error},
+                    json.load(caught.exception),
+                )
+                self.assertEqual(
+                    ["vorgang_tx_newer"],
+                    self.server.data_store.beleg_detail("beleg_1")[
+                        "vorgangs_ids"
+                    ],
+                )
+
+        unlink_request = Request(
+            endpoint + "/vorgang_missing",
+            method="DELETE",
+        )
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(unlink_request, timeout=5)
+        self.assertEqual(404, caught.exception.code)
+        self.assertEqual(
+            {"error": "Vorgang wurde nicht gefunden."},
+            json.load(caught.exception),
+        )
+        self.assertEqual(
+            ["vorgang_tx_newer"],
+            self.server.data_store.beleg_detail("beleg_1")["vorgangs_ids"],
+        )
+
     def test_beleg_original_document_is_served_over_http(self):
         document_path = (
             self.server.data_store.database_path.parent
