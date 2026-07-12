@@ -3595,6 +3595,129 @@ class DashboardHTTPTests(unittest.TestCase):
             urlopen(unknown_request, timeout=5)
         self.assertEqual(404, error.exception.code)
 
+        with closing(connect_database(
+            self.server.data_store.database_path
+        )) as connection:
+            link_count = connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM transaktion_vorgaenge
+                WHERE transaktions_id = 'tx_newer'
+                  AND vorgangs_id = 'vorgang_tx_older'
+                """
+            ).fetchone()[0]
+        self.assertEqual(1, link_count)
+
+    def test_transaction_detail_api_returns_json_errors_for_invalid_ids(self):
+        for path, expected_status, expected_error in (
+            ("/api/transactions/", 400, "Transaktions-ID fehlt."),
+            (
+                "/api/transactions/transaktion_unbekannt",
+                404,
+                "Transaktion nicht gefunden.",
+            ),
+        ):
+            with self.subTest(path=path):
+                with self.assertRaises(HTTPError) as raised:
+                    urlopen(self.base_url + path, timeout=5)
+                self.assertEqual(expected_status, raised.exception.code)
+                self.assertEqual(
+                    {"error": expected_error},
+                    json.load(raised.exception),
+                )
+
+    def test_transaction_link_api_rejects_invalid_requests_without_changes(self):
+        endpoint = self.base_url + "/api/transactions/tx_newer/vorgaenge"
+        invalid_requests = (
+            (b"{}", 400, "Das Feld vorgangs_id ist erforderlich."),
+            (
+                json.dumps({
+                    "vorgangs_id": "vorgang_tx_older",
+                    "extra": True,
+                }).encode("utf-8"),
+                400,
+                "Das Feld vorgangs_id ist erforderlich.",
+            ),
+            (
+                json.dumps({"vorgangs_id": "   "}).encode("utf-8"),
+                400,
+                "Das Feld vorgangs_id muss eine nichtleere ID enthalten.",
+            ),
+            (
+                json.dumps({"vorgangs_id": None}).encode("utf-8"),
+                400,
+                "Das Feld vorgangs_id muss eine nichtleere ID enthalten.",
+            ),
+            (
+                json.dumps({"vorgangs_id": 123}).encode("utf-8"),
+                400,
+                "Das Feld vorgangs_id muss eine nichtleere ID enthalten.",
+            ),
+            (b"{", 400, "Ung\u00fcltiger JSON-Inhalt."),
+        )
+
+        for body, expected_status, expected_error in invalid_requests:
+            with self.subTest(body=body):
+                request = Request(
+                    endpoint,
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(HTTPError) as raised:
+                    urlopen(request, timeout=5)
+                self.assertEqual(expected_status, raised.exception.code)
+                self.assertEqual(
+                    {"error": expected_error},
+                    json.load(raised.exception),
+                )
+
+                with closing(connect_database(
+                    self.server.data_store.database_path
+                )) as connection:
+                    link_count = connection.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM transaktion_vorgaenge
+                        WHERE transaktions_id = 'tx_newer'
+                          AND vorgangs_id = 'vorgang_tx_older'
+                        """
+                    ).fetchone()[0]
+                self.assertEqual(0, link_count)
+
+        for transaction_id, vorgangs_id, expected_error in (
+            ("tx_unbekannt", "vorgang_tx_older", "Transaktion nicht gefunden."),
+            ("tx_newer", "vorgang_unbekannt", "Vorgang wurde nicht gefunden."),
+        ):
+            with self.subTest(
+                transaction_id=transaction_id,
+                vorgangs_id=vorgangs_id,
+            ):
+                request = Request(
+                    self.base_url
+                    + f"/api/transactions/{transaction_id}/vorgaenge",
+                    data=json.dumps({"vorgangs_id": vorgangs_id}).encode(
+                        "utf-8"
+                    ),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(HTTPError) as raised:
+                    urlopen(request, timeout=5)
+                self.assertEqual(404, raised.exception.code)
+                self.assertEqual(
+                    {"error": expected_error},
+                    json.load(raised.exception),
+                )
+
+                with closing(connect_database(
+                    self.server.data_store.database_path
+                )) as connection:
+                    total_links = connection.execute(
+                        "SELECT COUNT(*) FROM transaktion_vorgaenge"
+                    ).fetchone()[0]
+                self.assertEqual(2, total_links)
+
     def test_classification_can_be_updated_over_http(self):
         request = Request(
             self.base_url + "/api/transactions/tx_newer/classification",

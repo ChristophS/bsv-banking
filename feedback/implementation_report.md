@@ -2,51 +2,47 @@
 
 ## Branchname
 
-`agent2/codex-20260712-183609`
+`agent2/codex-20260712-194543`
 
 ## Geänderte Dateien
 
 - `banking_dashboard/server.py`
-- `transaction_store/database.py`
 - `tests/test_dashboard.py`
-- `tests/test_transactions.py`
 - `feedback/implementation_report.md`
 
 ## Umgesetzte Punkte
 
-- Bestehenden GET-/PUT-Flow für `/api/transactions/<id>/splits` sowie die vorhandene Split-Persistenz geprüft.
-- Cent-Beträge in API-Payloads strikt auf echte Ganzzahlen validiert; Fließkommazahlen, numerische Strings und Booleans werden verständlich mit `ValueError` abgelehnt.
-- Dieselbe Typvalidierung in `transaction_store.database.replace_transaction_splits` ergänzt, damit direkte Persistenzaufrufe keine stillen Typkonvertierungen durchführen.
-- HTTP-Tests für ungültiges JSON, nicht ganzzahlige Cent-Beträge, unbekannte Transaktionen und eine leere Transaktions-ID ergänzt beziehungsweise präzisiert.
-- Nach jedem abgewiesenen schreibenden Request wird geprüft, dass die zuvor gespeicherten Splits unverändert sind.
-- Persistenztests prüfen die Atomizität auch bei ungültigen Betragstypen.
-- Vorhandene Validierungen für unbekannte Split-Felder, widersprüchliche Transaktions-IDs, Split-Summen, Vorgangsreferenzen und doppelte Split-IDs wurden wiederverwendet.
+- Die bestehende Fehlerbehandlung für `GET /api/transactions/<transaktions_id>` durch Regressionstests für eine leere und eine unbekannte Transaktions-ID abgesichert.
+- `POST /api/transactions/<transaktions_id>/vorgaenge` akzeptiert ausschließlich ein JSON-Objekt mit genau dem Feld `vorgangs_id` und einer nichtleeren Zeichenkette.
+- `null`, Zahlen, Leerzeichenwerte, zusätzliche oder fehlende Felder und ungültiges JSON liefern eindeutige JSON-Fehler mit HTTP 400.
+- Unbekannte Transaktionen und Vorgänge liefern eindeutige JSON-Fehler mit HTTP 404.
+- Nach jeder abgelehnten Verknüpfungsanfrage wird in der temporären SQLite-Datenbank geprüft, dass keine neue N:M-Zuordnung entstanden ist.
+- Das vorhandene idempotente Verhalten über `INSERT OR IGNORE` bleibt erhalten; der HTTP-Test prüft zusätzlich, dass die doppelte Anfrage genau einen Zuordnungseintrag erzeugt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine UI-, Modell-, Vorgangs- oder N:M-Strukturen geändert.
-- Keine neue Persistenzarchitektur eingeführt.
+- Keine Änderungen am Datenmodell, an Tabellen oder an der Persistenzarchitektur.
+- Keine Änderungen an anderen API-Endpunkten oder UI-Komponenten.
 - Keine externen Dienste, echten Logins, produktiven Daten oder Browser-Automationen verwendet.
 
 ## Ausgeführte Tests
 
 - `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
 - `git diff --check`
 
 ## Testergebnis
 
-- Abschließender Dashboard-Testlauf: 124 bestanden, 6 übersprungen, 0 fehlgeschlagen (130 gesammelt).
-- Persistenz-Testlauf: 41 bestanden, 0 fehlgeschlagen.
-- Diff-Prüfung ohne Whitespace-Fehler.
+- Dashboard-Testlauf: 126 bestanden, 6 übersprungen, 0 fehlgeschlagen (132 gesammelt).
+- Diff-Prüfung: siehe abschließende Ausführung.
 
 ## Bekannte Einschränkungen
 
-- Die sechs übersprungenen Dashboard-Tests sind vorhandene optionale Browsertests; für dieses Arbeitspaket war keine Browserausführung erforderlich.
-- Split-Payloads dürfen weiterhin die etablierten deutschen und englischen Feldnamen verwenden; unbekannte Felder bleiben verboten.
+- Die sechs übersprungenen Tests sind vorhandene optionale Browsertests; dieses Arbeitspaket benötigt keine Browserausführung.
+- Die leere Detail-ID folgt der bestehenden Konvention mit HTTP 400, eine nicht auflösbare ID mit HTTP 404.
 
 ## Hinweise für den Review-Agenten
 
-- Die fachliche Vorvalidierung für Summen und Vorgangsreferenzen erfolgt weiterhin vor dem ersten `DELETE`; der vorhandene Savepoint schützt zusätzlich den eigentlichen Austausch der Split-Zeilen.
-- Relevant sind `_transaction_splits_from_payload`, `transaction_store.database.replace_transaction_splits`, der Split-Abschnitt in `DashboardHTTPTests.test_dashboard_and_api_are_served` sowie `DatabaseConnectionTests.test_transaction_splits_are_replaced_atomically`.
-- Bereits vorhandene Änderungen an `feedback/Review-report.md` und die bereitgestellte unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
+- Die Änderung ist bewusst auf die Payload-Prüfung im Transaktion-Vorgang-POST-Flow begrenzt; die Store-Methode validiert IDs und Entitäten bereits vor dem ersten schreibenden SQL-Statement.
+- Die vorhandenen Fremdschlüssel und `INSERT OR IGNORE` bleiben unverändert.
+- Es lag keine Datei `feedback/agent2_review_request.md` vor; umgesetzt wurde die Erstaufgabe aus `feedback/next_task.md`.
+- Die bereits vorhandene Änderung an `feedback/Review-report.md` und die bereitgestellte unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
