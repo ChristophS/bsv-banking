@@ -66,3 +66,17 @@ class TransactionSplit:
     vorgangs_id: str | None = None
     created_at: str = ""
     updated_at: str = ""
+
+
+@dataclass(frozen=True)
+class DonationRecipient:
+    recipient_id: str
+    name: str
+    address_addition: str = ""
+    street: str = ""
+    house_number: str = ""
+    postal_code: str = ""
+    city: str = ""
+    country: str = ""
+    created_at: str = ""
+    updated_at: str = ""
