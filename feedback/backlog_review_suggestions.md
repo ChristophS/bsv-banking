@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Einen HTTP-Test für `GET /api/transactions/{id}/splits` ergänzen, der `zulaessige_vorgaenge` einschließlich der über `vorgang_belege` gelieferten Belege prüft.
