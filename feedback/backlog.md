@@ -1,7 +1,5 @@
 # Backlog
 
-Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
-
 ## 1. Klassifikationsvorschläge im Split-Editor an bestehende Kategorien koppeln
 
 **Epic-ID:** epic-transaction-splits
