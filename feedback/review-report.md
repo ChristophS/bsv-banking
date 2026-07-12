@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die nachgeladenen Dateien bestätigen die vollständige Vorabvalidierung, die unveränderte atomare Speicherung sowie die API- und Testeinbindung. Der Branch ist sauber einen Commit vor main.
+Die nachgeladenen Dateien bestätigen die bestehende API-Persistenz und die UI-Serialisierung von vorgangs_id; der Diff setzt die geforderte Auswahl und die Beleghinweise ohne neue Beziehungen oder Endpunkte um.
 
 ## Zusammenfassung
 
-Die Split-Vorgangszuordnung wird vor dem DELETE/INSERT atomar validiert, zulässige Vorgänge samt indirekt verknüpfter Belege werden über die Split-API geliefert, und Fehler lassen vorhandene Splits unverändert.
+Akzeptiert: Der Split-Editor lädt zulässige Vorgänge über die bestehende Split-API, speichert ausschließlich vorgangs_id in der bestehenden Split-Payload und zeigt Status sowie Belege des ausgewählten Vorgangs an. Betrags- und Klassifikationslogik bleiben unverändert.
 
 # Review Report
 
@@ -20,30 +20,38 @@ Die Split-Vorgangszuordnung wird vor dem DELETE/INSERT atomar validiert, zuläss
 
 **Accepted:** ja
 
-## Geprüfte Umsetzung
+## Geprüfter Umfang
 
-- `replace_transaction_splits` normalisiert leere `vorgangs_id` weiterhin zu `None`.
-- Gesetzte Vorgangs-IDs werden vor Summenprüfung sowie vor dem `SAVEPOINT`-geschützten DELETE/INSERT-Zyklus geprüft:
-  - nicht vorhandene IDs werden als `Unbekannte Vorgangs-ID` abgewiesen;
-  - vorhandene, aber nicht über `transaktion_vorgaenge` mit der Ursprungstransaktion verknüpfte IDs werden mit einer verständlichen Validierungsfehlermeldung abgewiesen.
-- Die Summenprüfung auf den exakten Transaktionsbetrag bleibt erhalten.
-- Bei Validierungs- und Summenfehlern wird vor dem DELETE abgebrochen. Bei Fehlern während der Speicherung sichert der bestehende Savepoint den Rollback ab.
-- `GET /api/transactions/{id}/splits` liefert `zulaessige_vorgaenge`. Die Auswahl enthält ausschließlich über `transaktion_vorgaenge` verknüpfte Vorgänge.
-- Belege werden ausschließlich durch `vorgang_belege` und `belege` geladen und als Liste je Vorgang geliefert. Es wurde keine direkte Split- oder Transaktion-zu-Beleg-Beziehung ergänzt.
-- Die vorhandene PUT-Route verwendet weiterhin den geprüften Speicherdienst und bildet `ValueError` als HTTP 400 ab.
+- `banking_dashboard/static/app.js`
+- `banking_dashboard/static/styles.css`
+- `tests/test_dashboard.py`
+- Bestehende Split-API und Persistenz in `banking_dashboard/server.py`
+
+## Bewertung
+
+Die Umsetzung erfüllt das Arbeitspaket:
+
+- Das Transaktionsdetail und die Transaktionsvorschau laden zusätzlich `GET /api/transactions/<id>/splits` und übernehmen daraus sowohl `splits` als auch `zulaessige_vorgaenge`.
+- Jede Split-Zeile verwendet nun ein Select-Feld statt eines freien Vorgangs-ID-Eingabefelds. Die Optionen werden ausschließlich aus `zulaessige_vorgaenge` erzeugt.
+- Die leere Option ist eindeutig als **„Nicht zugeordnet“** gekennzeichnet.
+- Die Auswahl zeigt Titel beziehungsweise ID und Status. Für den gewählten Vorgang wird zusätzlich der Status sowie ein Hinweis **„Belege des Vorgangs“** mit den Belegdateinamen angezeigt; Vorgänge ohne Belege werden klar als **„Keine Belege vorhanden“** ausgewiesen.
+- Die Hilfetexte machen deutlich, dass Belege zum Vorgang gehören und keine direkte Split- oder Transaktion-Beleg-Beziehung erzeugt wird.
+- Die bestehende Serialisierung liest `data-split-vorgang` als `vorgangs_id` und sendet sie unverändert in der vorhandenen PUT-Payload. Eine leere Auswahl wird als leerer Wert gesendet und serverseitig als keine Zuordnung normalisiert.
+- Der vorhandene Serverkontext bestätigt, dass `GET /splits` die zulässigen, über `transaktion_vorgaenge` verknüpften Vorgänge einschließlich der über `vorgang_belege` abgeleiteten Belege liefert. Es wurden keine Tabellen, Entitäten oder zusätzlichen APIs eingeführt.
+- Reload des Editors ersetzt neben den Splits auch `zulaessige_vorgaenge`; neu gerenderte Zeilen setzen Auswahl und Beleghinweis anhand der geladenen Daten erneut.
+- Die Summen-, Betrags- und Klassifikationsbearbeitung bleibt im bestehenden Ablauf erhalten.
 
 ## Tests
 
-Die ergänzten Tests decken ab:
+Die Ergänzungen prüfen:
 
-- das Laden zulässiger Vorgänge mit ihren über den Vorgang verknüpften Belegen;
-- unbekannte Vorgangs-IDs;
-- Vorgänge einer anderen Transaktion;
-- unveränderte bereits gespeicherte Splits nach beiden Fehlerfällen;
-- erfolgreiche Speicherung und erneutes Laden einer gültigen `vorgangs_id` über den bestehenden Split-Test.
+- die Ausgabe zulässiger Vorgänge mit Status und Belegdaten über den Split-Endpunkt,
+- die Vorauswahl einer gespeicherten `vorgangs_id` im Browser,
+- die Darstellung des Beleghinweises,
+- das Speichern der Zuordnung über den bestehenden PUT-Endpunkt.
 
-Laut Umsetzungsbericht wurden `tests/test_dashboard.py` mit 110 erfolgreichen Tests und 6 erwarteten Skips sowie `tests/test_transactions.py` mit 33 erfolgreichen Tests ausgeführt.
+Laut Umsetzungsbericht liefen `tests/test_dashboard.py` mit **110 passed, 6 skipped**. Die browserabhängigen Tests waren wegen fehlender lokaler Playwright/Chromium-Voraussetzungen übersprungen; dies ist plausibel dokumentiert und nicht blockierend.
 
-## Nicht blockierender Hinweis
+## Nicht-blockierender Verbesserungsvorschlag
 
-Ein eigenständiger HTTP-Test für den konkreten Inhalt von `zulaessige_vorgaenge` am GET-Endpunkt wäre eine sinnvolle zusätzliche Absicherung des öffentlichen API-Vertrags, ist für die Abnahme jedoch nicht erforderlich.
+Ein zusätzlicher Test für das Zurücksetzen auf „Nicht zugeordnet“ mit Persistenz und anschließendem Reload wäre eine sinnvolle weitere Regressionabsicherung.
