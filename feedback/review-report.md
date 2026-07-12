@@ -8,36 +8,53 @@
 
 ## Zusammenfassung
 
-Die Anforderungen des Arbeitspakets sind umgesetzt. Die Schema-Version wird auf 18 erhöht, die Empfängertabelle wird bei Neuinitialisierung und Migration angelegt, CRUD-Zugriffe, Normalisierung, Validierung, Zeitstempel und deterministische Sortierung sind vorhanden. Die bestehende Vorgangs-, Beleg-, Split- und Transaktionsarchitektur wird nicht umgangen. Der GitHub-Compare ist sauber und enthält genau die erwarteten Änderungen.
+Die Muss-Anforderungen sind im GitHub-Diff umgesetzt: lokale HTML-Bescheinigung, centgenaue Summe aus amount_minor, Empfänger- und Vorgangsvalidierung, automatische Belegkatalogisierung sowie ausschließliche Verknüpfung über vorgang_belege. Erfolgs-, Fehler-, API-, Atomicitäts- und UI-nahe Tests wurden ergänzt. Der GitHub-Branch ist gegenüber main um vier Commits voraus und enthält keine fehlenden Compare-Dateien.
 
 # Technischer Review
 
-## Ergebnis
+## Entscheidung
 
-**Freigegeben.** Die Umsetzung erfüllt die Muss-Anforderungen und Akzeptanzkriterien des Arbeitspakets.
+**Akzeptiert.**
 
 ## Geprüfte Anforderungen
 
-- Die Schema-Version wurde von 17 auf 18 erhöht.
-- Eine Migration von Version 17 auf 18 ist in das vorhandene Migrationsmuster integriert.
-- Die Tabelle `donation_recipients` enthält eine stabile Primär-ID, einen nichtleeren Namen, strukturierte Adressfelder sowie `created_at` und `updated_at`.
-- Die Tabelle wird sowohl bei einer neuen Datenbank als auch während der Migration angelegt.
-- `DonationRecipient` stellt eine gekapselte, unveränderliche Rückgabedatenstruktur bereit.
-- Funktionen zum Anlegen, Aktualisieren und geordneten Auflisten sind implementiert und öffentlich über `transaction_store` exportiert.
-- Empfänger-ID und Name werden vor dem Schreiben validiert.
-- Text- und Adressfelder werden durch Trimmen und Normalisierung interner Leerraumfolgen vereinheitlicht.
-- Die Liste wird deterministisch nach Name ohne Beachtung der Groß-/Kleinschreibung und anschließend nach Empfänger-ID sortiert.
-- Die Empfänger bleiben bewusst ohne direkte Transaktions-, Vorgangs- oder Belegverknüpfung.
-- Bestehende Tabellen, Migrationen, Vorgangsarchitektur und Split-Funktionen werden nicht strukturell umgebaut.
+- Für einen vorhandenen Vorgang und einen vorhandenen Spendenempfänger wird eine lokale Bescheinigung erzeugt.
+- Unbekannte Vorgangs- und Empfänger-IDs werden vor Datei- und Datenbankschreibzugriffen abgewiesen.
+- Empfänger-, Vorgangs- und zugeordnete Transaktionsdaten werden aus den bestehenden Tabellen gelesen.
+- Der Betrag wird als Summe der ganzzahligen `amount_minor`-Werte berechnet und ohne Gleitkommaarithmetik als Centbetrag formatiert.
+- Die Ausgabe ist eine lokal gespeicherte UTF-8-HTML-Datei und als steuerrechtlich ungeprüfter Entwurf gekennzeichnet.
+- Erstellzeit, Empfänger-ID, Vorgangsreferenz und die einbezogenen Transaktionen werden ausgegeben.
+- Die Datei wird im bestehenden geschützten Belegverzeichnis unter einer geeigneten Kategorie abgelegt.
+- Der Beleg wird mit Quelle `automatic` und Kategorie `spendenbescheinigungen` im bestehenden Katalog gespeichert.
+- Die Verknüpfung erfolgt ausschließlich über `vorgang_belege`; eine direkte Transaktion-Beleg-Beziehung wurde nicht eingeführt.
+- Wiederholte Erzeugungen beschädigen bestehende Verknüpfungen nicht und erzeugen versionierte Dateien.
+- Der API-Endpunkt akzeptiert exakt ein nichtleeres String-Feld `recipient_id`.
+- Der manuelle Auslöser ist im Vorgangsdetail vorhanden.
+
+## Transaktionalität und Fehlerbehandlung
+
+Die Validierung der Quelldaten erfolgt vor dem Dokumentaufbau. `create_document_from_bytes` verwendet weiterhin den bestehenden Katalogpfad. Bei einem Fehler während Datei-, Katalog- oder Verknüpfungsschreibzugriff wird die Datenbanktransaktion zurückgerollt und eine in diesem Aufruf geschriebene Datei bereinigt. Die ergänzten Tests prüfen insbesondere, dass nach einem erzwungenen Katalogfehler weder Beleg noch Vorgang-Beleg-Link noch HTML-Datei verbleiben.
 
 ## Tests
 
-Die ergänzten Tests decken Neuinitialisierung, Migration, Speichern, Aktualisieren, Auslesen, Sortierung, Normalisierung und verständliche Validierungsfehler ab. Die bestehenden Versionsprüfungen wurden konsistent auf die neue Endversion 18 angepasst. Laut Implementierungsbericht laufen die Transaktionssuite und die Gesamtsuite erfolgreich; externe Aktionen oder produktive Daten werden nicht verwendet.
+Die Änderungen ergänzen Unit- und API-Tests für:
 
-## Scope und Repository-Zustand
+- erfolgreichen API-Ablauf,
+- centgenaue Betragsermittlung,
+- Inhalt der HTML-Datei,
+- Katalogdaten und Quelle,
+- Verknüpfung mit genau dem angefragten Vorgang,
+- unbekannten Empfänger,
+- unbekannten Vorgang,
+- ungültige `recipient_id`-Typen und Leerwerte,
+- Fehlerbereinigung nach Katalogfehlern.
 
-Die Änderungen bleiben im vorgesehenen Scope. Die zusätzliche Anpassung am Implementierungsbericht ist unkritisch. Der GitHub-Compare ist `ahead` mit einem Commit, ohne fehlende oder zusätzliche Compare-Dateien. Es wurden keine externen Integrationen, Secrets, produktiven Daten oder unerlaubten Banking-Aktionen eingeführt.
+Die gemeldete relevante Testsuite umfasst 155 bestandene Tests und sechs übersprungene Tests. Die Tests verwenden temporäre SQLite-Datenbanken und synthetische Daten ohne externe Kommunikation.
 
-## Optionale Verbesserungen
+## Scope und Architektur
 
-Ein eigenständiger Fixture-Aufbau für eine echte Schema-17-Datenbank würde die Migration noch realistischer testen. Außerdem könnte die Commit-Verantwortung der CRUD-Funktionen explizit dokumentiert werden. Beides verhindert keine Freigabe.
+Die vorhandenen Tabellen, Services und der bestehende Belegkatalog werden verwendet. Es wurde keine zweite Empfängertabelle und keine unerlaubte direkte Transaktion-Beleg-Verknüpfung eingeführt. PDF, Signatur, Versand, DFBnet und externe Dokumentdienste bleiben außerhalb des Scopes.
+
+## Compare- und Runner-Prüfung
+
+Der GitHub-Compare ist nutzbar: Der Agent-Branch ist gegenüber `main` vier Commits voraus und nicht hinterher. `missing_from_github_compare` ist leer. Die Runner-Metadaten sind allerdings nicht vollständig synchron: Dort wurde lediglich der Implementation Report als validierter beziehungsweise gestagter Pfad angegeben, obwohl der GitHub-Compare die eigentlichen Quell- und Teständerungen enthält. Das ist ein Prozesshinweis, aber kein fachlicher Blocker für den geprüften GitHub-Commit.
