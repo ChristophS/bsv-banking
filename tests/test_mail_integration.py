@@ -126,7 +126,32 @@ class MailDocumentTransactionReferenceTests(unittest.TestCase):
             ],
         )
         connection = sqlite3.connect(self.database_path)
+        connection.row_factory = sqlite3.Row
         try:
+            document_columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(vorgang_belege)")
+            }
+            self.assertNotIn("transaktionsbezug_id", document_columns)
+            self.assertIn("vorgangsbezug_id", document_columns)
+            persisted_reference = connection.execute(
+                """
+                SELECT vb.vorgangsbezug_id, tv.bezugs_id, tv.transaktions_id
+                FROM vorgang_belege AS vb
+                JOIN transaktion_vorgaenge AS tv
+                  ON tv.bezugs_id = vb.vorgangsbezug_id
+                WHERE vb.beleg_id = 'beleg_1'
+                """
+            ).fetchone()
+            self.assertEqual("tx_newer", persisted_reference["transaktions_id"])
+            self.assertEqual(
+                persisted_reference["bezugs_id"],
+                persisted_reference["vorgangsbezug_id"],
+            )
+            self.assertNotEqual(
+                persisted_reference["transaktions_id"],
+                persisted_reference["vorgangsbezug_id"],
+            )
             connection.execute(
                 """
                 DELETE FROM transaktion_vorgaenge

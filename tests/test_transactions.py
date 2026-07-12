@@ -129,6 +129,43 @@ class DatabaseConnectionTests(unittest.TestCase):
             foreign_keys,
         )
 
+    def test_database_version_sixteen_removes_direct_document_transaction_column(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                connection.execute(
+                    """
+                    ALTER TABLE vorgang_belege
+                    ADD COLUMN transaktionsbezug_id TEXT NOT NULL DEFAULT ''
+                    """
+                )
+                connection.execute("UPDATE schema_info SET version = 16")
+                connection.commit()
+            finally:
+                connection.close()
+
+            migrated = connect_database(path)
+            try:
+                self.assertEqual(
+                    migrated.execute(
+                        "SELECT version FROM schema_info"
+                    ).fetchone()[0],
+                    17,
+                )
+                columns = {
+                    row["name"]
+                    for row in migrated.execute(
+                        "PRAGMA table_info(vorgang_belege)"
+                    )
+                }
+                self.assertNotIn("transaktionsbezug_id", columns)
+                self.assertIn("vorgangsbezug_id", columns)
+            finally:
+                migrated.close()
+
     def test_database_version_thirteen_migrates_transaction_splits(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "transactions.sqlite3"
@@ -195,7 +232,7 @@ class DatabaseConnectionTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    15,
+                    17,
                 )
                 self.assertIsNotNone(
                     migrated.execute(
@@ -1772,7 +1809,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    15,
+                    17,
                 )
                 row = migrated.execute(
                     "SELECT * FROM normalized_transactions"
@@ -1834,7 +1871,7 @@ class TransactionPipelineTests(unittest.TestCase):
                             "PRAGMA table_info(transaktion_vorgaenge)"
                         )
                     ],
-                    ["transaktions_id", "vorgangs_id"],
+                    ["transaktions_id", "vorgangs_id", "bezugs_id"],
                 )
                 self.assertEqual(
                     [
@@ -1843,7 +1880,14 @@ class TransactionPipelineTests(unittest.TestCase):
                             "PRAGMA table_info(vorgang_belege)"
                         )
                     ],
-                    ["vorgangs_id", "beleg_id", "erstellt_am"],
+                    [
+                        "vorgangs_id",
+                        "beleg_id",
+                        "erstellt_am",
+                        "mail_inbox_id",
+                        "mail_attachment_index",
+                        "vorgangsbezug_id",
+                    ],
                 )
                 self.assertIsNone(
                     migrated.execute(
@@ -1953,7 +1997,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    15,
+                    17,
                 )
                 self.assertEqual(
                     [

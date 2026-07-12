@@ -19,7 +19,7 @@ from .classification import SQL_CLASSIFICATION_STATUS_EXPRESSION
 from .models import ParsedFile, ParsedTransaction, TransactionSplit
 
 
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 BELEGE_DIRECTORY_ENV = "BSV_BELEGE_DIR"
 VORGANG_STATUS_IN_PROGRESS = "in_bearbeitung"
 VORGANG_STATUS_COMPLETED = "abgeschlossen"
@@ -949,6 +949,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
                 13: _migrate_v13_to_v14,
                 14: _migrate_v14_to_v15,
                 15: _migrate_v15_to_v16,
+                16: _migrate_v16_to_v17,
             }
             while version < SCHEMA_VERSION:
                 migration = migrations.get(version)
@@ -1316,6 +1317,23 @@ def _migrate_v15_to_v16(connection: sqlite3.Connection) -> None:
     connection.execute("UPDATE schema_info SET version = 16")
 
 
+def _migrate_v16_to_v17(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        "DROP TRIGGER IF EXISTS trg_transaktion_vorgang_document_reference_delete"
+    )
+    columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(vorgang_belege)")
+    }
+    if "transaktionsbezug_id" in columns:
+        connection.execute(
+            "ALTER TABLE vorgang_belege DROP COLUMN transaktionsbezug_id"
+        )
+    _create_transaction_link_tables(connection)
+    _create_document_tables(connection)
+    connection.execute("UPDATE schema_info SET version = 17")
+
+
 def _create_transaction_split_table(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
@@ -1468,6 +1486,33 @@ def _create_transaction_link_tables(connection: sqlite3.Connection) -> None:
         )
         """
     )
+    _add_columns_if_missing(
+        connection,
+        "transaktion_vorgaenge",
+        {"bezugs_id": "TEXT"},
+    )
+    missing_reference_rows = connection.execute(
+        """
+        SELECT transaktions_id, vorgangs_id
+        FROM transaktion_vorgaenge
+        WHERE bezugs_id IS NULL OR TRIM(bezugs_id) = ''
+        """
+    ).fetchall()
+    for row in missing_reference_rows:
+        connection.execute(
+            """
+            UPDATE transaktion_vorgaenge
+            SET bezugs_id = ?
+            WHERE transaktions_id = ? AND vorgangs_id = ?
+            """,
+            (f"tvb_{uuid4().hex}", row["transaktions_id"], row["vorgangs_id"]),
+        )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_transaktion_vorgaenge_bezugs_id
+            ON transaktion_vorgaenge(bezugs_id)
+        """
+    )
     connection.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_transaktion_vorgaenge_vorgangs_id
@@ -1568,7 +1613,7 @@ def _create_document_tables(connection: sqlite3.Connection) -> None:
                 "INTEGER CHECK (mail_attachment_index IS NULL "
                 "OR mail_attachment_index > 0)"
             ),
-            "transaktionsbezug_id": "TEXT NOT NULL DEFAULT ''",
+            "vorgangsbezug_id": "TEXT NOT NULL DEFAULT ''",
         },
     )
     connection.execute(
@@ -1586,9 +1631,9 @@ def _create_document_tables(connection: sqlite3.Connection) -> None:
         AFTER DELETE ON transaktion_vorgaenge
         BEGIN
             UPDATE vorgang_belege
-            SET transaktionsbezug_id = ''
+            SET vorgangsbezug_id = ''
             WHERE vorgangs_id = OLD.vorgangs_id
-              AND transaktionsbezug_id = OLD.transaktions_id;
+              AND vorgangsbezug_id = OLD.bezugs_id;
         END
         """
     )

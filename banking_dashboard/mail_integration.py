@@ -1044,15 +1044,31 @@ class InboxMailStore:
                 (inbox_id, cleaned_vorgangs_id),
             ).fetchone() is None:
                 raise ValueError("Die Mail gehoert nicht zum ausgewaehlten Vorgang.")
-            if connection.execute(
+            transaction_link = connection.execute(
                 """
-                SELECT 1 FROM transaktion_vorgaenge
+                SELECT bezugs_id FROM transaktion_vorgaenge
                 WHERE transaktions_id = ? AND vorgangs_id = ?
                 """,
                 (cleaned_transaction_id, cleaned_vorgangs_id),
-            ).fetchone() is None:
+            ).fetchone()
+            if transaction_link is None:
                 raise ValueError(
                     "Der Transaktionsbezug gehoert nicht zum ausgewaehlten Vorgang."
+                )
+            vorgangsbezug_id = str(transaction_link["bezugs_id"] or "").strip()
+            if not vorgangsbezug_id:
+                vorgangsbezug_id = f"tvb_{uuid4().hex}"
+                connection.execute(
+                    """
+                    UPDATE transaktion_vorgaenge
+                    SET bezugs_id = ?
+                    WHERE transaktions_id = ? AND vorgangs_id = ?
+                    """,
+                    (
+                        vorgangsbezug_id,
+                        cleaned_transaction_id,
+                        cleaned_vorgangs_id,
+                    ),
                 )
             link = connection.execute(
                 """
@@ -1073,13 +1089,13 @@ class InboxMailStore:
                     """
                     UPDATE vorgang_belege
                     SET mail_inbox_id = ?, mail_attachment_index = ?,
-                        transaktionsbezug_id = ?
+                        vorgangsbezug_id = ?
                     WHERE vorgangs_id = ? AND beleg_id = ?
                     """,
                     (
                         inbox_id,
                         attachment_index,
-                        cleaned_transaction_id,
+                        vorgangsbezug_id,
                         cleaned_vorgangs_id,
                         cleaned_beleg_id,
                     ),
@@ -1119,11 +1135,11 @@ class InboxMailStore:
             rows = connection.execute(
                 """
                 SELECT vb.beleg_id, vb.vorgangs_id, vb.mail_attachment_index,
-                       vb.transaktionsbezug_id
+                       tv.transaktions_id
                 FROM vorgang_belege AS vb
                 JOIN transaktion_vorgaenge AS tv
                   ON tv.vorgangs_id = vb.vorgangs_id
-                 AND tv.transaktions_id = vb.transaktionsbezug_id
+                 AND tv.bezugs_id = vb.vorgangsbezug_id
                 WHERE vb.mail_inbox_id = ?
                   AND vb.mail_attachment_index IS NOT NULL
                 ORDER BY vb.mail_attachment_index, vb.vorgangs_id
@@ -1136,7 +1152,7 @@ class InboxMailStore:
                 "attachment_index": int(row["mail_attachment_index"]),
                 "beleg_id": str(row["beleg_id"]),
                 "vorgangs_id": str(row["vorgangs_id"]),
-                "transaktions_id": str(row["transaktionsbezug_id"]),
+                "transaktions_id": str(row["transaktions_id"]),
             }
             for row in rows
         ]
