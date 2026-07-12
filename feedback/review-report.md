@@ -6,40 +6,38 @@
 
 **Needs more context:** false
 
-## Begründung
-
-Die geladenen API- und Testdateien reichen für die finale Prüfung aus. Der GitHub-Compare ist mit einem Commit vor main und ohne Abweichungen zum Runner verwendbar.
-
 ## Zusammenfassung
 
-Die Vorgangsdetailansicht lädt und bearbeitet Mail-Dokumentzuordnungen über die bestehenden Endpunkte. Die Auswahl ist auf Transaktionen des aktuellen Vorgangs begrenzt, unterstützt die explizite Aufhebung und lädt nach erfolgreichem Speichern konsistent neu.
+Die Anforderungen des Arbeitspakets sind umgesetzt. Die Schema-Version wird auf 18 erhöht, die Empfängertabelle wird bei Neuinitialisierung und Migration angelegt, CRUD-Zugriffe, Normalisierung, Validierung, Zeitstempel und deterministische Sortierung sind vorhanden. Die bestehende Vorgangs-, Beleg-, Split- und Transaktionsarchitektur wird nicht umgangen. Der GitHub-Compare ist sauber und enthält genau die erwarteten Änderungen.
 
-# Review
+# Technischer Review
 
 ## Ergebnis
 
-**Freigegeben.**
+**Freigegeben.** Die Umsetzung erfüllt die Muss-Anforderungen und Akzeptanzkriterien des Arbeitspakets.
 
-## Prüfung der Anforderungen
+## Geprüfte Anforderungen
 
-- `loadVorgangWorkspace` lädt die bestehende Ressource `GET /api/vorgaenge/<vorgangs_id>/mail-dokumentzuordnungen` parallel zu den vorhandenen Vorgangsdaten.
-- Der neue Editor zeigt jeden vom vorgangsspezifischen Endpoint gelieferten Beleg mit Dateiname und verfügbaren Metadaten. Mail-Anhänge werden anhand von `mail_inbox_id` und `mail_attachment_index` gekennzeichnet.
-- Die Optionen werden ausschließlich aus `assignmentPayload.transaktionen` aufgebaut. Der Server liefert diese aus `transaktion_vorgaenge` für genau den angeforderten Vorgang und validiert PUT-Zuordnungen erneut gegen diesen Vorgang.
-- Die erste Option `Keine spezifische Transaktion` besitzt den Leerwert und wird beim Speichern korrekt als `transaktions_id: null` serialisiert.
-- Beim Speichern werden alle sichtbaren Selects als vollständige Liste unter `zuordnungen` per PUT an den vorhandenen Endpoint gesendet.
-- Nach erfolgreichem PUT wird der vollständige Vorgangs-Workspace neu geladen. Bei Fehlern bleibt die lokale Auswahl sichtbar, der Status wird als Fehler angezeigt und die globale Fehlermeldung wird gesetzt; ein Erfolg wird nicht dargestellt.
-- Unveränderte Werte aktivieren den Speichern-Button nicht. Für keine Dokumente und für Vorgänge ohne verknüpfte Transaktionen existieren klare Leerzustände.
-
-## Architektur und Scope
-
-Die Umsetzung verwendet ausschließlich die vorhandene vorgangsbasierte API und die bestehende Persistenz über `vorgang_belege.vorgangsbezug_id` beziehungsweise `transaktion_vorgaenge.bezugs_id`. Es wurden weder Tabellen, Migrationen noch eine direkte Transaktion-Beleg-Beziehung ergänzt. Externe Mail-, Banking-, Graph- oder Login-Aktionen wurden nicht eingeführt.
+- Die Schema-Version wurde von 17 auf 18 erhöht.
+- Eine Migration von Version 17 auf 18 ist in das vorhandene Migrationsmuster integriert.
+- Die Tabelle `donation_recipients` enthält eine stabile Primär-ID, einen nichtleeren Namen, strukturierte Adressfelder sowie `created_at` und `updated_at`.
+- Die Tabelle wird sowohl bei einer neuen Datenbank als auch während der Migration angelegt.
+- `DonationRecipient` stellt eine gekapselte, unveränderliche Rückgabedatenstruktur bereit.
+- Funktionen zum Anlegen, Aktualisieren und geordneten Auflisten sind implementiert und öffentlich über `transaction_store` exportiert.
+- Empfänger-ID und Name werden vor dem Schreiben validiert.
+- Text- und Adressfelder werden durch Trimmen und Normalisierung interner Leerraumfolgen vereinheitlicht.
+- Die Liste wird deterministisch nach Name ohne Beachtung der Groß-/Kleinschreibung und anschließend nach Empfänger-ID sortiert.
+- Die Empfänger bleiben bewusst ohne direkte Transaktions-, Vorgangs- oder Belegverknüpfung.
+- Bestehende Tabellen, Migrationen, Vorgangsarchitektur und Split-Funktionen werden nicht strukturell umgebaut.
 
 ## Tests
 
-Die vorhandene lokale HTTP-Prüfung `test_mail_document_assignment_api_validates_vorgang_context` deckt das Laden per GET, erfolgreiches und idempotentes Speichern per PUT, ungültige Beleg- und Transaktions-IDs, vorgangsfremde Transaktionen, widersprüchliche Vorgangs-IDs, unbekannte Payload-Felder sowie den unveränderten bestätigten Stand nach Fehlern ab. Sie verwendet ausschließlich lokale Testdaten und Fakes.
+Die ergänzten Tests decken Neuinitialisierung, Migration, Speichern, Aktualisieren, Auslesen, Sortierung, Normalisierung und verständliche Validierungsfehler ab. Die bestehenden Versionsprüfungen wurden konsistent auf die neue Endversion 18 angepasst. Laut Implementierungsbericht laufen die Transaktionssuite und die Gesamtsuite erfolgreich; externe Aktionen oder produktive Daten werden nicht verwendet.
 
-Laut Implementation Report liefen zusätzlich `node --check banking_dashboard/static/app.js`, die Dashboard-Suite mit 112 bestandenen und 6 übersprungenen Tests sowie `git diff --check` erfolgreich.
+## Scope und Repository-Zustand
 
-## Compare-Status
+Die Änderungen bleiben im vorgesehenen Scope. Die zusätzliche Anpassung am Implementierungsbericht ist unkritisch. Der GitHub-Compare ist `ahead` mit einem Commit, ohne fehlende oder zusätzliche Compare-Dateien. Es wurden keine externen Integrationen, Secrets, produktiven Daten oder unerlaubten Banking-Aktionen eingeführt.
 
-Der Branch ist gegenüber `main` um einen Commit voraus, nicht hinter `main`, und die vom Runner validierten beziehungsweise gestagten Dateien entsprechen dem GitHub-Compare. Es bestehen keine Compare-Abweichungen.
+## Optionale Verbesserungen
+
+Ein eigenständiger Fixture-Aufbau für eine echte Schema-17-Datenbank würde die Migration noch realistischer testen. Außerdem könnte die Commit-Verantwortung der CRUD-Funktionen explizit dokumentiert werden. Beides verhindert keine Freigabe.
