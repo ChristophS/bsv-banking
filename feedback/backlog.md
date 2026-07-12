@@ -2,7 +2,7 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Weitere Transaktions-API-Flows auf Eingabevalidierung und Fehlerantworten prüfen
+## 1. Transaktionsdetail- und Vorgangsverknüpfungs-API auf konsistente Validierung und Fehlerantworten prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -10,11 +10,11 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
 
-**Teilpaket:** Teil 2.3
+**Teilpaket:** Teil 2.3.2
 
 **Priorität:** hoch
 
-**Grund:** Neben der einzelnen Klassifikationsaktualisierung bleiben Detail-, Vorgangsverknüpfungs- und Split-nahe Transaktionsendpunkte separat auf konsistente Validierung, Statuscodes und atomare Fehlerpfade zu prüfen.
+**Grund:** Der ursprüngliche Konsistenzpunkt umfasst neben dem Split-Flow weiterhin Transaktionsdetails und das Verknüpfen einer Transaktion mit einem bestehenden Vorgang.
 
 **Feedback:**
 
