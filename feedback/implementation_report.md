@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260712-124502`
+`agent2/rework-20260712-124843`
 
 ## Geänderte Dateien
 
@@ -12,7 +12,22 @@
 - `feedback/implementation_report.md`
 
 Die bereits vorhandene Änderung an `feedback/Review-report.md` und die
-unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
+unversionierten Dateien `feedback/agent2_prompt.md` sowie
+`feedback/agent2_review_request.md` wurden nicht verändert.
+
+## Nachbesserung nach Review
+
+- Der im Review beanstandete Widerspruch zwischen Diff und vollständigem
+  Dateistand ist im Rework-Branch behoben: Die vollständigen Dateien enthalten
+  nun nachweislich `DonationRecipient`, Schema-Version 18, die Migration
+  `_migrate_v17_to_v18`, die Tabelle `donation_recipients`, die drei
+  Datenzugriffsfunktionen sowie die zugehörigen Tests und Imports.
+- Die vorhandene fachliche Umsetzung wurde unverändert erhalten, da der
+  Blocker keinen fachlichen Defekt, sondern den fehlenden Quellstand am
+  geprüften Commit betraf.
+- Migration, Anlegen, Aktualisieren, Auslesen, Normalisierung und
+  Validierungsfehler wurden auf dem vollständigen Rework-Dateistand erneut
+  durch die Transaktions-Suite abgesichert.
 
 ## Umgesetzte Punkte
 
