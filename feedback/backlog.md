@@ -2,7 +2,7 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Klassifikation, Vorschläge und Statusableitung für Split-Zeilen fachlich vervollständigen
+## 1. Klassifikationsvorschläge im Split-Editor an bestehende Kategorien koppeln
 
 **Epic-ID:** epic-transaction-splits
 
@@ -10,18 +10,37 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Epic-Ziel:** Transaktionen fachlich so aufteilen können, dass Teilbeträge getrennt klassifiziert und darauf aufbauende Rechnungs- und Vorgangszuordnungen unterstützt werden.
 
-**Teilpaket:** Teil 3
+**Teilpaket:** Teil 3.2
 
 **Priorität:** hoch
 
-**Grund:** Nach dem Split-Editor muss die fachliche Logik für einzelne Teilbeträge in die bestehende Klassifikation und Statusberechnung integriert werden.
+**Grund:** Nach der Statusgrundlage benötigen einzelne Split-Zeilen dieselben nutzbaren Vorschläge und Kategorieabhängigkeiten wie die bestehende Transaktionsklassifikation.
 
 **Feedback:**
 
 - existing_backlog
 - bekannte Epic-Zuordnung für Split-Klassifikation, Statusableitung und Vorschlagslisten
 
-## 2. Transaktionen fachlich auf mehrere Rechnungen und Teilrechnungen aufteilen
+## 2. Vorgangsstatus unter Berücksichtigung klassifizierter Split-Zeilen ableiten
+
+**Epic-ID:** epic-transaction-splits
+
+**Epic-Titel:** Transaktionen in Teilbeträge und weitere Zuordnungsfälle aufteilen
+
+**Epic-Ziel:** Transaktionen fachlich so aufteilen können, dass Teilbeträge getrennt klassifiziert und darauf aufbauende Rechnungs- und Vorgangszuordnungen unterstützt werden.
+
+**Teilpaket:** Teil 3.3
+
+**Priorität:** hoch
+
+**Grund:** Die fachliche Statusberechnung soll nach stabiler Split-Klassifikation gezielt in die bestehende vorgangsbasierte Abschlusslogik integriert werden, ohne manuelle Statuswerte zu überschreiben.
+
+**Feedback:**
+
+- existing_backlog
+- Klassifikation, Vorschläge und Statusableitung für Split-Zeilen fachlich vervollständigen
+
+## 3. Split-Zeilen innerhalb eines Vorgangs Rechnungen und Teilrechnungen zuordnen
 
 **Epic-ID:** epic-transaction-splits
 
@@ -33,31 +52,123 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Komplexerer Folgeausbau des Split-Epics für mehrere Rechnungen und Teilrechnungen auf Basis stabiler Split-Persistenz, UI und Statuslogik.
+**Grund:** Der komplexe Folgeausbau soll eine Transaktion mit mehreren Rechnungen und Rechnungen mit mehreren Kategorien über die bestehende Vorgangs-, Beleg- und Verknüpfungsarchitektur abbilden.
 
 **Feedback:**
 
 - existing_backlog
-- ich benötige die Möglichkeit Transaktionen zu splitten. Da auf einer Rechnung oder innerhalb einer Transaktion Teilsummen zu Kategorie A und Teilsummen zu Kategorie B gehören können. Also ich brauche sowohl die Möglichkeit: Eine Transaktion - eien Rechnung - Teilsummen auf mehrere kategorien/Unterkategorien. Als auch die Möglichkeit Transaktion - mehrere Rechnungen und da vlt im Extremfall sogar innerhalb der Rechnungen verschiedene kateogrien/Unterkategorien
+- ich benötige die Möglichkeit Transaktionen zu splitten. Da auf einer Rechnung oder innerhalb einer Transaktion Teilsummen zu Kategorie A und Teilsummen zu Kategorie B gehören können.
 
-## 3. Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
+## 4. Dokumente einer Mail innerhalb eines Vorgangs gezielt Transaktionsbezügen zuordnen
+
+**Epic-ID:** epic-mail-document-assignment
+
+**Epic-Titel:** Mail-Dokumente über Vorgänge unterschiedlichen Transaktionsbezügen zuordnen
+
+**Epic-Ziel:** Mehrere Dokumente einer Mail innerhalb eines zentralen Vorgangs nachvollziehbar unterschiedlichen zugeordneten Transaktionen zuordnen, ohne die vorgangsbasierte Architektur zu umgehen.
+
+**Teilpaket:** Teil 1
 
 **Priorität:** mittel
 
-**Grund:** Eigenständiger Mail-/Dokumenten-/Vorgangsflow mit separatem Zuordnungs- und UI-Bedarf, unabhängig vom Split-Epic.
+**Grund:** Eine Mail mit mehreren Dokumenten und unterschiedlichen Transaktionsbezügen benötigt einen eigenen Vorgangs-, Beleg- und Auswahlflow; direkte Beziehungen zwischen Belegen und Transaktionen dürfen dabei nicht eingeführt werden.
 
 **Feedback:**
 
 - existing_backlog
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege, wie man geschickt damit umgehen kann.
 
-## 4. Spendenbescheinigungen mit Adressdatenbank und DFBnet-Verein-Integration in konkrete Teilpakete zerlegen
+## 5. Vorgangsbasierte Auswahl-API für Mail-Dokumentzuordnungen bereitstellen
+
+**Epic-ID:** epic-mail-document-assignment
+
+**Epic-Titel:** Mail-Dokumente über Vorgänge unterschiedlichen Transaktionsbezügen zuordnen
+
+**Epic-Ziel:** Mehrere Dokumente einer Mail innerhalb eines zentralen Vorgangs nachvollziehbar unterschiedlichen zugeordneten Transaktionen zuordnen, ohne die vorgangsbasierte Architektur zu umgehen.
+
+**Teilpaket:** Teil 2
 
 **Priorität:** mittel
 
-**Grund:** Großes eigenständiges Vorhaben mit Datenmodell-, Dokumenten- und externer Integrationskomplexität; vor Umsetzung sollte es sauber als Epic mit kleinen Teilpaketen geplant werden.
+**Grund:** Nach der fachlichen Zuordnungsdarstellung benötigt die Oberfläche eine klar begrenzte API, um vorhandene Vorgangs-, Transaktions- und Belegverknüpfungen sicher abzufragen und zu ändern.
 
 **Feedback:**
 
 - existing_backlog
-- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern. Dann auch eine automatische Erzeugung der Spendenbescheinigung. Das wird etwas kompliziert, da es über DFBnet Verein läuft.
+- Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
+
+## 6. Mail-Detailansicht für die vorgangsbasierte Dokumentzuordnung umsetzen
+
+**Epic-ID:** epic-mail-document-assignment
+
+**Epic-Titel:** Mail-Dokumente über Vorgänge unterschiedlichen Transaktionsbezügen zuordnen
+
+**Epic-Ziel:** Mehrere Dokumente einer Mail innerhalb eines zentralen Vorgangs nachvollziehbar unterschiedlichen zugeordneten Transaktionen zuordnen, ohne die vorgangsbasierte Architektur zu umgehen.
+
+**Teilpaket:** Teil 3
+
+**Priorität:** mittel
+
+**Grund:** Die Zuordnung soll nach stabiler fachlicher Grundlage und API im bestehenden Mail- und Vorgangs-UI bedienbar werden.
+
+**Feedback:**
+
+- existing_backlog
+- Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
+
+## 7. Adressdatenbestand für Spendenbescheinigungen fachlich und persistent anlegen
+
+**Epic-ID:** epic-donation-certificates
+
+**Epic-Titel:** Spendenbescheinigungen mit Empfängeradressen und Vereinsdaten erstellen
+
+**Epic-Ziel:** Spendenempfänger lokal verwalten und daraus nachvollziehbare Spendenbescheinigungen erzeugen; eine spätere DFBnet-Vereinsanbindung bleibt sicher und getrennt.
+
+**Teilpaket:** Teil 1
+
+**Priorität:** mittel
+
+**Grund:** Ein stabiler lokaler Empfänger- und Adressbestand ist die Grundlage für spätere Bescheinigungen und muss vor Dokumenterzeugung sowie externer Vereinsintegration abgegrenzt werden.
+
+**Feedback:**
+
+- existing_backlog
+- Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern.
+
+## 8. Spendenbescheinigungen aus lokalen Empfänger- und Vorgangsdaten erzeugen
+
+**Epic-ID:** epic-donation-certificates
+
+**Epic-Titel:** Spendenbescheinigungen mit Empfängeradressen und Vereinsdaten erstellen
+
+**Epic-Ziel:** Spendenempfänger lokal verwalten und daraus nachvollziehbare Spendenbescheinigungen erzeugen; eine spätere DFBnet-Vereinsanbindung bleibt sicher und getrennt.
+
+**Teilpaket:** Teil 2
+
+**Priorität:** mittel
+
+**Grund:** Auf Basis eines geprüften Adressbestands soll die eigentliche Dokumenterzeugung als separater, nachvollziehbarer lokaler Schritt erfolgen.
+
+**Feedback:**
+
+- existing_backlog
+- Dann auch eine automatische Erzeugung der Spendenbescheinigung.
+
+## 9. DFBnet-Vereinsdaten für Spendenbescheinigungen als getrennte Leseintegration prüfen
+
+**Epic-ID:** epic-donation-certificates
+
+**Epic-Titel:** Spendenbescheinigungen mit Empfängeradressen und Vereinsdaten erstellen
+
+**Epic-Ziel:** Spendenempfänger lokal verwalten und daraus nachvollziehbare Spendenbescheinigungen erzeugen; eine spätere DFBnet-Vereinsanbindung bleibt sicher und getrennt.
+
+**Teilpaket:** Teil 3
+
+**Priorität:** niedrig
+
+**Grund:** Die DFBnet-Abhängigkeit ist ein eigener externer Integrationsschritt und darf erst nach lokaler Daten- und Dokumentgrundlage mit Mocks oder Fixtures sowie ohne produktive Schreibaktionen umgesetzt werden.
+
+**Feedback:**
+
+- existing_backlog
+- Das wird etwas kompliziert, da es über DFBnet Verein läuft.
