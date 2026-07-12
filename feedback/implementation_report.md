@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260712-134315`
+`agent2/rework-20260712-134632`
 
 ## Geaenderte Dateien
 
@@ -50,8 +50,8 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
 
 ## Nachbesserung nach Review
 
-- Der aktuelle Rework-Branch basiert auf Commit `3750ffc`; der vollstaendige
-  Arbeitsbaum wurde gegen den Review-Hinweis abgeglichen. Die zuvor im
+- Der vollstaendige Arbeitsbaum des aktuellen Rework-Branches wurde gegen den
+  Review-Hinweis abgeglichen. Die zuvor im
   Dateikontext vermissten Symbole `donation_certificate_data`,
   `DonationCertificateData`, `DonationCertificateTransaction`,
   `create_donation_certificate` und der POST-Endpunkt sind in den
@@ -79,8 +79,7 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
 
 ## Ausgefuehrte Tests
 
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py tests/test_dashboard.py`
 - Expliziter Python-Importcheck fuer `donation_certificate_data`,
   `DonationCertificateData`, `DonationCertificateTransaction` und
   `DashboardDataStore.create_donation_certificate`
@@ -88,8 +87,7 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
 
 ## Testergebnis
 
-- Transaktionssuite: 40 bestanden.
-- Dashboardsuite: 115 bestanden, 6 uebersprungen.
+- Gemeinsame relevante Testsuite: 155 bestanden, 6 uebersprungen.
 - Der explizite Importcheck war erfolgreich.
 - `git diff --check` meldet keine Whitespace-Fehler.
 
