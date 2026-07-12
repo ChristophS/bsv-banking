@@ -2,66 +2,66 @@
 
 ## Branchname
 
-`agent2/codex-20260712-142335`
+`agent2/codex-20260712-145817`
 
-## Geaenderte Dateien
+## Geänderte Dateien
 
-- `README.md`
 - `feedback/implementation_report.md`
 
-Die bereits vorhandene Aenderung an `feedback/Review-report.md` und die
-unversionierte Datei `feedback/agent2_prompt.md` wurden nicht veraendert.
+Die bereits vorhandene Änderung an `feedback/Review-report.md` und die
+unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Bestehende DFBnet-Spielerpraemienintegration auf wiederverwendbare
-  Sicherheits- und Isolationsmuster geprueft.
-- Fachlich erforderliche, lokal verbindlich zu pflegende Vereinsdaten fuer
-  Spendenbescheinigungen dokumentiert.
-- DFBnet klar als optionale, unverbindliche Lese- und Vergleichsquelle
-  abgegrenzt; Spendenempfaenger und Bescheinigungsgrundlage bleiben lokal.
-- Eine getrennte read-only Adapter-Schnittstelle mit Snapshot-DTO und
-  manuell bestaetigtem Vergleich beziehungsweise Import vorgeschlagen, ohne
-  produktive Implementierung oder neue Entitaetsbeziehungen.
-- Risiken sowie konkrete Go-/No-Go-Entscheidungskriterien festgehalten.
-- Ausschliessliche Tests mit synthetischen Fixtures, Mocks oder Fakes und das
-  Verbot produktiver Logins, Netzwerkanfragen und Schreibaktionen festgelegt.
+- Die vollständige lokale Unit-Test-Suite wurde mit Python 3.12 ausgeführt.
+- Das Ergebnis wurde in bestandene Tests und erwartete umgebungsbedingte
+  Überspringungen eingeordnet.
+- Die vorhandene Dashboard-Abdeckung wurde anhand des Testlaufs geprüft:
+  Transaktionsdetails, Vorgangsverknüpfungen sowie das Anlegen, Ersetzen,
+  Entfernen und Validieren von Splits sind durch lokale Store- und HTTP-Tests
+  abgedeckt.
+- Es wurden keine externen Banking-, Microsoft-Graph-, DFBnet-, Mail-,
+  OpenAI- oder Browseraktionen ausgelöst.
 
 ## Nicht umgesetzte Punkte
 
-- Keine DFBnet-Automatisierung oder sonstige Anwendungsschicht geaendert.
-- Keine echten Logins, Browserlaeufe oder Netzwerkanfragen ausgefuehrt.
-- Keine Datenbank-, Empfaenger-, Vorgangs-, Beleg- oder Adressstruktur
-  geaendert.
-- `feedback/backlog.md` wurde wegen der ausdruecklichen Aenderungssperre im
-  Agenten-Prompt nicht geaendert.
+- Keine Code- oder Teständerung: Der vollständige Lauf hat keinen
+  reproduzierbaren Fehler im Dashboard- oder Transaktionskern ergeben.
+- `feedback/Review-report.md` wurde trotz Nennung im Arbeitspaket nicht
+  bearbeitet, weil der Agenten-Prompt Änderungen an Review-Reports
+  ausdrücklich untersagt. Die Testbaseline steht daher hier.
+- Die sieben Browser-Tests wurden nicht nachträglich aktiviert; Playwright ist
+  in der lokalen Testumgebung nicht installiert und Abhängigkeiten durften
+  nicht automatisch installiert werden.
 
-## Ausgefuehrte Tests
+## Ausgeführte Tests
 
-- Dokumentationspruefung per Diff und Suche nach den Akzeptanzkriterien.
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_player_premiums.py`
-- `git diff --check`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m unittest discover -s tests -v`
 
 ## Testergebnis
 
-- DFBnet-Unit-Tests: 15 bestanden.
-- Akzeptanzkriterien-Suche war erfolgreich.
-- `git diff --check` meldet keine Whitespace-Fehler.
+- 261 Tests ausgeführt und bestanden.
+- 7 zusätzliche Browser-Tests erwartungsgemäß übersprungen, jeweils mit dem
+  Grund `Playwright ist nicht installiert.`
+- Gesamtergebnis: `OK (skipped=7)` nach 39,266 Sekunden.
+- Keine fehlgeschlagenen Tests, keine reproduzierbaren Defekte und keine
+  erforderlichen Testanpassungen.
 
-## Bekannte Einschraenkungen
+## Bekannte Einschränkungen
 
-- Die tatsaechliche Verfuegbarkeit, Vollstaendigkeit und fachliche
-  Massgeblichkeit konkreter Vereinsstammdaten in DFBnet wurde gemaess
-  Arbeitspaket nicht durch einen produktiven Zugriff geprueft.
-- Verantwortlichkeit und konkretes lokales Speicherformat fuer verbindliche
-  Vereins- und Bescheiddaten bleiben vor einer Implementierung festzulegen.
+- Die optionalen browsergestützten Dashboard- und Mail-Integrationstests sind
+  ohne Playwright nicht Bestandteil der ausgeführten Abdeckung.
+- Es wurde kein optionaler manueller Dashboard-Workflow gestartet, da die
+  automatisierte Suite grün war und dafür kein zusätzlicher Befund vorlag.
 
-## Hinweise fuer den Review-Agenten
+## Hinweise für den Review-Agenten
 
-- Das Ergebnis ist bewusst nur eine Entscheidungsvorlage in der bestehenden
-  Projektdokumentation.
-- Die bestehende Implementierung in `banking_dashboard/player_premiums.py`
-  wurde nur lesend als Referenz ausgewertet.
-- Vorgaenge bleiben das zentrale fachliche Objekt; die Vorlage fuehrt keine
-  direkten externen Entitaetsbeziehungen ein.
+- Besonders relevante grüne Tests umfassen die Detaildarstellung mit Links,
+  Quellen und Rohfeldern, idempotente Transaktion-Vorgang-Verknüpfungen,
+  Vorgangsdetails mit Splits sowie Split-Ersetzen, -Entfernen, Summenprüfung
+  und Atomarität bei ungültigen Payloads.
+- Es bestehen aus diesem Lauf keine offenen Defekte mit hoher Folgepriorität
+  für Datenintegrität, Vorgangsverknüpfungen oder Nutzeraktionen.
+- Die bereits vorhandene Änderung an `feedback/Review-report.md` gehört nicht
+  zu dieser Umsetzung und wurde nicht angetastet.
 - Es wurde nicht committet und nicht gepusht.
