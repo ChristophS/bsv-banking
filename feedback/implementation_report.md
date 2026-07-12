@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260712-125240`
+`agent2/rework-20260712-125600`
 
 ## Geänderte Dateien
 
@@ -31,9 +31,9 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
 
 ## Umgesetzte Punkte
 
-- Die fachlich relevanten Dateien wurden im aktuellen Rework-Arbeitsstand
-  erneut konsolidiert, sodass sie als validierbare Änderungen dieses
-  Rework-Laufs vorliegen.
+- Die fachlich relevanten Dateien liegen im aktuellen Rework-Branch
+  vollständig und konsistent vor, sodass Modell, Schema, Migration,
+  Datenzugriff und Tests gemeinsam reviewbar sind.
 - Ein zusätzlicher Regressionstest weist nach, dass eine ungültige
   Aktualisierung den bereits gespeicherten Empfänger unverändert lässt.
 
