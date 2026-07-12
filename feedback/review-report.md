@@ -8,36 +8,40 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt das Arbeitspaket. Die vollständige unittest-Suite wurde vor und nach dem Fix ausgeführt: jeweils 263 Tests, 256 erfolgreich, 0 Fehler, 0 Fehlgeschlagen, 7 optionale Playwright-Tests übersprungen. Der reproduzierte ResourceWarning durch eine nicht geschlossene CSV-Datei wurde mit einem Context Manager behoben. Der GitHub-Compare ist sauber und enthält ausschließlich die erwarteten Änderungen.
+Die Dashboard-Ansicht für manuelle Saldo-Korrekturen erfüllt die Muss-Anforderungen: vorhandene Korrekturen werden geladen und nachvollziehbar dargestellt, neue Korrekturen können mit Konto, Centbetrag, ISO-Stichtag und Begründung angelegt werden, Validierungs-, Erfolgs- und Fehlerzustände sind sichtbar, und die Liste wird nach dem Speichern aktualisiert. Die Oberfläche weist ausdrücklich auf manuelle Prüfung und unveränderte Originaltransaktionen hin. Der Branch ist im GitHub-Compare sauber und enthält keine erkennbaren unerlaubten Änderungen.
 
-# Review
+## Review-Ergebnis
 
-## Ergebnis
+**Entscheidung: Akzeptiert**
 
-**Akzeptiert.**
+### Erfüllte Anforderungen
 
-## Geprüfte Anforderungen
+- Abgegrenzte Dashboard-Sektion für manuelle Saldo-Korrekturen im bestehenden Transaktions-/Kontostandsworkflow ergänzt.
+- GET `/api/balance-corrections` wird beim Dashboard-Start geladen.
+- Angezeigt werden Konto, Anbieter beziehungsweise Kontonummer, Stichtag, Betrag, Begründung, Erstellzeitpunkt sowie der Hinweis auf manuelle Prüfung.
+- Formular sendet ausschließlich die bestehenden Pflichtfelder `account_id`, `balance_minor`, `balance_as_of` und `reason` als JSON an den bestehenden POST-Endpunkt.
+- Cent-Semantik ist eindeutig dokumentiert und wird vor dem Absenden auf Ganzzahligkeit und JavaScript-Safe-Integer-Grenze geprüft.
+- Native Pflichtfeld-/Datumsvalidierung und zusätzliche Betragsvalidierung verhindern ungültige Requests.
+- Eine verpflichtende Bestätigung der manuellen Prüfung ist vorhanden.
+- Die Oberfläche weist darauf hin, dass Originaltransaktionen nicht verändert werden.
+- Erfolgs- und Fehlerzustände werden im Formular angezeigt; serverseitige Fehlermeldungen werden weitergereicht.
+- Nach erfolgreichem POST wird die Korrekturliste ohne Seitenreload neu geladen.
+- Es existieren keine Lösch-, Widerrufs-, Ersetzungs- oder Bearbeitungsaktionen für Korrekturen.
+- Die Kontenauswahl verwendet die lokal bekannte Kontoliste aus dem bestehenden Transaktions-Payload; es wird kein neuer Kontostammdaten-Endpunkt eingeführt.
+- Leer-, Lade- und Fehlerzustände sind vorgesehen.
 
-- Die vollständige lokale Unit-Test-Suite wurde mit `unittest discover -s tests -v` ausgeführt.
-- Der Lauf wurde nach der Korrektur erneut vollständig ausgeführt.
-- Die Ergebnisse sind klar dokumentiert: 263 Tests insgesamt, 256 erfolgreich, 0 Fehler, 0 Fehlgeschlagen und 7 Überspringungen.
-- Die Überspringungen sind auf optionale Browser-Tests wegen fehlender Playwright-Abhängigkeit begrenzt und nachvollziehbar dokumentiert.
-- Der reproduzierte `ResourceWarning` im Test `test_matching_manual_balance_correction_unblocks_snapshot_without_changing_raw_data` wurde durch deterministisches Schließen der CSV-Datei mit einem Context Manager behoben.
-- Die bestehende Testassertion zur unveränderten CSV-Zeile bleibt fachlich erhalten.
-- Die Änderung bleibt eng auf Test-Ressourcenmanagement und die zugehörige Dokumentation begrenzt.
-- Es wurden keine Produktivlogik, keine externen Integrationen und keine Architektur umgangen oder umgebaut.
-- Der bereitgestellte Test verwendet temporäre Verzeichnisse und lokale Testdaten. Die im Report dokumentierte Stichprobe zu Mocks, Fakes und lokalen Setups ist mit dem geforderten Scope vereinbar.
-- Der GitHub-Compare ist `ahead` mit einem Commit, `behind_by` ist 0. Es gibt keine fehlenden oder zusätzlichen Dateien gegenüber dem Runner-Compare.
+### Architektur- und Scope-Prüfung
 
-## Diff-Prüfung
+Die Umsetzung verwendet die vorhandenen `DashboardDataStore`-Methoden und die bestehenden GET-/POST-Endpunkte. Die Erweiterung von `balance_summary()` um `account_id` und `provider` bleibt lokal und dient ausschließlich der Kontenauswahl. Import-, Saldenketten-, Archivierungs- und Vorgangsarchitektur werden nicht umgebaut. Es gibt keine externen Banking- oder Login-Aktionen.
 
-Der tatsächliche Diff enthält ausschließlich:
+### Tests
 
-- `tests/test_transactions.py`: CSV-Datei wird beim Lesen über einen Context Manager geschlossen.
-- `feedback/implementation_report.md`: Testlauf, Befund, Korrektur, Überspringungen und Einschränkungen werden strukturiert dokumentiert.
+Die bestehenden Dashboard-API-Tests wurden um Prüfungen für die lokale Kontenauswahl, die UI-Struktur, den manuellen Prüfhinweis, die Request-Feldsemantik und das Fehlen einer Löschfunktion ergänzt. Syntax- und Diff-Prüfungen wurden laut Bericht erfolgreich ausgeführt. Die UI-nahe Absicherung ist akzeptabel, auch wenn ein echter Browser-End-to-End-Test des Korrekturformulars als spätere Verbesserung sinnvoll wäre.
 
-Die Änderung ist konsistent mit dem Implementation Report und stellt keinen Scope Creep dar.
+### GitHub-Status
 
-## Verbleibende Hinweise
+Der Branch liegt laut Compare einen Commit vor `main`, ist nicht hinter `main` und weist keine fehlenden oder zusätzlichen Compare-Dateien auf. Die geänderten Dateien entsprechen dem Arbeitspaket; die Anpassung des Implementation Reports ist unkritisch.
 
-Die sieben übersprungenen Browser-Tests sind als optionale lokale Abhängigkeit dokumentiert. Das ist für dieses Arbeitspaket kein Blocker, da keine Installation oder externe Browserumgebung erzwungen werden soll.
+### Hinweise
+
+Die Entscheidung basiert auf dem tatsächlichen GitHub-Diff für die geänderten Stellen. Die bereitgestellten vollständigen Dateiinhalte enthalten bei `balance_summary()` eine sichtbare Abweichung zum Diff; diese wirkt wie eine Kontext-/Snapshot-Inkonsistenz, da der Diff und der Implementation Report die Änderung konsistent ausweisen und die Änderung selbst funktional plausibel ist.
