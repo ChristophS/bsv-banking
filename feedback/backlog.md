@@ -1,5 +1,7 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
 ## 1. Termin-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
@@ -18,7 +20,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- gesamten Code auf Konsistenz und Funktion prüfen
+- Gesamten Code auf Konsistenz und Funktion prüfen.
 - Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
 
 ## 2. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
@@ -37,8 +39,8 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- gesamten Code auf Konsistenz und Funktion prüfen
-- Architekturregel: Vorgänge und bestehende Verknüpfungsstrukturen verwenden
+- Gesamten Code auf Konsistenz und Funktion prüfen.
+- Vorgänge und bestehende Verknüpfungsstrukturen verwenden.
 
 ## 3. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
@@ -52,12 +54,12 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Banking, Microsoft Graph und DFBnet dürfen keine unkontrollierten produktiven Aktionen ausführen; Fehler-, Abbruch- und Testpfade müssen deshalb getrennt mit Mocks, Fakes oder Fixtures geprüft werden.
+**Grund:** Banking, Microsoft Graph und DFBnet dürfen keine unkontrollierten produktiven Aktionen ausführen; Fehler-, Abbruch- und Testpfade müssen getrennt mit Mocks, Fakes oder Fixtures geprüft werden.
 
 **Feedback:**
 
-- gesamten Code auf Konsistenz und Funktion prüfen
-- Projektregel: externe Dienste nur mit Mocks, Fakes oder Fixtures testen
+- Gesamten Code auf Konsistenz und Funktion prüfen.
+- Externe Dienste nur mit Mocks, Fakes oder Fixtures testen.
 
 ## 4. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
 
@@ -95,25 +97,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen.
 
-## 6. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
-
-**Epic-ID:** epic-cashier-usability
-
-**Epic-Titel:** Kassiererfreundliche Arbeitsabläufe im Dashboard verbessern
-
-**Epic-Ziel:** Die tägliche Vereinsverwaltung im Dashboard mit klaren Prioritäten, verständlichen Zuständen und reibungsarmen Zuordnungsabläufen unterstützen, ohne Funktionsumfang oder Leistung zu verschlechtern.
-
-**Teilpaket:** Teil 1
-
-**Priorität:** hoch
-
-**Grund:** Vor UI-Änderungen sollen die täglichen Abläufe beim Sichten, Klassifizieren, Zuordnen und Abschließen von Vorgängen aus Kassierersicht nachvollziehbar erfasst und priorisiert werden.
-
-**Feedback:**
-
-- Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
-
-## 7. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
+## 6. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
 
 **Epic-ID:** epic-cashier-usability
 
@@ -129,10 +113,10 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- maximalen Benutzerkomfort ohne Leistungs- und Featureeinbußen erreichen
-- Vorhaben: Kassiererfreundliche Arbeitsabläufe
+- Maximalen Benutzerkomfort ohne Leistungs- und Featureeinbußen erreichen.
+- Kassiererfreundliche Arbeitsabläufe im Dashboard verbessern.
 
-## 8. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
+## 7. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -148,10 +132,10 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
-- Architekturregel: Vorgänge sind das zentrale fachliche Objekt
+- Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen.
+- Vorgänge sind das zentrale fachliche Objekt.
 
-## 9. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
+## 8. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -167,10 +151,10 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
-- Bestehender Dashboard-Kontext: Abschlussprüfungen und Klassifikationsstatus
+- Maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen.
+- Bestehender Dashboard-Kontext: Abschlussprüfungen und Klassifikationsstatus.
 
-## 10. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
+## 9. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -186,4 +170,4 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- Nutzerkomfort ohne Feature- und Leistungseinbußen
+- Nutzerkomfort ohne Feature- und Leistungseinbußen.
