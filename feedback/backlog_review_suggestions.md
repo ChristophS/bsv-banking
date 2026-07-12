@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+Für ein späteres Konsistenzpaket könnten die API-Regressionstests stärker zwischen fehlenden Feldern, unbekannten Feldern und leerem Pfad unterscheiden und zusätzlich unveränderte Metadaten bei idempotenten Wiederholungen prüfen.
