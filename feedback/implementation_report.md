@@ -2,96 +2,80 @@
 
 ## Branchname
 
-`agent2/rework-20260712-120459`
+`agent2/codex-20260712-122553`
 
 ## Geänderte Dateien
 
-- `banking_dashboard/server.py`
-- `tests/test_dashboard.py`
+- `banking_dashboard/static/app.js`
+- `banking_dashboard/static/styles.css`
 - `feedback/implementation_report.md`
 
-Bereits vorhandene, nicht zu diesem Arbeitspaket gehörende Änderungen an
-`feedback/Review-report.md` und die unversionierte Datei
-`feedback/agent2_prompt.md` wurden nicht verändert.
+Die bereits vorhandene Änderung an `feedback/Review-report.md` und die
+unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- GET-Endpunkt
-  `/api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen` ergänzt.
-- PUT-Endpunkt unter demselben Pfad ergänzt.
-- UI-taugliche Ausgabe mit Vorgang, verknüpften Transaktionen, über
-  `vorgang_belege` verfügbaren Dokumenten und aktuellen Zuordnungen umgesetzt.
-- Bestehende Persistenz aus Teil 1 wiederverwendet:
-  `vorgang_belege.vorgangsbezug_id` verweist ausschließlich auf
-  `transaktion_vorgaenge.bezugs_id`.
-- Vorgang, Belege und Transaktionen sowie deren Zugehörigkeit zum adressierten
-  Vorgang werden vor jeder Änderung vollständig validiert.
-- Widersprüchliche Vorgangs-IDs, unbekannte Payload-Felder, ungültige Typen und
-  doppelte Beleg-IDs werden als Clientfehler abgewiesen.
-- Die Änderung ist idempotent; `null` hebt eine vorhandene Auswahl auf.
-- Neu über den Dashboard-Service angelegte Transaktion-Vorgang-Links erhalten
-  eine stabile `bezugs_id`.
-- Fehlerhafte Requests hinterlassen aufgrund vollständiger Vorvalidierung keine
-  partiellen Änderungen.
-- API- und Architekturtest ergänzt.
-
-## Nachbesserung nach Review
-
-- `_replace_vorgang_links` verwendet für Transaktionslinks nun eine gezielte
-  Ersetzung. Jeder neu angelegte Link erhält unmittelbar eine eindeutige,
-  nicht leere `tvb_...`-Referenz; vorhandene leere Referenzen werden repariert.
-- Unveränderte Transaktionslinks werden bei einem Vorgangs-Update nicht mehr
-  gelöscht. Dadurch bleibt ihre stabile `bezugs_id` erhalten und der
-  Löschtrigger leert keine weiterhin gültige Dokumentzuordnung.
-- Auch die vorhandene generische Link-Ersetzung löscht nur noch tatsächlich
-  entfernte Links. So bleibt insbesondere bei unveränderten Beleglinks die in
-  `vorgang_belege.vorgangsbezug_id` gespeicherte Auswahl erhalten.
-- Ein Regressionstest legt einen Vorgang über `create_vorgang` mit Transaktion
-  und Beleg an, speichert die Auswahl über PUT, aktualisiert den Vorgang über
-  `update_vorgang` und prüft danach per GET den weiterhin aufgelösten
-  Transaktionsbezug sowie die nicht leere `bezugs_id`.
+- Die Vorgangsdetailansicht lädt die vorhandenen Dokumentzuordnungen parallel
+  über `GET /api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen`.
+- Für jeden vom Endpunkt gelieferten Beleg wird die bestätigte Zuordnung in
+  einer verständlichen Auswahl angezeigt.
+- Als Ziele werden ausschließlich die vom Endpunkt für diesen Vorgang
+  gelieferten Transaktionen angeboten. Die Labels enthalten Datum,
+  Zahlungsbeteiligten beziehungsweise Verwendungszweck und Betrag.
+- `Keine spezifische Transaktion` ist eine explizite Auswahl und wird als
+  `transaktions_id: null` gespeichert.
+- Beim Speichern wird die vollständige Liste aller sichtbaren Belege gesammelt
+  per `PUT /api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen` gesendet.
+- Nach erfolgreichem Speichern wird der gesamte Vorgangs-Workspace neu geladen.
+  Bei einem API-Fehler bleiben die lokalen Auswahlwerte sichtbar, werden aber
+  nicht als bestätigt behandelt; der Fehler erscheint am Formular und in der
+  vorhandenen globalen Fehlermeldung.
+- Unveränderte Zuordnungen aktivieren den Speichern-Button nicht.
+- Vorhandene Mail-Herkunft wird anhand von `mail_inbox_id` und
+  `mail_attachment_index` als Mail-Anhang gekennzeichnet.
+- Für Vorgänge ohne Dokumente sowie ohne verknüpfte Transaktionen gibt es
+  klare Leerzustände. Ohne Transaktionen enthält die Auswahl nur den
+  unzugeordneten Wert.
+- Die Darstellung ist responsiv ergänzt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Frontend-Bedienung; sie ist ausdrücklich nicht Teil des Pakets.
-- Keine neuen Tabellen oder direkten Transaktion-Beleg-Fremdschlüssel.
-- Keine externen Mail-, Graph-, Banking- oder Login-Aktionen.
+- Keine Server-, Datenbank-, Migrations- oder externe Mail-/Banking-Änderung;
+  die vorhandene API deckt den UI-Datenbedarf vollständig ab.
+- Keine Änderungen an `index.html`, da der bestehende dynamische
+  Detail-Container verwendet wird.
+- Keine neuen Tests angelegt: Die bereits vorhandenen Dashboard-Tests prüfen
+  Laden, erfolgreiches und idempotentes Speichern, ungültige beziehungsweise
+  vorgangsfremde Zuordnungen und den unveränderten bestätigten Stand nach 4xx.
 
 ## Ausgeführte Tests
 
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k mail_document_assignment_api_validates_vorgang_context -q`
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k 'mail_document_assignment_api_validates_vorgang_context or created_vorgang_keeps_resolvable_document_assignment_on_update' -q`
+- `node --check banking_dashboard/static/app.js`
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py tests/test_transactions.py`
 - `git diff --check`
 
 ## Testergebnis
 
-- Gezielte Tests nach Nachbesserung: 2 bestanden, 116 abgewählt; 5 Subtests bestanden.
+- JavaScript-Syntaxprüfung erfolgreich.
 - Dashboard-Suite: 112 bestanden, 6 übersprungen.
-- Mail-/Transaktions-Suiten: 74 bestanden, 1 übersprungen.
 - Die übersprungenen Tests sind vorhandene optionale Browser-/Umgebungstests.
 - `git diff --check` meldet keine Whitespace-Fehler.
 
 ## Bekannte Einschränkungen
 
-- Mangels eindeutiger fachlicher Einschränkung im Arbeitspaket liefert die API
-  alle über `vorgang_belege` mit dem Vorgang verbundenen Belege. Mail-Herkunft
-  wird über `mail_inbox_id` und `mail_attachment_index` sichtbar gemacht, aber
-  nicht als zwingender Filter verwendet.
-- Ein PUT ändert nur die explizit übergebenen Belege; nicht genannte Belege
-  behalten ihre aktuelle Auswahl. Dadurch sind kleine, sichere UI-Updates
-  möglich.
+- Es wurde kein echter Browser gestartet. Die UI nutzt ausschließlich die
+  lokal vorhandene API; externe Dienste und echte Zugangsdaten waren nicht
+  erforderlich.
+- Die Auswahl wird aus Sicherheitsgründen aus dem vorgangsspezifischen
+  API-Payload aufgebaut und nicht mit globalen Transaktionsdaten angereichert.
 
 ## Hinweise für den Review-Agenten
 
-- Besonders relevant sind die Methoden `mail_document_assignments` und
-  `replace_mail_document_assignments` sowie die GET-/PUT-Routen in
-  `DashboardRequestHandler`.
-- Für die Nachbesserung sind außerdem `_replace_transaction_vorgang_links`
-  und das differenzielle Verhalten von `_replace_link_rows` relevant.
-- Der Test prüft Erfolg, Idempotenz, unbekannte IDs, fremden Kontext,
-  widersprüchliche IDs, unbekannte Felder, unveränderten Zustand nach Fehlern
-  und die Abwesenheit einer direkten `transaktions_id`-Spalte in
-  `vorgang_belege`.
+- Zentral sind `loadVorgangWorkspace`,
+  `createMailDocumentAssignmentEditor` und
+  `mailDocumentTransactionLabel` in `banking_dashboard/static/app.js`.
+- Der vorhandene Test
+  `test_mail_document_assignment_api_validates_vorgang_context` deckt GET,
+  PUT, Idempotenz, ungültige IDs, fremden Vorgangskontext und den Zustand nach
+  Fehlern ab.
 - Es wurde nicht committet und nicht gepusht.

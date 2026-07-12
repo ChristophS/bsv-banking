@@ -7753,13 +7753,14 @@ async function loadVorgangWorkspace(vorgangsId, ruleStatus = "") {
     rulesResponse,
     completionRulesResponse,
     optionsResponse,
-    ,
+    assignmentResponse,
     suggestionsPayload,
   ] = await Promise.all([
     fetch(`/api/vorgaenge/${encodeURIComponent(vorgangsId)}`),
     fetch("/api/rules"),
     fetch("/api/completion-rules"),
     fetch("/api/classification-options"),
+    fetch(`/api/vorgaenge/${encodeURIComponent(vorgangsId)}/mail-dokumentzuordnungen`),
     loadVorgangTypes(),
     loadVorgangSuggestions("vorgang", vorgangsId).catch(() => null),
   ]);
@@ -7768,11 +7769,13 @@ async function loadVorgangWorkspace(vorgangsId, ruleStatus = "") {
     rulesPayload,
     completionRulesPayload,
     options,
+    assignmentPayload,
   ] = await Promise.all([
     readResponse(vorgangResponse),
     readResponse(rulesResponse),
     readResponse(completionRulesResponse),
     readResponse(optionsResponse),
+    readResponse(assignmentResponse),
   ]);
   state.ruleMatchFields = rulesPayload.match_fields;
   state.ruleMatchOperators = rulesPayload.match_operators;
@@ -7785,6 +7788,7 @@ async function loadVorgangWorkspace(vorgangsId, ruleStatus = "") {
     completionRulesPayload,
     ruleStatus,
     suggestionsPayload,
+    assignmentPayload,
   );
 }
 
@@ -7894,6 +7898,7 @@ function renderVorgangWorkspace(
   completionRulesPayload,
   ruleStatus = "",
   suggestionsPayload = null,
+  assignmentPayload = null,
 ) {
   elements.dialog.dataset.vorgangId = vorgang.vorgangs_id;
   elements.dialog.dataset.vorgangTransactionCount =
@@ -7924,6 +7929,7 @@ function renderVorgangWorkspace(
 
   details.append(createVorgangStatusEditor(vorgang));
   details.append(createVorgangMetadataEditor(vorgang, suggestionsPayload));
+  details.append(createMailDocumentAssignmentEditor(vorgang, assignmentPayload));
   appendDetailSection("Vorgang", [
     detailField("Vorgangs-ID", vorgang.vorgangs_id, true, true),
     detailField("Titel", vorgang.titel, true),
@@ -7965,6 +7971,119 @@ function renderVorgangWorkspace(
     details.append(heading);
     renderTransactionContent(transaction, details);
   }
+}
+
+function createMailDocumentAssignmentEditor(vorgang, payload) {
+  const section = mailElement(
+    "section",
+    "detail-section mail-document-assignment-editor",
+  );
+  section.append(mailElement("h3", "", "Dokumente Transaktionen zuordnen"));
+  const documents = payload?.dokumente || [];
+  const transactions = payload?.transaktionen || [];
+  if (!documents.length) {
+    section.append(mailElement("p", "empty-state", "Diesem Vorgang sind keine Dokumente zugeordnet."));
+    return section;
+  }
+
+  const assignments = new Map(
+    (payload?.zuordnungen || []).map((item) => [
+      item.beleg_id,
+      item.transaktions_id || "",
+    ]),
+  );
+  const form = mailElement("form", "mail-document-assignment-form");
+  const list = mailElement("div", "mail-document-assignment-list");
+  for (const documentItem of documents) {
+    const row = mailElement("label", "mail-document-assignment-row");
+    const description = mailElement("span", "mail-document-assignment-document");
+    description.append(
+      mailElement("strong", "", documentItem.dateiname || documentItem.beleg_id),
+    );
+    const metadata = [
+      documentItem.kategorie,
+      documentItem.dokumentdatum ? formatDate(documentItem.dokumentdatum) : "",
+      documentItem.betrag ? currencyFormatter.format(Number(documentItem.betrag)) : "",
+      documentItem.mail_inbox_id
+        ? `Mail-Anhang${documentItem.mail_attachment_index !== null ? ` ${Number(documentItem.mail_attachment_index) + 1}` : ""}`
+        : "",
+    ].filter(Boolean).join(" · ");
+    if (metadata) {
+      description.append(mailElement("span", "mail-document-assignment-meta", metadata));
+    }
+    const select = document.createElement("select");
+    select.name = "document_assignment";
+    select.dataset.belegId = documentItem.beleg_id;
+    select.append(new Option("Keine spezifische Transaktion", ""));
+    for (const transaction of transactions) {
+      select.append(new Option(mailDocumentTransactionLabel(transaction), transaction.transaktions_id));
+    }
+    select.value = assignments.get(documentItem.beleg_id) || "";
+    select.dataset.confirmedValue = select.value;
+    row.append(description, select);
+    list.append(row);
+  }
+  form.append(list);
+  if (!transactions.length) {
+    form.append(mailElement("p", "assignment-empty-hint", "Dieser Vorgang hat keine verknüpften Transaktionen. Dokumente können nur ohne spezifische Transaktion gespeichert werden."));
+  }
+  const actions = mailElement("div", "vorgang-form-actions");
+  const submit = mailElement("button", "primary-action", "Zuordnungen speichern");
+  submit.type = "submit";
+  const status = mailElement("span", "save-state");
+  actions.append(submit, status);
+  form.append(actions);
+  const assignmentSelects = () => [
+    ...form.querySelectorAll("select[data-beleg-id]"),
+  ];
+  const updateChangedState = () => {
+    const changed = assignmentSelects().some(
+      (select) => select.value !== select.dataset.confirmedValue,
+    );
+    submit.disabled = !changed;
+    if (!changed && !status.classList.contains("is-saved")) {
+      status.textContent = "Keine Änderungen";
+    }
+  };
+  form.addEventListener("change", updateChangedState);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    status.className = "save-state is-saving";
+    status.textContent = "Wird gespeichert";
+    const zuordnungen = assignmentSelects().map((select) => ({
+      beleg_id: select.dataset.belegId,
+      transaktions_id: select.value || null,
+    }));
+    try {
+      const response = await fetch(
+        `/api/vorgaenge/${encodeURIComponent(vorgang.vorgangs_id)}/mail-dokumentzuordnungen`,
+        {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({zuordnungen}),
+        },
+      );
+      await readResponse(response);
+      await loadVorgangWorkspace(vorgang.vorgangs_id, "Dokumentzuordnungen gespeichert");
+    } catch (error) {
+      status.className = "save-state is-error";
+      status.textContent = `Speichern fehlgeschlagen: ${error.message}`;
+      submit.disabled = false;
+      showError(error.message);
+    }
+  });
+  updateChangedState();
+  section.append(form);
+  return section;
+}
+
+function mailDocumentTransactionLabel(transaction) {
+  const description = transaction.zahlungsbeteiligter || transaction.verwendungszweck || transaction.transaktions_id;
+  const amount = transaction.betrag === null || transaction.betrag === undefined || transaction.betrag === ""
+    ? ""
+    : currencyFormatter.format(Number(transaction.betrag));
+  return [formatDate(transaction.datum), description, amount].filter(Boolean).join(" · ");
 }
 
 function entityCountSummary(vorgang) {
