@@ -18,7 +18,6 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- existing_backlog
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege, wie man geschickt damit umgehen kann.
 
 ## 2. Vorgangsbasierte Auswahl-API für Mail-Dokumentzuordnungen bereitstellen
@@ -37,7 +36,6 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- existing_backlog
 - Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
 ## 3. Mail-Detailansicht für die vorgangsbasierte Dokumentzuordnung umsetzen
@@ -56,7 +54,6 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- existing_backlog
 - Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
 ## 4. Adressdatenbestand für Spendenbescheinigungen fachlich und persistent anlegen
@@ -75,7 +72,6 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- existing_backlog
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern.
 
 ## 5. Spendenbescheinigungen aus lokalen Empfänger- und Vorgangsdaten erzeugen
@@ -94,7 +90,6 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- existing_backlog
 - Dann auch eine automatische Erzeugung der Spendenbescheinigung.
 
 ## 6. DFBnet-Vereinsdaten für Spendenbescheinigungen als getrennte Leseintegration prüfen
@@ -113,5 +108,4 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- existing_backlog
 - Das wird etwas kompliziert, da es über DFBnet Verein läuft.
