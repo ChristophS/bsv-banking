@@ -8,56 +8,40 @@
 
 ## Zusammenfassung
 
-Die Anforderungen des Arbeitspakets sind durch die bestehenden To-Do-Validierungs- und Handlerpfade erfüllt und werden mit umfangreichen lokalen HTTP-Regressionstests abgesichert. Die Tests decken ungültige Payloads, unbekannte Vorgangs- und To-Do-IDs, JSON-Fehlerantworten, Statuscodes, atomare Persistenz sowie die bestehenden N:M-Verknüpfungen ab. GitHub Compare ist sauber und enthält keine fehlenden oder zusätzlichen Änderungen.
+Die Umsetzung erfüllt die Anforderungen des Arbeitspakets. Der bestehende PATCH-Flow validiert Payloads vor dem Schreibzugriff, liefert 400/404/200 mit JSON-Antworten und bewahrt bei abgewiesenen Requests den bisherigen Zustand. Die ergänzten lokalen HTTP-Regressionstests decken Erfolg, leeres Objekt, unbekannte Felder, nicht-textuelle Werte, überlange Werte und unbekannte Transaktions-IDs ab.
 
-# Technischer Review
+# Review
 
 ## Ergebnis
 
-**Accepted:** ja
+**Accepted:** Ja
 
-## Geprüfter Umfang
+## Geprüfte Änderungen
 
-- `tests/test_dashboard.py`
-- `banking_dashboard/server.py`
-- GitHub-Diff des Commits `cf88e42fd3256b80873b37825c2925ebe0e8c607`
-- Runner- und GitHub-Compare-Status
+Der GitHub-Compare-Branch ist brauchbar und enthält genau die gemeldeten Änderungen in `tests/test_dashboard.py` sowie die aktualisierte Implementierungsdokumentation. Der Branch ist gegenüber `main` um einen Commit voraus und nicht hinterher.
 
-## Bewertung der Muss-Anforderungen
+## Fachliche Prüfung
 
-Die vorhandenen To-Do-Flows verwenden weiterhin die bestehende `DashboardDataStore`- und Handler-Architektur. Es wurde keine parallele Persistenz- oder API-Architektur eingeführt und das bestehende `todo_vorgaenge`-Verknüpfungsmodell bleibt unverändert.
+- Der Erfolgsfall des PATCH-Endpunkts `/api/transactions/<id>/classification` wird mit HTTP 200 geprüft.
+- Die aktualisierte Transaktion wird in der Antwort geprüft.
+- Die bestehende Abschlussregelverarbeitung bleibt erhalten; der Erfolgstest prüft weiterhin den aktualisierten Vorgangsstatus.
+- Ein leeres JSON-Objekt führt zu HTTP 400 und einer JSON-Antwort mit `error`.
+- Unbekannte Klassifikationsfelder werden nicht ignoriert. Der gemischte Payload mit gültigem und unbekanntem Feld wird abgewiesen.
+- Nicht-textuelle Werte werden mit HTTP 400 abgewiesen.
+- Werte über 2000 Zeichen werden mit HTTP 400 abgewiesen.
+- Eine unbekannte Transaktions-ID führt bei gültigem Payload zu HTTP 404 und einer JSON-Fehlermeldung.
+- Die Implementierung verwendet weiterhin `CLASSIFICATION_FIELDS` und `DashboardDataStore.update_transaction_classification`.
+- Die Validierung findet vor dem Schreibzugriff statt. Bei unbekannter ID wird die Schreibtransaktion zurückgerollt; bei Fehlern während der Abschlussregelverarbeitung wird wegen des fehlenden Commits ebenfalls keine Teiländerung persistiert.
+- Die Tests prüfen nach jedem abgewiesenen Validierungsrequest sowohl die Klassifikationsfelder als auch den Vorgangsstatus auf Unverändertheit.
 
-Die vollständige Prüfung von `banking_dashboard/server.py` bestätigt:
+## Fehlerantworten und Architektur
 
-- `create_todo` und `update_todo` lehnen unbekannte Felder ab.
-- Prioritäten werden gegen `niedrig`, `normal` und `hoch` validiert.
-- Fälligkeitsdaten werden als ISO-Datum validiert.
-- `vorgangs_ids` müssen Listen sein und werden gegen vorhandene Vorgänge geprüft.
-- Unbekannte Vorgangsreferenzen lösen `LookupError` aus.
-- Unbekannte To-Do-IDs bei Update und Delete lösen `LookupError` aus.
-- Die Handler bilden `ValueError` konsistent auf HTTP 400 und `LookupError` auf HTTP 404 mit einem JSON-Objekt mit `error` ab.
-- Fehler während der Linkvalidierung werden vor dem Commit ausgelöst; uncommittete Änderungen werden beim Schließen der Verbindung verworfen.
-- Erfolgreiche Flows verwenden weiterhin `_replace_todo_vorgaenge` und damit die bestehende N:M-Tabelle.
+Der vorhandene Request-Handler übersetzt `ValueError` in HTTP 400 und `LookupError` in HTTP 404 mit JSON-Objekt und `error`. Der Endpunkt verwendet damit die bestehende Fehlerarchitektur und führt keine parallele Implementierung ein. Es wurden keine Änderungen an Split-API, Datenmodell, UI oder externen Integrationen vorgenommen.
 
-## Tests
+## Testqualität
 
-Die neuen Tests in `tests/test_dashboard.py` decken ab:
+Die ergänzten Tests laufen als lokale HTTP-Integrationstests mit temporärer SQLite-Datenbank und lokalem Testserver. Es werden weder Browser, produktive Daten, Secrets noch externe Dienste benötigt. Die zentralen Akzeptanzkriterien sind durch die neuen beziehungsweise präzisierten Tests angemessen abgedeckt.
 
-- POST mit unbekanntem Feld, ungültiger Priorität, ungültigem Datum und nicht listenförmigen `vorgangs_ids`.
-- PATCH mit denselben relevanten ungültigen Eingaben.
-- HTTP-400-Statuscodes und JSON-Fehlerobjekte.
-- POST und PATCH mit nicht vorhandenen Vorgangs-IDs und HTTP 404.
-- Keine partiellen Änderungen an To-Dos oder `todo_vorgaenge` nach fehlgeschlagenem PATCH.
-- Kein zurückbleibendes To-Do nach fehlgeschlagenem POST.
-- PATCH und DELETE mit unbekannter To-Do-ID und HTTP 404 einschließlich konsistentem Fehlertext.
-- Erfolgreiche Erstellung, Änderung, Löschung und Vorgangsverknüpfungen über den bestehenden CRUD-Test.
+## Nicht blockierende Anmerkung
 
-Die Tests verwenden eine temporäre SQLite-Datenbank und den lokalen Testserver. Browser, Netzwerkzugriff, Secrets und produktive Laufzeitdaten sind für dieses Arbeitspaket nicht erforderlich.
-
-## Diff- und Scope-Prüfung
-
-Der GitHub-Diff enthält ausschließlich die präzisierten Regressionstests und die aktualisierte Implementierungsdokumentation. Es gibt keine unerlaubten Änderungen an Datenmodell, UI oder anderen API-Bereichen. Runner und GitHub Compare stimmen überein; der Branch ist einen Commit vor `main`, nicht hinterher und enthält keine fehlenden oder zusätzlichen Compare-Dateien.
-
-## Entscheidung
-
-Die Muss-Anforderungen und Akzeptanzkriterien sind erfüllt. Die Implementierung kann angenommen werden.
+Ein zusätzlicher Test für einen tatsächlich leeren HTTP-Body könnte die bereits vorhandene `_read_json_body`-Validierung noch expliziter dokumentieren. Die aktuelle Implementierung behandelt diesen Fall bereits kontrolliert mit HTTP 400; der vorhandene Test für `{}` deckt den fachlich leeren Payload ab.
