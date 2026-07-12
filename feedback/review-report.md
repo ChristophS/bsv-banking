@@ -8,30 +8,35 @@
 
 ## Zusammenfassung
 
-Die beiden API-Flows erfüllen die Muss-Anforderungen. Die Payload-Prüfung für vorgangs_id ist strikt, ungültige JSON-Inhalte und IDs werden gemäß bestehender Handler-Konvention als 400 beziehungsweise 404 beantwortet, und abgelehnte Verknüpfungen schreiben keine Zuordnung. Das idempotente Verhalten bleibt erhalten und wird durch lokale SQLite-Regressionstests abgesichert.
+Die Änderungen erfüllen die zentralen Anforderungen des Arbeitspakets. Vorgangs- und Beleg-Verknüpfungen validieren Eingaben konsistenter, unterscheiden Validierungsfehler von unbekannten Fachobjekten und verwenden das bestehende JSON-Fehlerformat mit HTTP 400 beziehungsweise 404. Die Änderungen bleiben innerhalb der vorhandenen Architektur; der GitHub-Compare ist vollständig und der gemeldete Testlauf erfolgreich.
 
-## Review-Ergebnis
+# Review
 
-**Entscheidung: Angenommen**
+## Entscheidung
 
-### Geprüfte Anforderungen
+**Akzeptiert.**
 
-- `GET /api/transactions/<id>` liefert für eine fehlende ID 400 mit JSON-Fehlerobjekt und für unbekannte Transaktionen 404.
-- `POST /api/transactions/<id>/vorgaenge` akzeptiert ausschließlich ein Objekt mit exakt `vorgangs_id`.
-- `vorgangs_id` wird auf Stringtyp und nichtleeren Inhalt geprüft; `null`, Zahlen und Leerzeichenwerte werden mit 400 abgelehnt.
-- Ungültiges JSON sowie zusätzliche oder fehlende Payload-Felder werden mit 400 behandelt.
-- Unbekannte Transaktionen und Vorgänge werden über die bestehende `LookupError`-Konvention mit 404 beantwortet.
-- Die Store-Methode prüft beide Entitäten vor dem INSERT. Abgelehnte Anfragen erzeugen daher keine neue N:M-Zuordnung.
-- `INSERT OR IGNORE` und das bestehende idempotente Verhalten bleiben unverändert.
+## Geprüfte Anforderungen
 
-### Tests
+- Die Vorgangs-Payload validiert Textfelder wie `title`, `description` und `vorgangstyp` jetzt explizit und wandelt fremde Datentypen nicht mehr stillschweigend in Text um.
+- Verknüpfungslisten für Vorgänge akzeptieren nur Text-IDs und lehnen Zahlen, `null` und andere Datentypen mit HTTP 400 ab.
+- Die Beleg-Verknüpfungs-API verlangt eine nichtleere Zeichenkette als `vorgangs_id`.
+- Das Verknüpfen und Aufheben einer Beleg-Verknüpfung prüft sowohl Beleg als auch Vorgang. Unbekannte Fachobjekte führen zu HTTP 404.
+- Das bestehende Fehlerformat `{"error": "..."}` und die vorhandene HTTP-Konvention für Validierungs- und Lookup-Fehler werden beibehalten.
+- Die Änderungen verwenden weiterhin die bestehenden Tabellen, Store-Methoden und N:M-Verknüpfungen.
 
-Die ergänzten lokalen Dashboard-Regressionstests verwenden eine temporäre SQLite-Datenbank und prüfen HTTP-Status, JSON-Fehlerobjekte, fehlende Persistenzänderungen sowie doppelte gültige Verknüpfungen. Der gemeldete Testlauf umfasst 126 erfolgreiche Tests und 6 vorhandene optionale Browser-Skips ohne Fehler. Es werden keine externen Dienste oder produktiven Daten verwendet.
+## Persistenz und Integrität
 
-### Scope und Architektur
+Die Validierungen erfolgen vor den relevanten Schreiboperationen. Bei ungültigen oder unbekannten Verknüpfungen werden keine neuen Zuordnungen angelegt. Die ergänzten Tests prüfen außerdem, dass abgelehnte Erstellungs- und Verknüpfungsanfragen keine teilweise persistierten Daten hinterlassen.
 
-Die Änderung ist auf die Payload-Validierung im genannten POST-Flow und die zugehörigen Regressionstests begrenzt. Datenmodell, Tabellen, Fremdschlüssel und Persistenzarchitektur wurden nicht verändert. Die bestehende Vorgangsverknüpfung über `transaktion_vorgaenge` bleibt erhalten.
+## Tests
 
-### Hinweise
+Die ergänzten HTTP-Regressionstests decken ungültige Vorgangseingaben, unbekannte Vorgänge bei Änderung und Löschung sowie ungültige und unbekannte Beleg-Verknüpfungen ab. Laut Implementierungsbericht bestehen 129 Tests; sechs optionale Browser-Tests sind übersprungen. Das ist für dieses lokale API-Arbeitspaket plausibel, da keine externen Dienste benötigt werden.
 
-Der bereitgestellte vollständige Dateikontext zeigt an der entsprechenden Stelle noch die ältere `str(payload["vorgangs_id"])`-Variante, während der tatsächliche GitHub-Diff die neue Typ- und Leerwertprüfung enthält. Gemäß Quellenpriorität wurde für die Bewertung der tatsächliche GitHub-Diff herangezogen. Dieser Kontextabgleich sollte bei der nächsten automatischen Dateiladung konsistent sein, stellt auf Basis des geprüften Diffs jedoch keinen funktionalen Blocker dar.
+## Scope und Branch-Zustand
+
+Es wurden nur der API-Store, die zugehörigen Tests und der Implementierungsbericht geändert. Es gibt keine Änderungen am Datenmodell, an externen Integrationen oder an UI-Komponenten. Der Branch ist laut Compare einen Commit vor `main`, nicht hinter `main`, und weist keine fehlenden oder zusätzlichen Compare-Dateien auf.
+
+## Nicht blockierende Hinweise
+
+Für eine noch vollständigere Vertragsabdeckung wären explizite Tests der erfolgreichen Erstellungs-, Änderungs- und Löschoperationen sowie der ungültigen Beleg-ID bei der POST-Verknüpfung sinnvoll. Diese Ergänzungen sind jedoch kein Blocker, da die bestehenden Tests und die geprüfte Implementierung die zentralen Akzeptanzkriterien abdecken.
