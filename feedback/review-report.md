@@ -8,40 +8,56 @@
 
 ## Zusammenfassung
 
-Die Dashboard-Ansicht für manuelle Saldo-Korrekturen erfüllt die Muss-Anforderungen: vorhandene Korrekturen werden geladen und nachvollziehbar dargestellt, neue Korrekturen können mit Konto, Centbetrag, ISO-Stichtag und Begründung angelegt werden, Validierungs-, Erfolgs- und Fehlerzustände sind sichtbar, und die Liste wird nach dem Speichern aktualisiert. Die Oberfläche weist ausdrücklich auf manuelle Prüfung und unveränderte Originaltransaktionen hin. Der Branch ist im GitHub-Compare sauber und enthält keine erkennbaren unerlaubten Änderungen.
+Die Anforderungen des Arbeitspakets sind durch die bestehenden To-Do-Validierungs- und Handlerpfade erfüllt und werden mit umfangreichen lokalen HTTP-Regressionstests abgesichert. Die Tests decken ungültige Payloads, unbekannte Vorgangs- und To-Do-IDs, JSON-Fehlerantworten, Statuscodes, atomare Persistenz sowie die bestehenden N:M-Verknüpfungen ab. GitHub Compare ist sauber und enthält keine fehlenden oder zusätzlichen Änderungen.
 
-## Review-Ergebnis
+# Technischer Review
 
-**Entscheidung: Akzeptiert**
+## Ergebnis
 
-### Erfüllte Anforderungen
+**Accepted:** ja
 
-- Abgegrenzte Dashboard-Sektion für manuelle Saldo-Korrekturen im bestehenden Transaktions-/Kontostandsworkflow ergänzt.
-- GET `/api/balance-corrections` wird beim Dashboard-Start geladen.
-- Angezeigt werden Konto, Anbieter beziehungsweise Kontonummer, Stichtag, Betrag, Begründung, Erstellzeitpunkt sowie der Hinweis auf manuelle Prüfung.
-- Formular sendet ausschließlich die bestehenden Pflichtfelder `account_id`, `balance_minor`, `balance_as_of` und `reason` als JSON an den bestehenden POST-Endpunkt.
-- Cent-Semantik ist eindeutig dokumentiert und wird vor dem Absenden auf Ganzzahligkeit und JavaScript-Safe-Integer-Grenze geprüft.
-- Native Pflichtfeld-/Datumsvalidierung und zusätzliche Betragsvalidierung verhindern ungültige Requests.
-- Eine verpflichtende Bestätigung der manuellen Prüfung ist vorhanden.
-- Die Oberfläche weist darauf hin, dass Originaltransaktionen nicht verändert werden.
-- Erfolgs- und Fehlerzustände werden im Formular angezeigt; serverseitige Fehlermeldungen werden weitergereicht.
-- Nach erfolgreichem POST wird die Korrekturliste ohne Seitenreload neu geladen.
-- Es existieren keine Lösch-, Widerrufs-, Ersetzungs- oder Bearbeitungsaktionen für Korrekturen.
-- Die Kontenauswahl verwendet die lokal bekannte Kontoliste aus dem bestehenden Transaktions-Payload; es wird kein neuer Kontostammdaten-Endpunkt eingeführt.
-- Leer-, Lade- und Fehlerzustände sind vorgesehen.
+## Geprüfter Umfang
 
-### Architektur- und Scope-Prüfung
+- `tests/test_dashboard.py`
+- `banking_dashboard/server.py`
+- GitHub-Diff des Commits `cf88e42fd3256b80873b37825c2925ebe0e8c607`
+- Runner- und GitHub-Compare-Status
 
-Die Umsetzung verwendet die vorhandenen `DashboardDataStore`-Methoden und die bestehenden GET-/POST-Endpunkte. Die Erweiterung von `balance_summary()` um `account_id` und `provider` bleibt lokal und dient ausschließlich der Kontenauswahl. Import-, Saldenketten-, Archivierungs- und Vorgangsarchitektur werden nicht umgebaut. Es gibt keine externen Banking- oder Login-Aktionen.
+## Bewertung der Muss-Anforderungen
 
-### Tests
+Die vorhandenen To-Do-Flows verwenden weiterhin die bestehende `DashboardDataStore`- und Handler-Architektur. Es wurde keine parallele Persistenz- oder API-Architektur eingeführt und das bestehende `todo_vorgaenge`-Verknüpfungsmodell bleibt unverändert.
 
-Die bestehenden Dashboard-API-Tests wurden um Prüfungen für die lokale Kontenauswahl, die UI-Struktur, den manuellen Prüfhinweis, die Request-Feldsemantik und das Fehlen einer Löschfunktion ergänzt. Syntax- und Diff-Prüfungen wurden laut Bericht erfolgreich ausgeführt. Die UI-nahe Absicherung ist akzeptabel, auch wenn ein echter Browser-End-to-End-Test des Korrekturformulars als spätere Verbesserung sinnvoll wäre.
+Die vollständige Prüfung von `banking_dashboard/server.py` bestätigt:
 
-### GitHub-Status
+- `create_todo` und `update_todo` lehnen unbekannte Felder ab.
+- Prioritäten werden gegen `niedrig`, `normal` und `hoch` validiert.
+- Fälligkeitsdaten werden als ISO-Datum validiert.
+- `vorgangs_ids` müssen Listen sein und werden gegen vorhandene Vorgänge geprüft.
+- Unbekannte Vorgangsreferenzen lösen `LookupError` aus.
+- Unbekannte To-Do-IDs bei Update und Delete lösen `LookupError` aus.
+- Die Handler bilden `ValueError` konsistent auf HTTP 400 und `LookupError` auf HTTP 404 mit einem JSON-Objekt mit `error` ab.
+- Fehler während der Linkvalidierung werden vor dem Commit ausgelöst; uncommittete Änderungen werden beim Schließen der Verbindung verworfen.
+- Erfolgreiche Flows verwenden weiterhin `_replace_todo_vorgaenge` und damit die bestehende N:M-Tabelle.
 
-Der Branch liegt laut Compare einen Commit vor `main`, ist nicht hinter `main` und weist keine fehlenden oder zusätzlichen Compare-Dateien auf. Die geänderten Dateien entsprechen dem Arbeitspaket; die Anpassung des Implementation Reports ist unkritisch.
+## Tests
 
-### Hinweise
+Die neuen Tests in `tests/test_dashboard.py` decken ab:
 
-Die Entscheidung basiert auf dem tatsächlichen GitHub-Diff für die geänderten Stellen. Die bereitgestellten vollständigen Dateiinhalte enthalten bei `balance_summary()` eine sichtbare Abweichung zum Diff; diese wirkt wie eine Kontext-/Snapshot-Inkonsistenz, da der Diff und der Implementation Report die Änderung konsistent ausweisen und die Änderung selbst funktional plausibel ist.
+- POST mit unbekanntem Feld, ungültiger Priorität, ungültigem Datum und nicht listenförmigen `vorgangs_ids`.
+- PATCH mit denselben relevanten ungültigen Eingaben.
+- HTTP-400-Statuscodes und JSON-Fehlerobjekte.
+- POST und PATCH mit nicht vorhandenen Vorgangs-IDs und HTTP 404.
+- Keine partiellen Änderungen an To-Dos oder `todo_vorgaenge` nach fehlgeschlagenem PATCH.
+- Kein zurückbleibendes To-Do nach fehlgeschlagenem POST.
+- PATCH und DELETE mit unbekannter To-Do-ID und HTTP 404 einschließlich konsistentem Fehlertext.
+- Erfolgreiche Erstellung, Änderung, Löschung und Vorgangsverknüpfungen über den bestehenden CRUD-Test.
+
+Die Tests verwenden eine temporäre SQLite-Datenbank und den lokalen Testserver. Browser, Netzwerkzugriff, Secrets und produktive Laufzeitdaten sind für dieses Arbeitspaket nicht erforderlich.
+
+## Diff- und Scope-Prüfung
+
+Der GitHub-Diff enthält ausschließlich die präzisierten Regressionstests und die aktualisierte Implementierungsdokumentation. Es gibt keine unerlaubten Änderungen an Datenmodell, UI oder anderen API-Bereichen. Runner und GitHub Compare stimmen überein; der Branch ist einen Commit vor `main`, nicht hinterher und enthält keine fehlenden oder zusätzlichen Compare-Dateien.
+
+## Entscheidung
+
+Die Muss-Anforderungen und Akzeptanzkriterien sind erfüllt. Die Implementierung kann angenommen werden.
