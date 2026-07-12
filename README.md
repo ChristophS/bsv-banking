@@ -616,6 +616,83 @@ Frauen-Wettbewerben zu den Damen und in Herren-Wettbewerben zu Herren 1.
 Der Zusatz `I` steht ebenfalls fuer Herren 1, `II` fuer Herren 2. Weitere
 Mannschaften werden ignoriert.
 
+### Entscheidungsvorlage: DFBnet-Vereinsdaten fuer Spendenbescheinigungen
+
+Eine DFBnet-Anbindung ist fuer Spendenbescheinigungen hoechstens als
+optionale Lesehilfe sinnvoll. Die verbindliche Bescheinigungsgrundlage muss
+lokal, versioniert und nachvollziehbar gepflegt werden. DFBnet ist weder die
+Quelle fuer Spendenempfaenger noch ein Ersatz fuer lokale Vereinsstammdaten
+oder die lokale Bescheinigungslogik. Spendenempfaenger bleiben eigenstaendige
+lokale Daten; Dokumente werden weiterhin ueber die bestehenden Vorgangs- und
+Belegverknuepfungen zugeordnet. Eine direkte Beziehung zwischen DFBnet-Daten
+und Empfaenger-, Transaktions-, Vorgangs- oder Belegtabellen ist nicht
+vorgesehen.
+
+Fuer einen Bescheinigungsentwurf werden mindestens folgende Vereinsdaten
+benoetigt und muessen lokal die fachlich verbindliche Quelle haben:
+
+- vollstaendiger Vereinsname, Rechtsform und ladungsfaehige Anschrift;
+- zustaendiges Finanzamt und Steuernummer;
+- Art, Datum, Bezugszeitraum und Aktenzeichen des aktuell massgeblichen
+  Freistellungsbescheids oder der Anlage zum Koerperschaftsteuerbescheid;
+- die darin bestaetigten steuerbeguenstigten Zwecke;
+- Aussteller beziehungsweise zeichnungsberechtigte Funktion sowie die lokal
+  freigegebene Text- oder Formularversion.
+
+DFBnet koennte allenfalls Vereinsname, Anschrift und technische Vereinskennung
+als unverbindliche Vergleichswerte liefern. Ob diese Felder dort vollstaendig,
+aktuell und fuer diesen Zweck fachlich massgeblich sind, ist vor einer
+Umsetzung zu klaeren. Steuerdaten, Bescheiddaten, Zwecke,
+Zeichnungsberechtigungen und freigegebene Texte duerfen nicht aus einer
+DFBnet-Anzeige abgeleitet werden. Abweichungen werden angezeigt und manuell
+geklaert; externe Werte duerfen lokale Werte nie still ueberschreiben.
+
+Die bestehende Spielerpraemien-Integration liefert nur Sicherheits- und
+Isolationsmuster: ein separates Browserprofil, ausschliesslich lokal geladene
+Credentials, geschuetzte Laufzeitverzeichnisse, deaktivierte Downloads,
+gekapselte Fehler und maskierte Loginfelder in Fehler-Screenshots. Ihre
+Selektoren, Navigation und Ergebnisdateien sind keine fachliche Grundlage fuer
+Spendenbescheinigungen. Ein spaeterer Adapter benoetigt ein eigenes Profil und
+einen eigenen Ergebnisbereich. Er darf nur Seiten lesen; Formulare absenden,
+Daten aendern, Dateien hochladen oder andere schreibende DFBnet-Aktionen sind
+verboten. Bei unklarer Seitensituation oder fehlenden Feldern muss er ohne
+lokale Aenderung abbrechen.
+
+Als getrennte Schnittstelle ist beispielsweise ein
+`DfbnetClubDataReader.read_club_snapshot() -> ClubDataSnapshot` denkbar. Das
+Snapshot-DTO enthaelt nur explizit freigegebene Vergleichsfelder, eine
+technische Vereinskennung, den Lesezeitpunkt, Herkunft und
+Vollstaendigkeitswarnungen. Der Adapter kennt weder Datenbankmodelle noch
+Bescheinigungen und schreibt nicht in den Store. Ein separater
+Anwendungsdienst vergleicht das Snapshot mit lokalen Stammdaten und gibt
+Abweichungen zur manuellen Bestaetigung aus. Falls spaeter ein Import
+freigegeben wird, muss er bewusst ausgeloest, feldweise bestaetigt und mit
+Quelle sowie Zeitpunkt protokolliert werden; die lokale Historie bleibt
+erhalten. Vorgaenge bleiben das zentrale fachliche Objekt.
+
+Technische und fachliche Risiken sind insbesondere instabile Selektoren und
+Webablaeufe, geaenderte Anmeldung oder Berechtigungen, zeitweise
+Nichtverfuegbarkeit, unvollstaendige beziehungsweise veraltete Stammdaten und
+die fehlende fachliche Autoritaet von DFBnet fuer steuerliche Angaben. Auch
+ein erfolgreich gelesener Wert ist daher kein Nachweis seiner Richtigkeit.
+
+Eine Implementierung kommt nur in Betracht, wenn Datenfelder und erlaubter
+Zugriffsweg dokumentiert und freigegeben sind, der Lesezugriff die
+Nutzungsbedingungen einhaelt, ein fachlich verantwortlicher Prozess fuer
+Abweichungen besteht und der Nutzen den Wartungsaufwand der instabilen
+Weboberflaeche rechtfertigt. Sie ist zu verwerfen, wenn Pflichtdaten fehlen,
+nur schreibend oder unzuverlaessig erreichbar sind, DFBnet als verbindliche
+steuerliche Quelle behandelt werden muesste oder keine manuelle Kontrolle
+gewollt ist.
+
+Eine spaetere Umsetzung darf ausschliesslich mit synthetischen HTML-Fixtures,
+Mocks oder Fakes getestet werden. Tests duerfen weder echte Credentials noch
+produktive Logins, Netzwerkanfragen, Browserprofile oder DFBnet-Schreibaktionen
+verwenden. Zu pruefen sind mindestens vollstaendige und unvollstaendige
+Snapshots, Layoutaenderungen, Authentifizierungs- und Lesefehler, der Abbruch
+ohne lokale Seiteneffekte sowie die manuell bestaetigte Uebernahme. Ein echter
+DFBnet-Lauf ist kein manueller Testschritt.
+
 ## Lokale Daten und Sicherheit
 
 Standardmaessig liegen alle Laufzeitdaten unter `.runtime/`:
