@@ -2679,6 +2679,17 @@ th[aria-sort="descending"] .sort-indicator {
   min-width: 0;
 }
 
+.split-vorgang-field {
+  min-width: 0;
+}
+
+.split-vorgang-hint {
+  margin: 5px 0 0;
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .split-field input,
 .split-field select {
   width: 100%;

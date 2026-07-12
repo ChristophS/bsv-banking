@@ -7421,15 +7421,19 @@ function entityPreviewLabel(type) {
 }
 
 async function renderTransactionPreview(transaktionsId) {
-  const [transactionResponse, optionsResponse] = await Promise.all([
+  const [transactionResponse, splitsResponse, optionsResponse] = await Promise.all([
     fetch(`/api/transactions/${encodeURIComponent(transaktionsId)}`),
+    fetch(`/api/transactions/${encodeURIComponent(transaktionsId)}/splits`),
     fetch("/api/classification-options"),
   ]);
-  const [payload, options] = await Promise.all([
+  const [payload, splitsPayload, options] = await Promise.all([
     readResponse(transactionResponse),
+    readResponse(splitsResponse),
     readResponse(optionsResponse),
   ]);
   const transaction = payload.transaction;
+  transaction.splits = splitsPayload.splits || [];
+  transaction.zulaessige_vorgaenge = splitsPayload.zulaessige_vorgaenge || [];
   state.classificationOptions = options;
   elements.entityPreviewTitle.textContent =
     transaction.zahlungsbeteiligter || transaction.verwendungszweck || transaktionsId;
@@ -7806,19 +7810,22 @@ async function openTransaction(transaktionsId) {
 async function loadTransactionWorkspace(transaktionsId, ruleStatus = "") {
   const [
     transactionResponse,
+    splitsResponse,
     rulesResponse,
     completionRulesResponse,
     optionsResponse,
     suggestionsPayload,
   ] = await Promise.all([
     fetch(`/api/transactions/${encodeURIComponent(transaktionsId)}`),
+    fetch(`/api/transactions/${encodeURIComponent(transaktionsId)}/splits`),
     fetch("/api/rules"),
     fetch("/api/completion-rules"),
     fetch("/api/classification-options"),
     loadVorgangSuggestions("transaction", transaktionsId).catch(() => null),
   ]);
-  const [payload, rulesPayload, completionRulesPayload, options] = await Promise.all([
+  const [payload, splitsPayload, rulesPayload, completionRulesPayload, options] = await Promise.all([
     readResponse(transactionResponse),
+    readResponse(splitsResponse),
     readResponse(rulesResponse),
     readResponse(completionRulesResponse),
     readResponse(optionsResponse),
@@ -7828,6 +7835,9 @@ async function loadTransactionWorkspace(transaktionsId, ruleStatus = "") {
   state.ruleMatchOperators = completionRulesPayload.match_operators;
   state.ruleLogicConnectors = completionRulesPayload.logic_connectors;
   state.classificationOptions = options;
+  payload.transaction.splits = splitsPayload.splits || [];
+  payload.transaction.zulaessige_vorgaenge =
+    splitsPayload.zulaessige_vorgaenge || [];
   renderDetail(
     payload.transaction,
     rulesPayload,
@@ -9244,6 +9254,7 @@ function updateVorgangDisplays(vorgaenge) {
 function appendSplitEditor(transaction, target = elements.detailContent) {
   const originalAmount = Number(transaction.betrag_cent || 0);
   let splits = (transaction.splits || []).map((split) => ({...split}));
+  let allowedVorgaenge = transaction.zulaessige_vorgaenge || [];
   const section = document.createElement("section");
   section.className = "detail-section split-editor";
   const headingRow = document.createElement("div");
@@ -9389,7 +9400,7 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
         split.professional_description ?? split.fachliche_beschreibung ?? "",
         "professional",
       ),
-      splitInput("Vorgangs-ID", split.vorgangs_id || "", "vorgang"),
+      splitVorgangField(split.vorgangs_id || "", allowedVorgaenge),
     );
     configureSplitClassificationFields(row);
     const meta = document.createElement("div");
@@ -9452,6 +9463,8 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
         )}/splits`,
       );
       const result = await readResponse(response);
+      allowedVorgaenge = result.zulaessige_vorgaenge || [];
+      transaction.zulaessige_vorgaenge = allowedVorgaenge;
       renderRows(result.splits || []);
       status.className = "save-state is-saved";
       status.textContent = "Splits geladen";
@@ -9547,6 +9560,55 @@ function splitInput(label, value, key) {
   input.dataset[`split${key[0].toUpperCase()}${key.slice(1)}`] = "true";
   field.append(fieldLabel, input);
   return field;
+}
+
+function splitVorgangField(value, vorgaenge) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "split-vorgang-field";
+  const field = document.createElement("label");
+  field.className = "split-field";
+  const fieldLabel = document.createElement("span");
+  fieldLabel.className = "detail-label";
+  fieldLabel.textContent = "Vorgang";
+  const select = document.createElement("select");
+  select.dataset.splitVorgang = "true";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "Nicht zugeordnet";
+  select.append(blank);
+  for (const vorgang of vorgaenge) {
+    const option = document.createElement("option");
+    option.value = vorgang.vorgangs_id;
+    const title = vorgang.titel || vorgang.vorgangs_id;
+    option.textContent = `${title} · ${formatStatus(vorgang.status)}`;
+    option.title = vorgang.vorgangs_id;
+    select.append(option);
+  }
+  select.value = [...select.options].some((option) => option.value === value)
+    ? value
+    : "";
+  const hint = document.createElement("p");
+  hint.className = "split-vorgang-hint";
+  hint.setAttribute("aria-live", "polite");
+  const updateHint = () => {
+    const selected = vorgaenge.find(
+      (vorgang) => vorgang.vorgangs_id === select.value,
+    );
+    if (!selected) {
+      hint.textContent = "Kein Vorgang zugeordnet.";
+      return;
+    }
+    const belege = selected.belege || [];
+    const belegText = belege.length
+      ? belege.map((beleg) => beleg.dateiname || beleg.beleg_id).join(", ")
+      : "Keine Belege vorhanden";
+    hint.textContent = `Status: ${formatStatus(selected.status)} · Belege des Vorgangs: ${belegText}`;
+  };
+  select.addEventListener("change", updateHint);
+  field.append(fieldLabel, select);
+  wrapper.append(field, hint);
+  updateHint();
+  return wrapper;
 }
 
 function splitSphereField(value) {
