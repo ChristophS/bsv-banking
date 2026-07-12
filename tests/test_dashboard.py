@@ -3344,6 +3344,77 @@ class DashboardHTTPTests(unittest.TestCase):
                 [1000, 1500],
             )
 
+        malformed_json_request = Request(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            data=b'{"splits": [',
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with self.assertRaises(HTTPError) as malformed_json_error:
+            urlopen(malformed_json_request, timeout=5)
+        self.assertEqual(malformed_json_error.exception.code, 400)
+        self.assertEqual(
+            json.loads(
+                malformed_json_error.exception.read().decode("utf-8")
+            ),
+            {"error": "Ungültiger JSON-Inhalt."},
+        )
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer/splits",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+        self.assertEqual(
+            [split["betrag_cent"] for split in payload["splits"]],
+            [1000, 1500],
+        )
+
+        for invalid_amount in (2500.0, "2500", True):
+            with self.subTest(invalid_amount=invalid_amount):
+                invalid_type_request = Request(
+                    self.base_url + "/api/transactions/tx_newer/splits",
+                    data=json.dumps(
+                        {"splits": [{"betrag_cent": invalid_amount}]}
+                    ).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="PUT",
+                )
+                with self.assertRaises(HTTPError) as invalid_type_error:
+                    urlopen(invalid_type_request, timeout=5)
+                self.assertEqual(invalid_type_error.exception.code, 400)
+                self.assertIn(
+                    "ganzzahligen Betrag",
+                    json.loads(
+                        invalid_type_error.exception.read().decode("utf-8")
+                    )["error"],
+                )
+                with urlopen(
+                    self.base_url + "/api/transactions/tx_newer/splits",
+                    timeout=5,
+                ) as response:
+                    payload = json.load(response)
+                self.assertEqual(
+                    [split["betrag_cent"] for split in payload["splits"]],
+                    [1000, 1500],
+                )
+
+        for path in (
+            "/api/transactions/tx_missing/splits",
+            "/api/transactions//splits",
+        ):
+            with self.subTest(path=path):
+                with self.assertRaises(HTTPError) as get_error:
+                    urlopen(self.base_url + path, timeout=5)
+                self.assertEqual(
+                    get_error.exception.code,
+                    404 if "tx_missing" in path else 400,
+                )
+                self.assertTrue(
+                    json.loads(
+                        get_error.exception.read().decode("utf-8")
+                    )["error"]
+                )
+
         missing_request = Request(
             self.base_url + "/api/transactions/tx_missing/splits",
             data=json.dumps({"splits": []}).encode("utf-8"),
