@@ -2,7 +2,7 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Restliche kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
+## 1. Weitere Transaktions-API-Flows auf Eingabevalidierung und Fehlerantworten prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -10,18 +10,56 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
 
-**Teilpaket:** Teil 2.2
+**Teilpaket:** Teil 2.3
 
 **Priorität:** hoch
 
-**Grund:** Der ursprüngliche Prüfauftrag umfasst neben To-Dos auch Transaktionen, Vorgänge, Belege und Termine. Diese Endpunkte bleiben offen, werden aber nach der abgegrenzten To-Do-Absicherung separat geprüft.
+**Grund:** Neben der einzelnen Klassifikationsaktualisierung bleiben Detail-, Vorgangsverknüpfungs- und Split-nahe Transaktionsendpunkte separat auf konsistente Validierung, Statuscodes und atomare Fehlerpfade zu prüfen.
 
 **Feedback:**
 
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
 
-## 2. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
+## 2. Vorgangs- und Beleg-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
+
+**Epic-ID:** epic-system-consistency
+
+**Epic-Titel:** Systematische Qualitäts- und Konsistenzprüfung des Vereins-Finanztools
+
+**Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
+
+**Teilpaket:** Teil 2.4
+
+**Priorität:** hoch
+
+**Grund:** Erstellen, Ändern, Löschen und Verknüpfen von Vorgängen und Belegen müssen getrennt auf korrekte Statuscodes, erlaubte Eingabefelder und verständliche Fehlerpfade geprüft werden.
+
+**Feedback:**
+
+- gesamten Code auf Konsistenz und Funktion prüfen
+- Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
+
+## 3. Termin-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
+
+**Epic-ID:** epic-system-consistency
+
+**Epic-Titel:** Systematische Qualitäts- und Konsistenzprüfung des Vereins-Finanztools
+
+**Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
+
+**Teilpaket:** Teil 2.5
+
+**Priorität:** mittel
+
+**Grund:** Termin-Erstellung, -Änderung und -Löschung sollen Datums-, Status- und Verknüpfungsfehler einheitlich ablehnen und keine unvollständigen Änderungen hinterlassen.
+
+**Feedback:**
+
+- gesamten Code auf Konsistenz und Funktion prüfen
+- Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
+
+## 4. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -40,7 +78,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Architekturregel: Vorgänge und bestehende Verknüpfungsstrukturen verwenden
 
-## 3. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
+## 5. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -59,7 +97,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Projektregel: externe Dienste nur mit Mocks, Fakes oder Fixtures testen
 
-## 4. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
+## 6. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
 
 **Epic-ID:** epic-balance-correction
 
@@ -77,7 +115,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen.
 
-## 5. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
+## 7. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
 
 **Epic-ID:** epic-balance-correction
 
@@ -95,7 +133,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen.
 
-## 6. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
+## 8. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
 
 **Epic-ID:** epic-cashier-usability
 
@@ -113,7 +151,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 
-## 7. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
+## 9. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
 
 **Epic-ID:** epic-cashier-usability
 
@@ -132,7 +170,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - maximalen Benutzerkomfort ohne Leistungs- und Featureeinbußen erreichen
 - Vorhaben: Kassiererfreundliche Arbeitsabläufe
 
-## 8. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
+## 10. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -151,7 +189,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 - Architekturregel: Vorgänge sind das zentrale fachliche Objekt
 
-## 9. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
+## 11. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -170,7 +208,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
 - Bestehender Dashboard-Kontext: Abschlussprüfungen und Klassifikationsstatus
 
-## 10. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
+## 12. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
 
 **Epic-ID:** epic-cashier-usability
 
