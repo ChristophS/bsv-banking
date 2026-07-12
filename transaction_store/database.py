@@ -587,6 +587,8 @@ def create_donation_recipient(
     connection: sqlite3.Connection,
     recipient: DonationRecipient,
 ) -> DonationRecipient:
+    """Create a validated local donation recipient."""
+
     normalized = _normalize_donation_recipient(recipient)
     connection.execute(
         """
@@ -612,6 +614,8 @@ def update_donation_recipient(
     connection: sqlite3.Connection,
     recipient: DonationRecipient,
 ) -> DonationRecipient:
+    """Replace the editable fields of an existing donation recipient."""
+
     normalized = _normalize_donation_recipient(recipient)
     cursor = connection.execute(
         """
@@ -639,6 +643,8 @@ def update_donation_recipient(
 def list_donation_recipients(
     connection: sqlite3.Connection,
 ) -> list[DonationRecipient]:
+    """Return local donation recipients ordered by name and stable ID."""
+
     rows = connection.execute(
         """
         SELECT recipient_id, name, address_extra, street, postal_code,

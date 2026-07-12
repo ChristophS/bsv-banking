@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260712-125059`
+`agent2/rework-20260712-125240`
 
 ## Geänderte Dateien
 
@@ -30,6 +30,12 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
   durch die Transaktions-Suite abgesichert.
 
 ## Umgesetzte Punkte
+
+- Die fachlich relevanten Dateien wurden im aktuellen Rework-Arbeitsstand
+  erneut konsolidiert, sodass sie als validierbare Änderungen dieses
+  Rework-Laufs vorliegen.
+- Ein zusätzlicher Regressionstest weist nach, dass eine ungültige
+  Aktualisierung den bereits gespeicherten Empfänger unverändert lässt.
 
 - Schema-Version von 17 auf 18 erhöht und eine Migration nach Version 18 in
   das vorhandene SQLite-Migrationsverfahren aufgenommen.
@@ -64,7 +70,7 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
 
 ## Testergebnis
 
-- Transaktions-Suite: 37 bestanden.
+- Transaktions-Suite: 38 bestanden.
 - Dashboard-Suite: 112 bestanden, 6 übersprungen.
 - Die übersprungenen Tests sind vorhandene optionale Browser-/Umgebungstests.
 - `git diff --check` meldet keine Whitespace-Fehler.

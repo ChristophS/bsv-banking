@@ -70,6 +70,8 @@ class TransactionSplit:
 
 @dataclass(frozen=True)
 class DonationRecipient:
+    """Locally persisted recipient data for future donation certificates."""
+
     recipient_id: str
     name: str
     address_extra: str = ""

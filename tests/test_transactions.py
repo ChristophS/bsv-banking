@@ -118,6 +118,31 @@ class DatabaseConnectionTests(unittest.TestCase):
 
         self.assertEqual(0, count)
 
+    def test_invalid_update_keeps_existing_donation_recipient_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            connection = connect_database(Path(temp_dir) / "transactions.sqlite3")
+            try:
+                original = create_donation_recipient(
+                    connection,
+                    DonationRecipient(
+                        recipient_id="donor_1",
+                        name="Beispiel Verein",
+                        city="Musterstadt",
+                    ),
+                )
+
+                with self.assertRaisesRegex(ValueError, "darf nicht leer"):
+                    update_donation_recipient(
+                        connection,
+                        DonationRecipient(recipient_id="donor_1", name="  "),
+                    )
+
+                recipients = list_donation_recipients(connection)
+            finally:
+                connection.close()
+
+        self.assertEqual([original], recipients)
+
     def test_database_version_seventeen_migrates_donation_recipients(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "transactions.sqlite3"
