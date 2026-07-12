@@ -4447,6 +4447,29 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         )
                     )
 
+                    first_row = editor.locator(".split-row").first()
+                    first_top = first_row.locator("[data-split-top]")
+                    first_sub = first_row.locator("[data-split-sub]")
+                    first_sphere = first_row.locator("[data-split-sphere]")
+                    first_top.fill("")
+                    expect(first_sub).to_be_disabled()
+                    first_top.fill("Spielbetrieb")
+                    expect(first_sub).to_be_enabled()
+                    self.assertEqual(
+                        ["Eintritt"],
+                        first_sub.evaluate(
+                            """
+                            input => [...document.getElementById(input.list.id)
+                              .options].map(option => option.value)
+                            """
+                        ),
+                    )
+                    first_sphere.select_option("Vermögensverwaltung")
+                    first_sub.fill("Eintritt")
+                    expect(first_sphere).to_have_value(
+                        "Vermögensverwaltung"
+                    )
+
                     editor.locator("[data-split-amount]").first().fill("10,00")
                     editor.locator("button", has_text="Zeile hinzufuegen").click()
                     second_row = editor.locator(".split-row").last()
@@ -4496,6 +4519,10 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     self.assertEqual(
                         ["Teilbetrag Eintritt", "API Teil 2"],
                         [split["description"] for split in persisted],
+                    )
+                    self.assertEqual(
+                        "Vermögensverwaltung",
+                        persisted[0]["sphere"],
                     )
 
                     editor.locator("[data-split-amount]").first().fill("")
