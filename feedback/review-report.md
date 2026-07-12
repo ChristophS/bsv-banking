@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die nachgeladenen Dateien bestätigen die bestehende API-Persistenz und die UI-Serialisierung von vorgangs_id; der Diff setzt die geforderte Auswahl und die Beleghinweise ohne neue Beziehungen oder Endpunkte um.
+Der nachgeladene Kontext bestätigt die Migrationsreihenfolge, die bestehende Inbox-/Vorgangsarchitektur und die Test-Fixture. Die Umsetzung erfüllt die fachlichen Anforderungen ohne direkte Beleg-Transaktions-Beziehung.
 
 ## Zusammenfassung
 
-Akzeptiert: Der Split-Editor lädt zulässige Vorgänge über die bestehende Split-API, speichert ausschließlich vorgangs_id in der bestehenden Split-Payload und zeigt Status sowie Belege des ausgewählten Vorgangs an. Betrags- und Klassifikationslogik bleiben unverändert.
+Akzeptiert: Mail-Dokumente werden über einen opaken Bezug auf bestehende transaktion_vorgaenge-Einträge einem bereits mit dem Vorgang verknüpften Transaktionsbezug zugeordnet. Validierung, idempotentes Speichern, Auslesen und Migration sind vorhanden; die Tests decken den Zwei-Dokumente-/Zwei-Transaktionen-Fall sowie zentrale Fehlerfälle ab.
 
 # Review Report
 
@@ -22,36 +22,44 @@ Akzeptiert: Der Split-Editor lädt zulässige Vorgänge über die bestehende Spl
 
 ## Geprüfter Umfang
 
-- `banking_dashboard/static/app.js`
-- `banking_dashboard/static/styles.css`
-- `tests/test_dashboard.py`
-- Bestehende Split-API und Persistenz in `banking_dashboard/server.py`
+- Arbeitspaket: vorgangsbasierte Grundlage zur Zuordnung von Mail-Dokumenten zu Transaktionsbezügen
+- Maßgeblicher Commit: `31503eb18d720a2ca460793a0f849c367f39cc84`
+- Branch-Zustand: `ahead` um 2 Commits, nicht hinter `main`
 
-## Bewertung
+## Umsetzung
 
-Die Umsetzung erfüllt das Arbeitspaket:
+Die Umsetzung ergänzt eine interne Zuordnungsrepräsentation im `InboxMailStore`:
 
-- Das Transaktionsdetail und die Transaktionsvorschau laden zusätzlich `GET /api/transactions/<id>/splits` und übernehmen daraus sowohl `splits` als auch `zulaessige_vorgaenge`.
-- Jede Split-Zeile verwendet nun ein Select-Feld statt eines freien Vorgangs-ID-Eingabefelds. Die Optionen werden ausschließlich aus `zulaessige_vorgaenge` erzeugt.
-- Die leere Option ist eindeutig als **„Nicht zugeordnet“** gekennzeichnet.
-- Die Auswahl zeigt Titel beziehungsweise ID und Status. Für den gewählten Vorgang wird zusätzlich der Status sowie ein Hinweis **„Belege des Vorgangs“** mit den Belegdateinamen angezeigt; Vorgänge ohne Belege werden klar als **„Keine Belege vorhanden“** ausgewiesen.
-- Die Hilfetexte machen deutlich, dass Belege zum Vorgang gehören und keine direkte Split- oder Transaktion-Beleg-Beziehung erzeugt wird.
-- Die bestehende Serialisierung liest `data-split-vorgang` als `vorgangs_id` und sendet sie unverändert in der vorhandenen PUT-Payload. Eine leere Auswahl wird als leerer Wert gesendet und serverseitig als keine Zuordnung normalisiert.
-- Der vorhandene Serverkontext bestätigt, dass `GET /splits` die zulässigen, über `transaktion_vorgaenge` verknüpften Vorgänge einschließlich der über `vorgang_belege` abgeleiteten Belege liefert. Es wurden keine Tabellen, Entitäten oder zusätzlichen APIs eingeführt.
-- Reload des Editors ersetzt neben den Splits auch `zulaessige_vorgaenge`; neu gerenderte Zeilen setzen Auswahl und Beleghinweis anhand der geladenen Daten erneut.
-- Die Summen-, Betrags- und Klassifikationsbearbeitung bleibt im bestehenden Ablauf erhalten.
+- `assign_document_transaction_reference(...)` prüft Mail, Anhang, Vorgang, Transaktion, Mail-Vorgangs-Verknüpfung, Beleg-Vorgangs-Verknüpfung und die vorhandene Verknüpfung in `transaktion_vorgaenge`.
+- In `vorgang_belege` wird keine Transaktions-ID gespeichert. Stattdessen referenziert `vorgangsbezug_id` einen opaken `bezugs_id` der vorhandenen Tabelle `transaktion_vorgaenge`.
+- Beim Auslesen wird die Transaktions-ID ausschließlich per Join über den Vorgang und dessen vorhandene Transaktionsverknüpfung aufgelöst.
+- Der eindeutige partielle Index auf `(mail_inbox_id, mail_attachment_index)` verhindert mehrere Belegzuordnungen für dasselbe Mail-Dokument und ermöglicht idempotentes Wiederholen derselben Speicherung.
+- Der Lösch-Trigger entfernt einen nicht mehr auflösbaren Vorgangsbezug, wenn die zugehörige `transaktion_vorgaenge`-Zeile gelöscht wird.
+
+## Architektur- und Datenintegritätsbewertung
+
+Die vorgangsbasierte Architektur wird eingehalten:
+
+- Es wurde keine direkte Beleg-Transaktions- oder Mail-Anhang-Transaktions-Tabelle eingeführt.
+- Die persistierte Dokumentzuordnung enthält keinen Wert aus `transactions.transaction_id`.
+- Eine angebotene bzw. gespeicherte Transaktion ist nur über einen existierenden Datensatz in `transaktion_vorgaenge` für den gewählten Vorgang erreichbar.
+- Die Migration auf Schema-Version 17 ergänzt die benötigten Spalten, hinterlegt fehlende opake Bezugs-IDs für Bestandsverknüpfungen und entfernt die zuvor beanstandete direkte Spalte `transaktionsbezug_id`, falls sie in einer Version-16-Datenbank vorhanden ist.
 
 ## Tests
 
-Die Ergänzungen prüfen:
+Die ergänzten Tests verwenden SQLite-Testdaten und lokale Mail-Fixtures. Sie decken insbesondere ab:
 
-- die Ausgabe zulässiger Vorgänge mit Status und Belegdaten über den Split-Endpunkt,
-- die Vorauswahl einer gespeicherten `vorgangs_id` im Browser,
-- die Darstellung des Beleghinweises,
-- das Speichern der Zuordnung über den bestehenden PUT-Endpunkt.
+- zwei Anhänge derselben Mail,
+- zwei unterschiedliche Belege,
+- zwei unterschiedliche, mit demselben Vorgang verknüpfte Transaktionen,
+- idempotentes Wiederholen einer gültigen Zuordnung,
+- unbekannte Mail-Dokumente, Vorgänge und Transaktionen,
+- das Fehlen einer direkten Spalte `transaktionsbezug_id`,
+- das Auslesen der Transaktions-ID ausschließlich über den opaken Vorgangsbezug,
+- das Verhalten nach Entfernen einer `transaktion_vorgaenge`-Verknüpfung.
 
-Laut Umsetzungsbericht liefen `tests/test_dashboard.py` mit **110 passed, 6 skipped**. Die browserabhängigen Tests waren wegen fehlender lokaler Playwright/Chromium-Voraussetzungen übersprungen; dies ist plausibel dokumentiert und nicht blockierend.
+Der Implementierungsbericht dokumentiert zudem erfolgreiche Testläufe für Mail-Integration, Dashboard und Migrations-/Transaktionstests. Die im Diff sichtbaren Änderungen und der geladene Kontext sind damit konsistent.
 
-## Nicht-blockierender Verbesserungsvorschlag
+## Fazit
 
-Ein zusätzlicher Test für das Zurücksetzen auf „Nicht zugeordnet“ mit Persistenz und anschließendem Reload wäre eine sinnvolle weitere Regressionabsicherung.
+Die Akzeptanzkriterien des Teilpakets sind erfüllt. Die Lösung schafft eine auslesbare, serverseitig validierte und idempotente Grundlage für die spätere API- und UI-Umsetzung, ohne die zentrale Vorgangsarchitektur zu umgehen.
