@@ -14,7 +14,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Nach einer stabilen lokalen Empfänger-Persistenz soll die eigentliche Dokumenterzeugung als eigener, nachvollziehbarer Schritt umgesetzt werden. Die Zuordnung muss dabei die bestehende Vorgangsarchitektur verwenden.
+**Grund:** Nach der stabilen lokalen Empfänger-Persistenz soll die eigentliche Dokumenterzeugung als eigener, nachvollziehbarer Schritt umgesetzt werden. Die Zuordnung muss dabei die bestehende Vorgangsarchitektur verwenden.
 
 **Feedback:**
 
