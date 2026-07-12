@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260712-125747`
+`agent2/rework-20260712-125952`
 
 ## Geänderte Dateien
 
@@ -18,13 +18,14 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
 ## Nachbesserung nach Review
 
 - Der im Review beanstandete Widerspruch zwischen Diff und vollständigem
-  Dateistand ist im Rework-Branch behoben: Die vollständigen Dateien enthalten
-  nun nachweislich `DonationRecipient`, Schema-Version 18, die Migration
+  Dateistand ist im aktuellen Rework-Branch behoben: Die vollständigen Dateien
+  enthalten nachweislich `DonationRecipient`, Schema-Version 18, die Migration
   `_migrate_v17_to_v18`, die Tabelle `donation_recipients`, die drei
   Datenzugriffsfunktionen sowie die zugehörigen Tests und Imports.
-- Der aktuelle Branch zeigt diesen fachlichen Stand konsistent im Commit
-  `76c0577`; die Nacharbeit am Report verweist nun auf den tatsächlich
-  geprüften Rework-Branch `agent2/rework-20260712-125747`.
+- Branchangabe und Prüfstand wurden korrigiert. Dieser Report beschreibt den
+  Arbeitsbaum von `agent2/rework-20260712-125952` auf Basis des Ausgangs-HEAD
+  `ec1cc32`; er verweist nicht mehr auf den fremden Commit `76c0577` oder den
+  abgelehnten Vorgängerbranch.
 - Die vorhandene fachliche Umsetzung wurde unverändert erhalten, da der
   Blocker keinen fachlichen Defekt, sondern den fehlenden Quellstand am
   geprüften Commit betraf.
