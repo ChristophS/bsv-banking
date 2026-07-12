@@ -2800,6 +2800,145 @@ class DashboardHTTPTests(unittest.TestCase):
         self.thread.join(timeout=5)
         self.temporary_directory.cleanup()
 
+    def test_mail_document_assignment_api_validates_vorgang_context(self):
+        database_path = self.server.data_store.database_path
+        with closing(connect_database(database_path)) as connection:
+            connection.execute(
+                """
+                UPDATE transaktion_vorgaenge
+                SET bezugs_id = 'tvb_newer'
+                WHERE transaktions_id = 'tx_newer'
+                  AND vorgangs_id = 'vorgang_tx_newer'
+                """
+            )
+            connection.execute(
+                """
+                UPDATE transaktion_vorgaenge
+                SET bezugs_id = 'tvb_older'
+                WHERE transaktions_id = 'tx_older'
+                  AND vorgangs_id = 'vorgang_tx_older'
+                """
+            )
+            connection.commit()
+
+        endpoint = (
+            self.base_url
+            + "/api/vorgaenge/vorgang_tx_newer/mail-dokumentzuordnungen"
+        )
+        with urlopen(endpoint, timeout=5) as response:
+            initial = json.load(response)
+        self.assertEqual("vorgang_tx_newer", initial["vorgang"]["vorgangs_id"])
+        self.assertEqual(
+            ["tx_newer"],
+            [item["transaktions_id"] for item in initial["transaktionen"]],
+        )
+        self.assertEqual(["beleg_1"], [item["beleg_id"] for item in initial["dokumente"]])
+        self.assertIsNone(initial["zuordnungen"][0]["transaktions_id"])
+
+        update = Request(
+            endpoint,
+            data=json.dumps(
+                {
+                    "vorgangs_id": "vorgang_tx_newer",
+                    "zuordnungen": [
+                        {"beleg_id": "beleg_1", "transaktions_id": "tx_newer"}
+                    ],
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with urlopen(update, timeout=5) as response:
+            assigned = json.load(response)
+        self.assertEqual("tx_newer", assigned["zuordnungen"][0]["transaktions_id"])
+
+        # Derselbe Zustand ist idempotent.
+        with urlopen(update, timeout=5) as response:
+            duplicate = json.load(response)
+        self.assertEqual(assigned["zuordnungen"], duplicate["zuordnungen"])
+
+        invalid_payloads = (
+            ({"zuordnungen": [{"beleg_id": "missing", "transaktions_id": None}]}, 404),
+            ({"zuordnungen": [{"beleg_id": "beleg_1", "transaktions_id": "missing"}]}, 404),
+            ({"zuordnungen": [{"beleg_id": "beleg_1", "transaktions_id": "tx_older"}]}, 400),
+            ({"vorgangs_id": "vorgang_tx_older", "zuordnungen": []}, 400),
+            ({"zuordnungen": [], "direkte_beziehung": True}, 400),
+        )
+        for payload, expected_status in invalid_payloads:
+            with self.subTest(payload=payload):
+                request = Request(
+                    endpoint,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="PUT",
+                )
+                with self.assertRaises(HTTPError) as error:
+                    urlopen(request, timeout=5)
+                self.assertEqual(expected_status, error.exception.code)
+
+        with urlopen(endpoint, timeout=5) as response:
+            unchanged = json.load(response)
+        self.assertEqual("tx_newer", unchanged["zuordnungen"][0]["transaktions_id"])
+
+        with closing(connect_database(database_path)) as connection:
+            self.assertNotIn(
+                "transaktions_id",
+                {
+                    str(row["name"])
+                    for row in connection.execute("PRAGMA table_info(vorgang_belege)")
+                },
+            )
+
+    def test_created_vorgang_keeps_resolvable_document_assignment_on_update(self):
+        created = self.server.data_store.create_vorgang(
+            {
+                "title": "Mail-Dokumentzuordnung",
+                "transaction_ids": ["tx_newer"],
+                "beleg_ids": ["beleg_1"],
+            }
+        )
+        vorgangs_id = created["vorgangs_id"]
+        endpoint = (
+            self.base_url
+            + f"/api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen"
+        )
+        update = Request(
+            endpoint,
+            data=json.dumps(
+                {
+                    "zuordnungen": [
+                        {"beleg_id": "beleg_1", "transaktions_id": "tx_newer"}
+                    ]
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with urlopen(update, timeout=5) as response:
+            assigned = json.load(response)
+        self.assertEqual("tx_newer", assigned["zuordnungen"][0]["transaktions_id"])
+
+        self.server.data_store.update_vorgang(
+            vorgangs_id,
+            {"title": "Mail-Dokumentzuordnung aktualisiert"},
+        )
+
+        with urlopen(endpoint, timeout=5) as response:
+            reloaded = json.load(response)
+        self.assertEqual("tx_newer", reloaded["zuordnungen"][0]["transaktions_id"])
+        with closing(
+            connect_database(self.server.data_store.database_path)
+        ) as connection:
+            reference = connection.execute(
+                """
+                SELECT bezugs_id
+                FROM transaktion_vorgaenge
+                WHERE vorgangs_id = ? AND transaktions_id = 'tx_newer'
+                """,
+                (vorgangs_id,),
+            ).fetchone()["bezugs_id"]
+        self.assertTrue(str(reference).startswith("tvb_"))
+
     def test_dashboard_and_api_are_served(self):
         with urlopen(self.base_url + "/", timeout=5) as response:
             html = response.read().decode("utf-8")

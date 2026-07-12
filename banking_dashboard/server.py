@@ -730,10 +730,14 @@ class DashboardDataStore:
             cursor = connection.execute(
                 """
                 INSERT OR IGNORE INTO transaktion_vorgaenge (
-                    transaktions_id, vorgangs_id
-                ) VALUES (?, ?)
+                    transaktions_id, vorgangs_id, bezugs_id
+                ) VALUES (?, ?, ?)
                 """,
-                (cleaned_transaction_id, cleaned_vorgangs_id),
+                (
+                    cleaned_transaction_id,
+                    cleaned_vorgangs_id,
+                    f"tvb_{uuid4().hex}",
+                ),
             )
             if cursor.rowcount == 1:
                 connection.execute(
@@ -1405,6 +1409,188 @@ class DashboardDataStore:
         detail["abschluss_moeglich"] = requirements["can_complete"]
         detail["abschluss_blocker"] = requirements["issues"]
         return detail
+
+    def mail_document_assignments(self, vorgangs_id: str) -> dict[str, Any]:
+        cleaned_vorgangs_id = str(vorgangs_id or "").strip()
+        if not cleaned_vorgangs_id:
+            raise ValueError("Vorgangs-ID fehlt.")
+        with closing(self._connect()) as connection:
+            vorgang = connection.execute(
+                """
+                SELECT vorgangs_id, titel, vorgangstyp, status
+                FROM vorgaenge
+                WHERE vorgangs_id = ?
+                """,
+                (cleaned_vorgangs_id,),
+            ).fetchone()
+            if vorgang is None:
+                raise LookupError("Vorgang nicht gefunden.")
+            transaction_rows = connection.execute(
+                """
+                SELECT
+                    tv.transaktions_id,
+                    tv.bezugs_id,
+                    n.datum,
+                    n.zahlungsbeteiligter,
+                    n.verwendungszweck,
+                    n.betrag
+                FROM transaktion_vorgaenge AS tv
+                JOIN normalized_transactions AS n
+                  ON n.transaktions_id = tv.transaktions_id
+                WHERE tv.vorgangs_id = ?
+                ORDER BY n.datum DESC, tv.transaktions_id
+                """,
+                (cleaned_vorgangs_id,),
+            ).fetchall()
+            document_rows = connection.execute(
+                """
+                SELECT
+                    vb.beleg_id,
+                    b.dateiname,
+                    b.kategorie,
+                    b.dokumentdatum,
+                    b.betrag,
+                    vb.mail_inbox_id,
+                    vb.mail_attachment_index,
+                    tv.transaktions_id
+                FROM vorgang_belege AS vb
+                JOIN belege AS b ON b.beleg_id = vb.beleg_id
+                LEFT JOIN transaktion_vorgaenge AS tv
+                  ON tv.vorgangs_id = vb.vorgangs_id
+                 AND tv.bezugs_id = vb.vorgangsbezug_id
+                WHERE vb.vorgangs_id = ?
+                ORDER BY b.dateiname, vb.beleg_id
+                """,
+                (cleaned_vorgangs_id,),
+            ).fetchall()
+        return {
+            "vorgang": dict(vorgang),
+            "transaktionen": [dict(row) for row in transaction_rows],
+            "dokumente": [dict(row) for row in document_rows],
+            "zuordnungen": [
+                {
+                    "beleg_id": str(row["beleg_id"]),
+                    "transaktions_id": (
+                        str(row["transaktions_id"])
+                        if row["transaktions_id"] is not None
+                        else None
+                    ),
+                }
+                for row in document_rows
+            ],
+        }
+
+    def replace_mail_document_assignments(
+        self,
+        vorgangs_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        cleaned_vorgangs_id = str(vorgangs_id or "").strip()
+        if not isinstance(payload, dict):
+            raise ValueError("Der Request-Inhalt muss ein Objekt sein.")
+        unknown_fields = sorted(set(payload) - {"vorgangs_id", "zuordnungen"})
+        if unknown_fields:
+            raise ValueError("Unbekannte Felder: " + ", ".join(unknown_fields))
+        payload_vorgangs_id = payload.get("vorgangs_id", cleaned_vorgangs_id)
+        if not isinstance(payload_vorgangs_id, str) or (
+            payload_vorgangs_id.strip() != cleaned_vorgangs_id
+        ):
+            raise ValueError("Die Vorgangs-ID widerspricht der URL.")
+        assignments = payload.get("zuordnungen")
+        if not isinstance(assignments, list):
+            raise ValueError("Das Feld zuordnungen muss eine Liste sein.")
+
+        normalized: list[tuple[str, str | None]] = []
+        seen_document_ids: set[str] = set()
+        for index, item in enumerate(assignments, start=1):
+            if not isinstance(item, dict):
+                raise ValueError(f"Zuordnung {index} muss ein Objekt sein.")
+            item_unknown = sorted(set(item) - {"beleg_id", "transaktions_id"})
+            if item_unknown:
+                raise ValueError(
+                    f"Unbekannte Felder in Zuordnung {index}: "
+                    + ", ".join(item_unknown)
+                )
+            beleg_id = item.get("beleg_id")
+            transaction_id = item.get("transaktions_id")
+            if not isinstance(beleg_id, str) or not beleg_id.strip():
+                raise ValueError(f"Beleg-ID in Zuordnung {index} fehlt.")
+            cleaned_beleg_id = beleg_id.strip()
+            if cleaned_beleg_id in seen_document_ids:
+                raise ValueError(f"Beleg {cleaned_beleg_id} ist doppelt enthalten.")
+            if transaction_id is not None and (
+                not isinstance(transaction_id, str) or not transaction_id.strip()
+            ):
+                raise ValueError(
+                    f"Transaktions-ID in Zuordnung {index} ist ungueltig."
+                )
+            seen_document_ids.add(cleaned_beleg_id)
+            normalized.append(
+                (
+                    cleaned_beleg_id,
+                    transaction_id.strip() if transaction_id is not None else None,
+                )
+            )
+
+        with closing(self._connect(writable=True)) as connection:
+            if connection.execute(
+                "SELECT 1 FROM vorgaenge WHERE vorgangs_id = ?",
+                (cleaned_vorgangs_id,),
+            ).fetchone() is None:
+                raise LookupError("Vorgang nicht gefunden.")
+            for beleg_id, transaction_id in normalized:
+                if connection.execute(
+                    "SELECT 1 FROM belege WHERE beleg_id = ?", (beleg_id,)
+                ).fetchone() is None:
+                    raise LookupError(f"Beleg {beleg_id} wurde nicht gefunden.")
+                if connection.execute(
+                    """
+                    SELECT 1 FROM vorgang_belege
+                    WHERE vorgangs_id = ? AND beleg_id = ?
+                    """,
+                    (cleaned_vorgangs_id, beleg_id),
+                ).fetchone() is None:
+                    raise ValueError(
+                        f"Beleg {beleg_id} gehoert nicht zu diesem Vorgang."
+                    )
+                if transaction_id is not None:
+                    if connection.execute(
+                        "SELECT 1 FROM transactions WHERE transaction_id = ?",
+                        (transaction_id,),
+                    ).fetchone() is None:
+                        raise LookupError(
+                            f"Transaktion {transaction_id} wurde nicht gefunden."
+                        )
+                    if connection.execute(
+                        """
+                        SELECT 1 FROM transaktion_vorgaenge
+                        WHERE vorgangs_id = ? AND transaktions_id = ?
+                        """,
+                        (cleaned_vorgangs_id, transaction_id),
+                    ).fetchone() is None:
+                        raise ValueError(
+                            f"Transaktion {transaction_id} gehoert nicht zu diesem Vorgang."
+                        )
+            for beleg_id, transaction_id in normalized:
+                connection.execute(
+                    """
+                    UPDATE vorgang_belege
+                    SET vorgangsbezug_id = COALESCE((
+                        SELECT bezugs_id
+                        FROM transaktion_vorgaenge
+                        WHERE vorgangs_id = ? AND transaktions_id = ?
+                    ), '')
+                    WHERE vorgangs_id = ? AND beleg_id = ?
+                    """,
+                    (
+                        cleaned_vorgangs_id,
+                        transaction_id,
+                        cleaned_vorgangs_id,
+                        beleg_id,
+                    ),
+                )
+            connection.commit()
+        return self.mail_document_assignments(cleaned_vorgangs_id)
 
     def _validate_vorgang_completion_values(
         self,
@@ -3606,18 +3792,10 @@ class DashboardDataStore:
         vorgangs_id: str,
         values: dict[str, Any],
     ) -> None:
-        self._replace_link_rows(
+        self._replace_transaction_vorgang_links(
             connection,
-            table="transaktion_vorgaenge",
-            entity_table="transactions",
-            entity_column="transaction_id",
-            link_entity_column="transaktions_id",
-            link_vorgang_column="vorgangs_id",
-            entity_ids=values["transaction_ids"],
             vorgangs_id=vorgangs_id,
-            entity_label="Transaktion",
-            entity_first=True,
-            timestamp_column=None,
+            transaction_ids=values["transaction_ids"],
         )
         if _table_exists(connection, "inbox_vorgaenge"):
             self._replace_link_rows(
@@ -3676,6 +3854,81 @@ class DashboardDataStore:
         )
 
     @staticmethod
+    def _replace_transaction_vorgang_links(
+        connection: sqlite3.Connection,
+        *,
+        vorgangs_id: str,
+        transaction_ids: list[str],
+    ) -> None:
+        if transaction_ids:
+            placeholders = ", ".join("?" for _ in transaction_ids)
+            existing_transactions = {
+                str(row[0])
+                for row in connection.execute(
+                    f"""
+                    SELECT transaction_id
+                    FROM transactions
+                    WHERE transaction_id IN ({placeholders})
+                    """,
+                    tuple(transaction_ids),
+                )
+            }
+            missing = [
+                transaction_id
+                for transaction_id in transaction_ids
+                if transaction_id not in existing_transactions
+            ]
+            if missing:
+                raise LookupError(
+                    "Transaktion wurde nicht gefunden: " + ", ".join(missing)
+                )
+
+        requested = set(transaction_ids)
+        current_rows = connection.execute(
+            """
+            SELECT transaktions_id, bezugs_id
+            FROM transaktion_vorgaenge
+            WHERE vorgangs_id = ?
+            """,
+            (vorgangs_id,),
+        ).fetchall()
+        current = {
+            str(row["transaktions_id"]): row["bezugs_id"]
+            for row in current_rows
+        }
+
+        removed = set(current) - requested
+        if removed:
+            placeholders = ", ".join("?" for _ in removed)
+            connection.execute(
+                f"""
+                DELETE FROM transaktion_vorgaenge
+                WHERE vorgangs_id = ? AND transaktions_id IN ({placeholders})
+                """,
+                (vorgangs_id, *removed),
+            )
+
+        for transaction_id in transaction_ids:
+            if transaction_id not in current:
+                connection.execute(
+                    """
+                    INSERT INTO transaktion_vorgaenge (
+                        transaktions_id, vorgangs_id, bezugs_id
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (transaction_id, vorgangs_id, f"tvb_{uuid4().hex}"),
+                )
+            elif not str(current[transaction_id] or "").strip():
+                connection.execute(
+                    """
+                    UPDATE transaktion_vorgaenge
+                    SET bezugs_id = ?
+                    WHERE transaktions_id = ? AND vorgangs_id = ?
+                    """,
+                    (f"tvb_{uuid4().hex}", transaction_id, vorgangs_id),
+                )
+
+    @staticmethod
     def _replace_link_rows(
         connection: sqlite3.Connection,
         *,
@@ -3711,12 +3964,21 @@ class DashboardDataStore:
                     f"{entity_label} wurde nicht gefunden: "
                     + ", ".join(missing)
                 )
-        connection.execute(
-            f"DELETE FROM {table} WHERE {link_vorgang_column} = ?",
-            (vorgangs_id,),
-        )
         if not entity_ids:
+            connection.execute(
+                f"DELETE FROM {table} WHERE {link_vorgang_column} = ?",
+                (vorgangs_id,),
+            )
             return
+        retained_placeholders = ", ".join("?" for _ in entity_ids)
+        connection.execute(
+            f"""
+            DELETE FROM {table}
+            WHERE {link_vorgang_column} = ?
+              AND {link_entity_column} NOT IN ({retained_placeholders})
+            """,
+            (vorgangs_id, *entity_ids),
+        )
         columns = (
             (link_entity_column, link_vorgang_column)
             if entity_first
@@ -5424,6 +5686,22 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     }
                 )
                 return
+            assignment_suffix = "/mail-dokumentzuordnungen"
+            if (
+                parsed.path.startswith("/api/vorgaenge/")
+                and parsed.path.endswith(assignment_suffix)
+            ):
+                vorgangs_id = unquote(
+                    parsed.path[
+                        len("/api/vorgaenge/") : -len(assignment_suffix)
+                    ]
+                ).strip("/")
+                self._json_response(
+                    self.server.data_store.mail_document_assignments(
+                        vorgangs_id
+                    )
+                )
+                return
             if parsed.path.startswith("/api/vorgaenge/"):
                 vorgangs_id = unquote(
                     parsed.path.removeprefix("/api/vorgaenge/")
@@ -5662,6 +5940,24 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def do_PUT(self) -> None:
         parsed = urlparse(self.path)
         try:
+            assignment_prefix = "/api/vorgaenge/"
+            assignment_suffix = "/mail-dokumentzuordnungen"
+            if (
+                parsed.path.startswith(assignment_prefix)
+                and parsed.path.endswith(assignment_suffix)
+            ):
+                vorgangs_id = unquote(
+                    parsed.path[
+                        len(assignment_prefix) : -len(assignment_suffix)
+                    ]
+                ).strip("/")
+                self._json_response(
+                    self.server.data_store.replace_mail_document_assignments(
+                        vorgangs_id,
+                        self._read_json_body(),
+                    )
+                )
+                return
             prefix = "/api/transactions/"
             suffix = "/splits"
             if parsed.path.startswith(prefix) and parsed.path.endswith(suffix):

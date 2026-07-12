@@ -2,87 +2,96 @@
 
 ## Branchname
 
-`agent2/rework-20260712-114750`
+`agent2/rework-20260712-120459`
 
 ## Geänderte Dateien
 
-- `transaction_store/database.py`
-- `banking_dashboard/mail_integration.py`
-- `tests/test_mail_integration.py`
-- `tests/test_transactions.py`
+- `banking_dashboard/server.py`
+- `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
+
+Bereits vorhandene, nicht zu diesem Arbeitspaket gehörende Änderungen an
+`feedback/Review-report.md` und die unversionierte Datei
+`feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Schema-Version 17 entfernt die direkte Spalte `transaktionsbezug_id` aus
-  `vorgang_belege`. Stattdessen erhält der bestehende Verknüpfungssatz
-  `transaktion_vorgaenge` einen opaken `bezugs_id`; `vorgang_belege` speichert
-  ausschließlich diesen Vorgangsbezug in `vorgangsbezug_id`.
-- Die Zuordnung wird nur gespeichert, wenn Mail, Anhang, Beleg und Vorgang existieren,
-  die Mail und der Beleg bereits zum Vorgang gehören und die Kombination aus
-  Transaktion und Vorgang in `transaktion_vorgaenge` vorhanden ist.
-- Die auslesbare Zuordnungsrepräsentation enthält Inbox-ID, Anhangsindex,
-  Beleg-ID, Vorgangs-ID und die über den Vorgang aufgelöste Transaktions-ID.
-- Wiederholtes Speichern derselben Zuordnung ist idempotent; ein Anhang kann
-  nicht gleichzeitig einem anderen Beleg zugeordnet werden.
-- Beim Entfernen einer `transaktion_vorgaenge`-Verknüpfung wird der davon
-  abhängige Dokumentbezug geleert, damit keine nicht mehr auflösbare Zuordnung
-  bestehen bleibt.
-- SQLite-Fixture-Tests decken zwei Dokumente mit zwei unterschiedlichen
-  Transaktionsbezügen sowie unbekannte Dokumente, Vorgänge, Transaktionen und
-  Transaktionen außerhalb des Vorgangskontexts ab.
-- Der Regressionstest prüft zusätzlich, dass `vorgang_belege` keine
-  `transaktionsbezug_id` mehr enthält und der persistierte opake Vorgangsbezug
-  nicht der Transaktions-ID entspricht.
+- GET-Endpunkt
+  `/api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen` ergänzt.
+- PUT-Endpunkt unter demselben Pfad ergänzt.
+- UI-taugliche Ausgabe mit Vorgang, verknüpften Transaktionen, über
+  `vorgang_belege` verfügbaren Dokumenten und aktuellen Zuordnungen umgesetzt.
+- Bestehende Persistenz aus Teil 1 wiederverwendet:
+  `vorgang_belege.vorgangsbezug_id` verweist ausschließlich auf
+  `transaktion_vorgaenge.bezugs_id`.
+- Vorgang, Belege und Transaktionen sowie deren Zugehörigkeit zum adressierten
+  Vorgang werden vor jeder Änderung vollständig validiert.
+- Widersprüchliche Vorgangs-IDs, unbekannte Payload-Felder, ungültige Typen und
+  doppelte Beleg-IDs werden als Clientfehler abgewiesen.
+- Die Änderung ist idempotent; `null` hebt eine vorhandene Auswahl auf.
+- Neu über den Dashboard-Service angelegte Transaktion-Vorgang-Links erhalten
+  eine stabile `bezugs_id`.
+- Fehlerhafte Requests hinterlassen aufgrund vollständiger Vorvalidierung keine
+  partiellen Änderungen.
+- API- und Architekturtest ergänzt.
 
 ## Nachbesserung nach Review
 
-- Das blockierende Architekturproblem wurde behoben: Eine
-  `transactions.transaction_id` wird nicht mehr am Beleg-/Dokumentlink
-  persistiert.
-- Schreiben und Lesen erfolgen über den opaken Schlüssel des bereits bestehenden
-  Datensatzes in `transaktion_vorgaenge`; die Transaktions-ID wird erst beim Lesen
-  durch den Join auf diese Vorgangsverknüpfung aufgelöst.
-- Die Migration entfernt die beanstandete Spalte und den alten Trigger. Der neue
-  Trigger leert nur den opaken Vorgangsbezug, falls die zugrunde liegende
-  Vorgang-Transaktion-Verknüpfung gelöscht wird.
+- `_replace_vorgang_links` verwendet für Transaktionslinks nun eine gezielte
+  Ersetzung. Jeder neu angelegte Link erhält unmittelbar eine eindeutige,
+  nicht leere `tvb_...`-Referenz; vorhandene leere Referenzen werden repariert.
+- Unveränderte Transaktionslinks werden bei einem Vorgangs-Update nicht mehr
+  gelöscht. Dadurch bleibt ihre stabile `bezugs_id` erhalten und der
+  Löschtrigger leert keine weiterhin gültige Dokumentzuordnung.
+- Auch die vorhandene generische Link-Ersetzung löscht nur noch tatsächlich
+  entfernte Links. So bleibt insbesondere bei unveränderten Beleglinks die in
+  `vorgang_belege.vorgangsbezug_id` gespeicherte Auswahl erhalten.
+- Ein Regressionstest legt einen Vorgang über `create_vorgang` mit Transaktion
+  und Beleg an, speichert die Auswahl über PUT, aktualisiert den Vorgang über
+  `update_vorgang` und prüft danach per GET den weiterhin aufgelösten
+  Transaktionsbezug sowie die nicht leere `bezugs_id`.
 
 ## Nicht umgesetzte Punkte
 
-- Keine öffentliche API, UI oder JavaScript-Interaktion (für Teil 2 vorgesehen).
-- Keine automatische Vorgangserstellung oder Dokumentzuordnung.
-- Keine direkten Beleg-/Mail-Anhang-Transaktions-Tabellen oder Fremdschlüssel.
+- Keine Frontend-Bedienung; sie ist ausdrücklich nicht Teil des Pakets.
+- Keine neuen Tabellen oder direkten Transaktion-Beleg-Fremdschlüssel.
+- Keine externen Mail-, Graph-, Banking- oder Login-Aktionen.
 
 ## Ausgeführte Tests
 
-```text
-"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py
-"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py
-"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py
-git diff --check
-```
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k mail_document_assignment_api_validates_vorgang_context -q`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k 'mail_document_assignment_api_validates_vorgang_context or created_vorgang_keeps_resolvable_document_assignment_on_update' -q`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py tests/test_transactions.py`
+- `git diff --check`
 
 ## Testergebnis
 
-- Mail-Integration: `40 passed, 1 skipped`.
-- Dashboard: `110 passed, 6 skipped`.
-- Transaktions-/Migrationstests: `34 passed`.
-- `git diff --check`: keine Whitespace-Fehler; nur LF/CRLF-Hinweise.
+- Gezielte Tests nach Nachbesserung: 2 bestanden, 116 abgewählt; 5 Subtests bestanden.
+- Dashboard-Suite: 112 bestanden, 6 übersprungen.
+- Mail-/Transaktions-Suiten: 74 bestanden, 1 übersprungen.
+- Die übersprungenen Tests sind vorhandene optionale Browser-/Umgebungstests.
+- `git diff --check` meldet keine Whitespace-Fehler.
 
 ## Bekannte Einschränkungen
 
-- Für Teil 1 gilt die dokumentierte Annahme: genau ein Transaktionsbezug pro
-  Mail-Dokument. Eine spätere Neuzuordnung ersetzt den bisherigen Bezug.
-- Browserabhängige Tests wurden von der vorhandenen lokalen Testumgebung
-  übersprungen.
+- Mangels eindeutiger fachlicher Einschränkung im Arbeitspaket liefert die API
+  alle über `vorgang_belege` mit dem Vorgang verbundenen Belege. Mail-Herkunft
+  wird über `mail_inbox_id` und `mail_attachment_index` sichtbar gemacht, aber
+  nicht als zwingender Filter verwendet.
+- Ein PUT ändert nur die explizit übergebenen Belege; nicht genannte Belege
+  behalten ihre aktuelle Auswahl. Dadurch sind kleine, sichere UI-Updates
+  möglich.
 
 ## Hinweise für den Review-Agenten
 
-- Die Persistenz verwendet ausschließlich die bestehenden Knoten und
-  Verknüpfungen `inbox_attachments`, `inbox_vorgaenge`, `belege`,
-  `vorgang_belege` und `transaktion_vorgaenge`.
-- Die neuen Methoden liegen bewusst intern im `InboxMailStore`; eine öffentliche
-  Bearbeitungsroute wurde entsprechend der Abgrenzung von Teil 1 nicht ergänzt.
-- Die vorbestehende Änderung an `feedback/Review-report.md` sowie die vom Auftrag
-  bereitgestellte unversionierte Datei `feedback/agent2_prompt.md` wurden nicht
-  verändert.
+- Besonders relevant sind die Methoden `mail_document_assignments` und
+  `replace_mail_document_assignments` sowie die GET-/PUT-Routen in
+  `DashboardRequestHandler`.
+- Für die Nachbesserung sind außerdem `_replace_transaction_vorgang_links`
+  und das differenzielle Verhalten von `_replace_link_rows` relevant.
+- Der Test prüft Erfolg, Idempotenz, unbekannte IDs, fremden Kontext,
+  widersprüchliche IDs, unbekannte Felder, unveränderten Zustand nach Fehlern
+  und die Abwesenheit einer direkten `transaktions_id`-Spalte in
+  `vorgang_belege`.
+- Es wurde nicht committet und nicht gepusht.
