@@ -155,6 +155,12 @@ const elements = {
   totalBalanceLabel: document.querySelector("#total-balance-label"),
   totalBalanceNote: document.querySelector("#total-balance-note"),
   accountBalances: document.querySelector("#account-balances"),
+  balanceCorrectionCount: document.querySelector("#balance-correction-count"),
+  balanceCorrectionLoading: document.querySelector("#balance-correction-loading"),
+  balanceCorrectionEmpty: document.querySelector("#balance-correction-empty"),
+  balanceCorrectionList: document.querySelector("#balance-correction-list"),
+  balanceCorrectionForm: document.querySelector("#balance-correction-form"),
+  balanceCorrectionStatus: document.querySelector("#balance-correction-status"),
   sortButtons: [...document.querySelectorAll("[data-sort]")],
   vorgangSearch: document.querySelector("#vorgang-search"),
   vorgangHideCompleted: document.querySelector("#vorgang-hide-completed"),
@@ -581,6 +587,7 @@ elements.detailClose.addEventListener("click", () => {
 elements.entityPreviewClose.addEventListener("click", () => {
   elements.entityDialog.close();
 });
+elements.balanceCorrectionForm.addEventListener("submit", saveBalanceCorrection);
 
 elements.dialog.addEventListener("click", (event) => {
   if (event.target === elements.dialog) {
@@ -10073,6 +10080,9 @@ function renderBalances(summary) {
   }
 
   elements.accountBalances.replaceChildren();
+  const accountSelect = elements.balanceCorrectionForm.elements.account_id;
+  const selectedAccount = accountSelect.value;
+  accountSelect.replaceChildren(new Option("Konto auswählen", ""));
   for (const account of summary.konten) {
     const card = document.createElement("div");
     card.className = "balance-card";
@@ -10091,6 +10101,109 @@ function renderBalances(summary) {
       : "CSV enthält keinen Kontostand";
     card.append(label, value, note);
     elements.accountBalances.append(card);
+
+    const provider = account.provider ? `${account.provider} · ` : "";
+    const number = account.kontonummer ? ` · ${account.kontonummer}` : "";
+    accountSelect.append(new Option(
+      `${provider}${account.kontoname}${number}`,
+      account.account_id,
+    ));
+  }
+  accountSelect.value = selectedAccount;
+}
+
+async function loadBalanceCorrections() {
+  elements.balanceCorrectionLoading.hidden = false;
+  elements.balanceCorrectionEmpty.hidden = true;
+  try {
+    const response = await fetch("/api/balance-corrections");
+    const payload = await readResponse(response);
+    renderBalanceCorrections(payload.corrections || []);
+  } catch (error) {
+    elements.balanceCorrectionStatus.className = "is-error";
+    elements.balanceCorrectionStatus.textContent = error.message;
+  } finally {
+    elements.balanceCorrectionLoading.hidden = true;
+  }
+}
+
+function renderBalanceCorrections(corrections) {
+  elements.balanceCorrectionList.replaceChildren();
+  elements.balanceCorrectionCount.textContent =
+    `${integerFormatter.format(corrections.length)} ${corrections.length === 1 ? "Korrektur" : "Korrekturen"}`;
+  elements.balanceCorrectionEmpty.hidden = corrections.length > 0;
+  for (const correction of corrections) {
+    const card = document.createElement("article");
+    card.className = "balance-correction-card";
+    const heading = document.createElement("div");
+    heading.className = "balance-correction-card-heading";
+    const account = document.createElement("strong");
+    account.textContent = correction.account_name || correction.account_id;
+    const amount = document.createElement("strong");
+    amount.className = correction.balance_minor < 0 ? "is-negative" : "is-positive";
+    amount.textContent = currencyFormatter.format(correction.balance_minor / 100);
+    heading.append(account, amount);
+    const accountDetail = document.createElement("p");
+    accountDetail.textContent = [correction.provider, correction.account_number]
+      .filter(Boolean).join(" · ");
+    const details = document.createElement("dl");
+    for (const [label, value] of [
+      ["Stichtag", formatDate(correction.balance_as_of)],
+      ["Begründung", correction.reason],
+      ["Erstellt", formatDateTime(correction.created_at)],
+    ]) {
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const description = document.createElement("dd");
+      description.textContent = value;
+      details.append(term, description);
+    }
+    const notice = document.createElement("p");
+    notice.className = "balance-correction-manual-notice";
+    notice.textContent = "Manuell geprüft · Originaltransaktionen unverändert";
+    card.append(heading, accountDetail, details, notice);
+    elements.balanceCorrectionList.append(card);
+  }
+}
+
+async function saveBalanceCorrection(event) {
+  event.preventDefault();
+  const form = elements.balanceCorrectionForm;
+  elements.balanceCorrectionStatus.className = "";
+  if (!form.reportValidity()) {
+    elements.balanceCorrectionStatus.textContent = "Bitte alle Pflichtfelder prüfen.";
+    return;
+  }
+  const rawAmount = form.elements.balance_minor.value.trim();
+  if (!/^-?\d+$/.test(rawAmount) || !Number.isSafeInteger(Number(rawAmount))) {
+    elements.balanceCorrectionStatus.className = "is-error";
+    elements.balanceCorrectionStatus.textContent = "Der Saldo muss ein ganzzahliger Centbetrag sein.";
+    return;
+  }
+  const submit = form.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  elements.balanceCorrectionStatus.textContent = "Korrektur wird gespeichert";
+  try {
+    const response = await fetch("/api/balance-corrections", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        account_id: form.elements.account_id.value,
+        balance_minor: Number(rawAmount),
+        balance_as_of: form.elements.balance_as_of.value,
+        reason: form.elements.reason.value.trim(),
+      }),
+    });
+    await readResponse(response);
+    form.reset();
+    elements.balanceCorrectionStatus.className = "is-success";
+    elements.balanceCorrectionStatus.textContent = "Korrektur wurde angelegt.";
+    await loadBalanceCorrections();
+  } catch (error) {
+    elements.balanceCorrectionStatus.className = "is-error";
+    elements.balanceCorrectionStatus.textContent = error.message;
+  } finally {
+    submit.disabled = false;
   }
 }
 
@@ -10298,5 +10411,6 @@ setDefaultPeriod();
 setDefaultHistoryPeriod();
 loadOverview();
 loadTransactions();
+loadBalanceCorrections();
 loadRefreshStatus();
 

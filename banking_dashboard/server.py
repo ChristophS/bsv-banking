@@ -1972,6 +1972,8 @@ class DashboardDataStore:
             rows = connection.execute(
                 """
                 SELECT
+                    account_id,
+                    provider,
                     account_name AS kontoname,
                     account_number AS kontonummer,
                     current_balance_minor,
@@ -1998,6 +2000,8 @@ class DashboardDataStore:
                     currencies.add(row["waehrung"])
             accounts.append(
                 {
+                    "account_id": row["account_id"],
+                    "provider": row["provider"],
                     "kontoname": row["kontoname"],
                     "kontonummer": row["kontonummer"],
                     "kontostand": balance,

@@ -2,46 +2,56 @@
 
 ## Branchname
 
-`agent2/codex-20260712-161047`
+`agent2/codex-20260712-161559`
 
 ## Geänderte Dateien
 
-- `tests/test_transactions.py`
+- `banking_dashboard/server.py`
+- `banking_dashboard/static/index.html`
+- `banking_dashboard/static/app.js`
+- `banking_dashboard/static/styles.css`
+- `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
 
 ## Umgesetzte Punkte
 
-- Die vollständige lokale Unit-Test-Suite mit Python 3.12 und `unittest discover` ausgeführt.
-- Teststatus sowie Überspringungen und Warnungen reproduzierbar erfasst.
-- Einen eindeutig abgegrenzten Testfehler korrigiert: Der Test zum manuellen Saldoanker schließt die zum CSV-Lesen geöffnete Datei nun deterministisch über einen Context Manager.
-- Stichprobenartig geprüft, dass Dashboard-, Login-, Session-, Mail-, Detector- und Exporter-Tests temporäre Verzeichnisse, lokale HTTP-Server sowie Mocks/Fakes verwenden. Der Lauf erforderte keine echten Banking-, Microsoft-Graph-, OpenAI- oder DFBnet-Zugriffe, keine Browserprofile und keine Zugangsdaten.
+- Klar abgegrenzte Ansicht für vorhandene manuelle Saldo-Korrekturen im Transaktions- und Kontostandsworkflow ergänzt.
+- Korrekturen zeigen Konto, Anbieter/Kontonummer, Stichtag, Euro-Betrag, Begründung, Erstellzeitpunkt und den manuellen Prüfhinweis.
+- Verständlichen Leer-, Lade-, Erfolgs- und Fehlerzustand ergänzt.
+- Formular für Konto, ganzzahligen Centbetrag, ISO-Stichtag und Begründung ergänzt.
+- Pflichtbestätigung der manuellen Prüfung sowie sichtbaren Hinweis ergänzt, dass Originaltransaktionen unverändert bleiben.
+- Vor dem POST werden Pflichtfelder, Ganzzahligkeit und JavaScript-Safe-Integer-Grenze geprüft. Gesendet werden ausschließlich die vier bestehenden API-Pflichtfelder als JSON.
+- Nach erfolgreichem Speichern wird die Korrekturliste ohne Seitenreload neu geladen.
+- Die bestehende Kontostandsantwort wurde minimal um lokale `account_id` und `provider` ergänzt, damit keine neuen Kontostammdaten oder kein zusätzlicher Endpunkt erforderlich sind.
+- Keine Lösch-, Widerrufs-, Ersetzungs- oder Bearbeitungsfunktion ergänzt.
+- API- und UI-nahe Tests für Kontenauswahl, Prüfhinweis, Formulardaten und fehlende Löschfunktion ergänzt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Produktlogik geändert, da alle fachlichen Tests bestanden und kein enger Produktfehler nachgewiesen wurde.
-- Keine optionale Browser-Testumgebung ergänzt und keine Abhängigkeiten installiert.
-- Keine größeren Folgepunkte für die Teile 2 bis 4 des Konsistenz-Epics festgestellt.
+- Keine Widerrufs-, Lösch-, Ersetzungs- oder nachgelagerte Bestätigungsfunktion, da nicht Teil des Arbeitspakets.
+- Keine externe Banking- oder Browser-Automation.
+- Keine Änderung an Import-, Saldenketten-, Archivierungs- oder Originaltransaktionslogik.
 
 ## Ausgeführte Tests
 
-- Baseline: `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m unittest discover -s tests -v`
-- Nach der Korrektur: vollständiger Lauf mit demselben Befehl (siehe Testergebnis).
+- `node --check banking_dashboard/static/app.js`
+- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
+- `git diff --check -- banking_dashboard/server.py banking_dashboard/static/index.html banking_dashboard/static/app.js banking_dashboard/static/styles.css tests/test_dashboard.py feedback/implementation_report.md`
 
 ## Testergebnis
 
-- Baseline: 263 Tests in 39,771 Sekunden; 256 bestanden, 0 fehlgeschlagen, 0 Fehler, 7 übersprungen.
-- Übersprungen wurden ausschließlich optionale Browser-Tests mit der Begründung `Playwright ist nicht installiert.`
-- Reproduzierbarer Baseline-Hinweis: `ResourceWarning` wegen einer nicht geschlossenen CSV-Datei in `test_matching_manual_balance_correction_unblocks_snapshot_without_changing_raw_data`.
-- Abschlusslauf nach Korrektur: 263 Tests in 39,267 Sekunden; 256 bestanden, 0 fehlgeschlagen, 0 Fehler, 7 übersprungen.
-- Der zuvor reproduzierte `ResourceWarning` trat im Abschlusslauf nicht mehr auf; weitere auffällige Warnungen wurden nicht ausgegeben.
+- JavaScript-Syntaxprüfung erfolgreich.
+- Dashboard-Testlauf: 118 bestanden, 6 übersprungen, 0 fehlgeschlagen (124 gesammelt).
+- Die sechs Überspringungen betreffen vorhandene optionale Tests; es wurden keine Abhängigkeiten installiert.
+- Diff-Prüfung ohne Whitespace-Fehler.
 
 ## Bekannte Einschränkungen
 
-- Sieben Browser-Tests werden ohne die optionale Playwright-Abhängigkeit nicht ausgeführt. Entsprechend den Vorgaben wurde die Abhängigkeit nicht automatisch installiert.
-- Die Aussage zu externen Zugriffen beruht auf dem erfolgreichen isolierten Lauf und einer Stichprobe der maßgeblichen Test-Setups; es wurden keine externen Dienste kontaktiert.
+- Die Betragseingabe erfolgt bewusst in ganzzahligen Cent statt als Euro-Dezimalwert, um die bestehende API-Semantik eindeutig und verlustfrei abzubilden.
+- Es wurde kein echter Browser gestartet; der UI-nahe Flow ist über statische Auslieferung und Quelltextmerkmale abgesichert, der API-Flow über den lokalen temporären Testserver.
 
 ## Hinweise für den Review-Agenten
 
-- Die einzige Codeänderung betrifft Test-Ressourcenmanagement, nicht die Produktimplementierung.
-- Beim Abschlusslauf besonders darauf achten, dass der bisherige `ResourceWarning` nicht erneut erscheint und die Testanzahl unverändert bleibt.
-- Bereits vorhandene Änderungen an `feedback/Review-report.md` sowie die vom Auftrag bereitgestellte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
+- Die Kontenauswahl nutzt die um `account_id` und `provider` ergänzten Einträge in `balances.konten`; es wurde kein neuer Konto-Endpunkt angelegt.
+- Serverseitige Fehlermeldungen werden über die bestehende `readResponse`-Logik direkt im Formularstatus angezeigt.
+- Bereits vorhandene Änderungen an `feedback/Review-report.md` und die bereitgestellte unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.

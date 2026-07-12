@@ -2819,6 +2819,7 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual(created["balance_minor"], 12345)
         self.assertEqual(created["account_number"], "DE001")
         self.assertTrue(created["is_manual"])
+        self.assertIn("manueller Pruefung", created["usage_notice"])
 
         with urlopen(request, timeout=5) as response:
             duplicate = json.load(response)["correction"]
@@ -2836,6 +2837,29 @@ class DashboardHTTPTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as caught:
             urlopen(invalid, timeout=5)
         self.assertEqual(caught.exception.code, 400)
+
+    def test_balance_summary_exposes_known_accounts_for_correction_form(self):
+        with urlopen(self.base_url + "/api/transactions", timeout=5) as response:
+            balances = json.load(response)["balances"]
+
+        account = next(
+            item for item in balances["konten"] if item["account_id"] == "acct_test"
+        )
+        self.assertEqual(account["provider"], "testbank")
+        self.assertEqual(account["kontoname"], "Hauptkonto")
+
+    def test_dashboard_contains_balance_correction_ui_flow(self):
+        with urlopen(self.base_url + "/", timeout=5) as response:
+            html = response.read().decode("utf-8")
+        with urlopen(self.base_url + "/static/app.js", timeout=5) as response:
+            javascript = response.read().decode("utf-8")
+
+        self.assertIn('id="balance-correction-form"', html)
+        self.assertIn('name="manual_confirmation"', html)
+        self.assertIn("keine Originaltransaktionen", html)
+        self.assertIn('fetch("/api/balance-corrections"', javascript)
+        self.assertIn("balance_minor: Number(rawAmount)", javascript)
+        self.assertNotIn("delete-balance-correction", html)
 
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
