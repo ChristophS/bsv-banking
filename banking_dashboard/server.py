@@ -6331,10 +6331,15 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     raise ValueError(
                         "Das Feld vorgangs_id ist erforderlich."
                     )
+                vorgangs_id = payload["vorgangs_id"]
+                if not isinstance(vorgangs_id, str) or not vorgangs_id.strip():
+                    raise ValueError(
+                        "Das Feld vorgangs_id muss eine nichtleere ID enthalten."
+                    )
                 self._json_response(
                     self.server.data_store.link_transaction_vorgang(
                         transaktions_id,
-                        str(payload["vorgangs_id"]),
+                        vorgangs_id,
                     )
                 )
                 return
