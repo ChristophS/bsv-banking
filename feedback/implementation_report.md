@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260712-133838`
+`agent2/rework-20260712-134315`
 
 ## Geaenderte Dateien
 
@@ -50,6 +50,17 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
 
 ## Nachbesserung nach Review
 
+- Der aktuelle Rework-Branch basiert auf Commit `3750ffc`; der vollstaendige
+  Arbeitsbaum wurde gegen den Review-Hinweis abgeglichen. Die zuvor im
+  Dateikontext vermissten Symbole `donation_certificate_data`,
+  `DonationCertificateData`, `DonationCertificateTransaction`,
+  `create_donation_certificate` und der POST-Endpunkt sind in den
+  vollstaendigen Quelldateien vorhanden und importierbar.
+- `recipient_id` wird am API-Rand nun explizit als nichtleerer String
+  validiert. `null`, Zahlen, leere Strings und reine Leerzeichen werden mit
+  HTTP 400 abgewiesen, statt implizit per `str()` umgewandelt zu werden.
+- Ein API-Test sichert ab, dass diese 4xx-Anfragen weder automatische Belege
+  oder Vorgang-Beleg-Verknuepfungen noch lokale Dateien hinterlassen.
 - Die Fehlerbereinigung wurde in `create_document_from_bytes` verschoben. Dort
   steht der tatsaechlich durch `_safe_filename` bereinigte und durch
   `_unique_file_path` gegebenenfalls uniquifizierte Zielpfad zur Verfuegung.
@@ -70,12 +81,16 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
 
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
+- Expliziter Python-Importcheck fuer `donation_certificate_data`,
+  `DonationCertificateData`, `DonationCertificateTransaction` und
+  `DashboardDataStore.create_donation_certificate`
 - `git diff --check`
 
 ## Testergebnis
 
 - Transaktionssuite: 40 bestanden.
-- Dashboardsuite: 114 bestanden, 6 uebersprungen, 14 Subtests bestanden.
+- Dashboardsuite: 115 bestanden, 6 uebersprungen.
+- Der explizite Importcheck war erfolgreich.
 - `git diff --check` meldet keine Whitespace-Fehler.
 
 ## Bekannte Einschraenkungen

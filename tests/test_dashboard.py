@@ -2877,6 +2877,47 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertEqual(0, count)
         self.assertEqual(before_files, set(self.server.data_store.belege_directory.rglob("*")))
 
+    def test_donation_certificate_api_rejects_invalid_recipient_id_without_changes(self):
+        database_path = self.server.data_store.database_path
+        endpoint = self.base_url + "/api/vorgaenge/vorgang_tx_newer/spendenbescheinigung"
+        before_files = set(self.server.data_store.belege_directory.rglob("*"))
+        with closing(connect_database(database_path)) as connection:
+            before_belege = connection.execute(
+                "SELECT COUNT(*) FROM belege"
+            ).fetchone()[0]
+            before_links = connection.execute(
+                "SELECT COUNT(*) FROM vorgang_belege"
+            ).fetchone()[0]
+
+        for recipient_id in (None, 123, "", "   "):
+            request = Request(
+                endpoint,
+                data=json.dumps({"recipient_id": recipient_id}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(HTTPError) as raised:
+                urlopen(request, timeout=5)
+            self.assertEqual(400, raised.exception.code)
+
+        with closing(connect_database(database_path)) as connection:
+            self.assertEqual(
+                before_belege,
+                connection.execute(
+                    "SELECT COUNT(*) FROM belege"
+                ).fetchone()[0],
+            )
+            self.assertEqual(
+                before_links,
+                connection.execute(
+                    "SELECT COUNT(*) FROM vorgang_belege"
+                ).fetchone()[0],
+            )
+        self.assertEqual(
+            before_files,
+            set(self.server.data_store.belege_directory.rglob("*")),
+        )
+
     def test_mail_document_assignment_api_validates_vorgang_context(self):
         database_path = self.server.data_store.database_path
         with closing(connect_database(database_path)) as connection:

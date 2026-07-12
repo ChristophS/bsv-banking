@@ -6318,9 +6318,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 payload = self._read_json_body()
                 if set(payload) != {"recipient_id"}:
                     raise ValueError("Das Feld recipient_id ist erforderlich.")
+                recipient_id = payload["recipient_id"]
+                if not isinstance(recipient_id, str) or not recipient_id.strip():
+                    raise ValueError(
+                        "Das Feld recipient_id muss ein nichtleerer String sein."
+                    )
                 self._json_response(
                     self.server.data_store.create_donation_certificate(
-                        vorgangs_id, str(payload["recipient_id"])
+                        vorgangs_id, recipient_id
                     ),
                     status=HTTPStatus.CREATED,
                 )
