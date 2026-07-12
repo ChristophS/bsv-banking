@@ -1,1 +1,3 @@
-Für eine spätere Härtung kann die API bei gleichzeitig gesetzten Aliasfeldern wie `betrag_cent` und `amount_minor` widersprüchliche Werte explizit zurückweisen. Zusätzlich könnte die erfolgreiche PUT-Antwort in einem fokussierten Vertragstest vollständig auf Feldnamen, Reihenfolge und Klassifikationsstatus geprüft werden.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
