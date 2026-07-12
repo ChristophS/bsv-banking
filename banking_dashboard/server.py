@@ -2877,84 +2877,80 @@ class DashboardDataStore:
         document_date = str(metadata.get("document_date") or "").strip()
         if document_date:
             document_date = _parse_iso_date(document_date, "Dokumentdatum")
-        with closing(self._connect(writable=True)) as connection:
-            if connection.execute(
-                "SELECT 1 FROM vorgaenge WHERE vorgangs_id = ?",
-                (cleaned_vorgangs_id,),
-            ).fetchone() is None:
-                raise LookupError("Vorgang wurde nicht gefunden.")
-            existing = connection.execute(
-                """
-                SELECT beleg_id
-                FROM belege
-                WHERE datei_sha256 = ? AND datei_sha256 <> ''
-                """,
-                (file_hash,),
-            ).fetchone()
-            if existing is not None:
-                beleg_id = str(existing["beleg_id"])
+        wrote_target = False
+        try:
+            with closing(self._connect(writable=True)) as connection:
+                if connection.execute(
+                    "SELECT 1 FROM vorgaenge WHERE vorgangs_id = ?",
+                    (cleaned_vorgangs_id,),
+                ).fetchone() is None:
+                    raise LookupError("Vorgang wurde nicht gefunden.")
+                existing = connection.execute(
+                    """
+                    SELECT beleg_id
+                    FROM belege
+                    WHERE datei_sha256 = ? AND datei_sha256 <> ''
+                    """,
+                    (file_hash,),
+                ).fetchone()
+                if existing is not None:
+                    beleg_id = str(existing["beleg_id"])
+                    connection.execute(
+                        """
+                        UPDATE belege
+                        SET vorhanden = 1, aktualisiert_am = ?
+                        WHERE beleg_id = ?
+                        """,
+                        (now, beleg_id),
+                    )
+                else:
+                    target_path.write_bytes(content)
+                    wrote_target = True
+                    connection.execute(
+                        """
+                        INSERT INTO belege (
+                            beleg_id, dateiname, dateipfad, dateityp,
+                            dateigroesse, datei_sha256, vorhanden, kategorie,
+                            dokumentdatum, betrag, aussteller, empfaenger,
+                            beschreibung, quelle, erstellt_am, aktualisiert_am
+                        ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            beleg_id,
+                            target_path.name,
+                            str(target_path.resolve()),
+                            content_type
+                            or mimetypes.guess_type(target_path.name)[0]
+                            or "application/octet-stream",
+                            len(content),
+                            file_hash,
+                            category,
+                            document_date,
+                            str(metadata.get("amount") or "").strip()[:100],
+                            str(metadata.get("issuer") or "").strip()[:500],
+                            str(metadata.get("recipient") or "").strip()[:500],
+                            str(metadata.get("description") or "").strip()[:2000],
+                            "automatic",
+                            now,
+                            now,
+                        ),
+                    )
                 connection.execute(
                     """
-                    UPDATE belege
-                    SET
-                        vorhanden = 1,
-                        aktualisiert_am = ?
-                    WHERE beleg_id = ?
+                    INSERT OR IGNORE INTO vorgang_belege (
+                        vorgangs_id, beleg_id, erstellt_am
+                    ) VALUES (?, ?, ?)
                     """,
-                    (now, beleg_id),
+                    (cleaned_vorgangs_id, beleg_id, now),
                 )
-            else:
-                target_path.write_bytes(content)
-                connection.execute(
-                    """
-                    INSERT INTO belege (
-                        beleg_id,
-                        dateiname,
-                        dateipfad,
-                        dateityp,
-                        dateigroesse,
-                        datei_sha256,
-                        vorhanden,
-                        kategorie,
-                        dokumentdatum,
-                        betrag,
-                        aussteller,
-                        empfaenger,
-                        beschreibung,
-                        quelle,
-                        erstellt_am,
-                        aktualisiert_am
-                    ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        beleg_id,
-                        target_path.name,
-                        str(target_path.resolve()),
-                        content_type
-                        or mimetypes.guess_type(target_path.name)[0]
-                        or "application/octet-stream",
-                        len(content),
-                        file_hash,
-                        category,
-                        document_date,
-                        str(metadata.get("amount") or "").strip()[:100],
-                        str(metadata.get("issuer") or "").strip()[:500],
-                        str(metadata.get("recipient") or "").strip()[:500],
-                        str(metadata.get("description") or "").strip()[:2000],
-                        "automatic",
-                        now,
-                        now,
-                    ),
-                )
-            connection.execute(
-                """
-                INSERT OR IGNORE INTO vorgang_belege (
-                    vorgangs_id, beleg_id, erstellt_am
-                ) VALUES (?, ?, ?)
-                """,
-                (cleaned_vorgangs_id, beleg_id, now),
-            )
-            connection.commit()
+                connection.commit()
+        except Exception:
+            if wrote_target:
+                try:
+                    target_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
         result = self.beleg_detail(beleg_id)
         if result is None:
             raise RuntimeError("Beleg konnte nicht geladen werden.")
@@ -3019,37 +3015,23 @@ class DashboardDataStore:
             "<th>Datum</th><th>ID</th><th>Beteiligter</th><th>Zweck</th><th>Betrag</th>"
             f"</tr></thead><tbody>{transaction_rows}</tbody></table></body></html>"
         ).encode("utf-8")
-        try:
-            beleg = self.create_document_from_bytes(
-                content=content,
-                filename=filename,
-                content_type="text/html; charset=utf-8",
-                metadata={
-                    "category": "spendenbescheinigungen",
-                    "filename": filename,
-                    "document_date": created_at.date().isoformat(),
-                    "amount": amount,
-                    "recipient": data.recipient.name,
-                    "description": f"Lokaler Entwurf fuer Vorgang {data.vorgangs_id}",
-                },
-                vorgangs_id=data.vorgangs_id,
-                source_reference=(
-                    f"donation-certificate:{data.recipient.recipient_id}"
-                ),
-            )
-        except Exception:
-            # create_document_from_bytes writes before cataloguing. Its database
-            # transaction rolls back on failure; remove the matching draft too.
-            failed_path = (
-                self.belege_directory
-                / DOCUMENT_CATEGORY_LABELS["spendenbescheinigungen"]
-                / filename
-            )
-            try:
-                failed_path.unlink(missing_ok=True)
-            except OSError:
-                pass
-            raise
+        beleg = self.create_document_from_bytes(
+            content=content,
+            filename=filename,
+            content_type="text/html; charset=utf-8",
+            metadata={
+                "category": "spendenbescheinigungen",
+                "filename": filename,
+                "document_date": created_at.date().isoformat(),
+                "amount": amount,
+                "recipient": data.recipient.name,
+                "description": f"Lokaler Entwurf fuer Vorgang {data.vorgangs_id}",
+            },
+            vorgangs_id=data.vorgangs_id,
+            source_reference=(
+                f"donation-certificate:{data.recipient.recipient_id}"
+            ),
+        )
         return {"beleg": beleg, "amount_minor": data.amount_minor}
 
     @staticmethod

@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260712-133124`
+`agent2/rework-20260712-133838`
 
 ## Geaenderte Dateien
 
@@ -11,10 +11,12 @@
 - `banking_dashboard/server.py`
 - `banking_dashboard/static/app.js`
 - `tests/test_dashboard.py`
+- `tests/test_transactions.py`
 - `feedback/implementation_report.md`
 
 Die bereits vorhandene Aenderung an `feedback/Review-report.md` und die
-unversionierte Datei `feedback/agent2_prompt.md` wurden nicht veraendert.
+unversionierten Dateien `feedback/agent2_prompt.md` sowie
+`feedback/agent2_review_request.md` wurden nicht veraendert.
 
 ## Umgesetzte Punkte
 
@@ -46,6 +48,24 @@ unversionierte Datei `feedback/agent2_prompt.md` wurden nicht veraendert.
   pruefung oder externe Integration.
 - Keine direkte Empfaenger-, Transaktion- oder Belegbeziehung eingefuehrt.
 
+## Nachbesserung nach Review
+
+- Die Fehlerbereinigung wurde in `create_document_from_bytes` verschoben. Dort
+  steht der tatsaechlich durch `_safe_filename` bereinigte und durch
+  `_unique_file_path` gegebenenfalls uniquifizierte Zielpfad zur Verfuegung.
+  Bei einem Katalog- oder Verknuepfungsfehler wird nur die in diesem Aufruf
+  tatsaechlich geschriebene Datei entfernt; die Datenbanktransaktion bleibt
+  unveraendert zurueckgerollt.
+- Der fehlerhafte Cleanup in `create_donation_certificate`, der den
+  unsanitisierten Dateinamen verwendete, wurde entfernt.
+- In `tests/test_transactions.py` sichern isolierte Unit-Tests den
+  Datenbank-Helper einschliesslich exakter Integer-Cent-Summe und unbekannter
+  IDs ab. Ein erzwungener SQLite-Katalogfehler prueft zudem, dass weder Beleg,
+  Vorgang-Beleg-Link noch eine Datei mit sanitisiertem Namen zurueckbleiben.
+- Die vom Server importierten Symbole `donation_certificate_data`,
+  `DonationCertificateData` und `DonationCertificateTransaction` sind im
+  aktuellen Branch in den vollstaendigen Quelldateien vorhanden.
+
 ## Ausgefuehrte Tests
 
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
@@ -54,7 +74,7 @@ unversionierte Datei `feedback/agent2_prompt.md` wurden nicht veraendert.
 
 ## Testergebnis
 
-- Transaktionssuite: 38 bestanden.
+- Transaktionssuite: 40 bestanden.
 - Dashboardsuite: 114 bestanden, 6 uebersprungen, 14 Subtests bestanden.
 - `git diff --check` meldet keine Whitespace-Fehler.
 

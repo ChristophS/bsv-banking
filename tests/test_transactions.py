@@ -2,6 +2,7 @@ import csv
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -18,6 +19,7 @@ from banking_readonly.config import (
     ExportConfig,
     RuntimeConfig,
 )
+from banking_dashboard import DashboardDataStore
 from transaction_store.classification import (
     ClassificationStatus,
     aggregate_classification_status,
@@ -29,6 +31,7 @@ from transaction_store import database as database_module
 from transaction_store.database import (
     connect_database,
     create_donation_recipient,
+    donation_certificate_data,
     list_donation_recipients,
     list_transaction_splits,
     replace_transaction_splits,
@@ -220,6 +223,114 @@ class DatabaseConnectionTests(unittest.TestCase):
                 connection.close()
 
         self.assertEqual(count, 0)
+
+    def test_donation_certificate_data_uses_exact_minor_amounts_and_known_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            connection = connect_database(Path(temp_dir) / "transactions.sqlite3")
+            try:
+                create_donation_recipient(
+                    connection,
+                    DonationRecipient("recipient_test", "Test Stiftung"),
+                )
+                connection.execute(
+                    "INSERT INTO vorgaenge (vorgangs_id, titel) VALUES (?, ?)",
+                    ("vorgang_test", "Testspende"),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO accounts (
+                        account_id, provider, account_name, account_number
+                    ) VALUES ('account_test', 'test', 'Testkonto', '')
+                    """
+                )
+                for transaction_id, amount_minor in (("tx_1", 1001), ("tx_2", 2)):
+                    connection.execute(
+                        """
+                        INSERT INTO transactions (
+                            transaction_id, fingerprint, occurrence, provider,
+                            account_id, account_name, account_number,
+                            booking_date, value_date, counterparty, amount,
+                            currency, booking_text, purpose, amount_minor,
+                            counterparty_account, creditor_id,
+                            mandate_reference, source_info, first_seen_at,
+                            raw_fields_json
+                        ) VALUES (?, ?, 1, 'test', 'account_test', '', '', '2026-07-01',
+                                  '2026-07-01', 'Spender', '', 'EUR', '',
+                                  'Spende', ?, '', '', '', '', '', '{}')
+                        """,
+                        (transaction_id, f"fp_{transaction_id}", amount_minor),
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO transaktion_vorgaenge (
+                            transaktions_id, vorgangs_id
+                        ) VALUES (?, 'vorgang_test')
+                        """,
+                        (transaction_id,),
+                    )
+                connection.commit()
+
+                result = donation_certificate_data(
+                    connection, "vorgang_test", "recipient_test"
+                )
+
+                self.assertEqual(result.amount_minor, 1003)
+                self.assertEqual(
+                    [item.amount_minor for item in result.transactions], [1001, 2]
+                )
+                with self.assertRaisesRegex(LookupError, "Vorgang"):
+                    donation_certificate_data(
+                        connection, "vorgang_missing", "recipient_test"
+                    )
+                with self.assertRaisesRegex(LookupError, "Spendenempfaenger"):
+                    donation_certificate_data(
+                        connection, "vorgang_test", "recipient_missing"
+                    )
+            finally:
+                connection.close()
+
+    def test_document_catalog_failure_removes_sanitized_written_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(database_path)
+            try:
+                connection.execute(
+                    "INSERT INTO vorgaenge (vorgangs_id, titel) VALUES (?, ?)",
+                    ("vorgang_test", "Testspende"),
+                )
+                connection.execute(
+                    """
+                    CREATE TRIGGER fail_automatic_beleg
+                    BEFORE INSERT ON belege
+                    BEGIN
+                        SELECT RAISE(ABORT, 'catalog failure');
+                    END
+                    """
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            store = DashboardDataStore(database_path)
+
+            with self.assertRaisesRegex(sqlite3.IntegrityError, "catalog failure"):
+                store.create_document_from_bytes(
+                    content=b"certificate draft",
+                    filename="draft+01.html",
+                    content_type="text/html",
+                    metadata={
+                        "category": "spendenbescheinigungen",
+                        "filename": "draft+01.html",
+                    },
+                    vorgangs_id="vorgang_test",
+                    source_reference="test",
+                )
+
+            self.assertEqual(list(store.belege_directory.rglob("*.html")), [])
+            with closing(sqlite3.connect(database_path)) as check:
+                self.assertEqual(check.execute("SELECT COUNT(*) FROM belege").fetchone()[0], 0)
+                self.assertEqual(
+                    check.execute("SELECT COUNT(*) FROM vorgang_belege").fetchone()[0], 0
+                )
 
     def test_empty_sqlite_sidecars_are_discarded(self):
         with tempfile.TemporaryDirectory() as temp_dir:
