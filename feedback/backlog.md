@@ -2,7 +2,7 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Split-Zeilen innerhalb eines Vorgangs Rechnungen und Teilrechnungen zuordnen
+## 1. Split-Editor für Vorgangs- und Rechnungszuordnungen bereitstellen
 
 **Epic-ID:** epic-transaction-splits
 
@@ -10,11 +10,11 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Epic-Ziel:** Transaktionen fachlich so aufteilen können, dass Teilbeträge getrennt klassifiziert und darauf aufbauende Rechnungs- und Vorgangszuordnungen unterstützt werden.
 
-**Teilpaket:** Teil 4
+**Teilpaket:** Teil 5
 
 **Priorität:** hoch
 
-**Grund:** Nach stabiler Split-Klassifikation und Statusableitung soll eine Transaktion mit mehreren Rechnungen sowie Rechnungen mit mehreren Kategorien über bestehende Vorgänge, Belege und Verknüpfungen abgebildet werden.
+**Grund:** Nach der abgesicherten Backend- und API-Grundlage muss die Zuordnung von Split-Zeilen zu vorhandenen Vorgängen und den daraus sichtbaren Rechnungsbelegen im Transaktionsdetail bedienbar werden.
 
 **Feedback:**
 
