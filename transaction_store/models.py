@@ -49,6 +49,10 @@ class ParsedFile:
     account_balance: Decimal | None
     balance_as_of: str | None
     balance_currency: str | None
+    observed_account_balance: Decimal | None = None
+    comparison_account_balance: Decimal | None = None
+    manual_balance_correction_id: str | None = None
+    manual_balance_correction_reason: str | None = None
 
 
 @dataclass(frozen=True)

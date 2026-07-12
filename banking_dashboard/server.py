@@ -69,7 +69,9 @@ from transaction_store.database import (
     TERMIN_STATUS_PLANNED,
     configured_belege_directory,
     connect_database,
+    create_manual_balance_correction,
     donation_certificate_data,
+    list_manual_balance_corrections,
     list_transaction_splits,
     replace_transaction_splits,
     sync_belege_directory,
@@ -1915,6 +1917,55 @@ class DashboardDataStore:
             }
             for row in rows
         ]
+
+    def list_balance_corrections(self) -> dict[str, Any]:
+        with closing(connect_database(self.database_path)) as connection:
+            rows = list_manual_balance_corrections(connection)
+        corrections = [self._balance_correction_response(row) for row in rows]
+        return {"corrections": corrections, "count": len(corrections)}
+
+    def create_balance_correction(self, payload: dict[str, Any]) -> dict[str, Any]:
+        required = {"account_id", "balance_minor", "balance_as_of", "reason"}
+        if set(payload) != required:
+            raise ValueError(
+                "account_id, balance_minor, balance_as_of und reason sind erforderlich."
+            )
+        with closing(connect_database(self.database_path)) as connection:
+            row = create_manual_balance_correction(
+                connection,
+                str(payload["account_id"]),
+                payload["balance_minor"],
+                str(payload["balance_as_of"]),
+                str(payload["reason"]),
+            )
+            connection.commit()
+            row = next(
+                item for item in list_manual_balance_corrections(connection)
+                if item["correction_id"] == row["correction_id"]
+            )
+            response = self._balance_correction_response(row)
+        return {"correction": response}
+
+    @staticmethod
+    def _balance_correction_response(row: sqlite3.Row) -> dict[str, Any]:
+        keys = set(row.keys())
+        return {
+            "correction_id": str(row["correction_id"]),
+            "account_id": str(row["account_id"]),
+            "provider": str(row["provider"]) if "provider" in keys else None,
+            "account_name": str(row["account_name"]) if "account_name" in keys else None,
+            "account_number": str(row["account_number"]) if "account_number" in keys else None,
+            "balance_minor": int(row["balance_minor"]),
+            "balance_as_of": str(row["balance_as_of"]),
+            "reason": str(row["reason"]),
+            "created_at": str(row["created_at"]),
+            "source": str(row["source"]),
+            "is_manual": bool(row["is_manual"]),
+            "confirmed": bool(row["confirmed"]),
+            "usage_notice": (
+                "Nur nach manueller Pruefung von Kontoauszug oder Bankstand verwenden."
+            ),
+        }
 
     def balance_summary(self) -> dict[str, Any]:
         with closing(self._connect()) as connection:
@@ -5727,6 +5778,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if parsed.path == "/api/balance-history":
                 self._balance_history_response(parse_qs(parsed.query))
                 return
+            if parsed.path == "/api/balance-corrections":
+                self._json_response(
+                    self.server.data_store.list_balance_corrections()
+                )
+                return
             if parsed.path.startswith("/api/transactions/"):
                 transaction_suffix = "/splits"
                 if parsed.path.endswith(transaction_suffix):
@@ -6189,6 +6245,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
         try:
+            if parsed.path == "/api/balance-corrections":
+                self._json_response(
+                    self.server.data_store.create_balance_correction(
+                        self._read_json_body()
+                    ),
+                    status=HTTPStatus.CREATED,
+                )
+                return
             if parsed.path == "/api/mail/delete-selected":
                 self._json_response(
                     self.server.mail_manager.delete_selected(
