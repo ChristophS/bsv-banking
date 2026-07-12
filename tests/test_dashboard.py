@@ -2857,6 +2857,22 @@ class DashboardHTTPTests(unittest.TestCase):
                 payload["splits"][0]["transaction_id"],
                 "tx_newer",
             )
+            self.assertEqual(
+                payload["zulaessige_vorgaenge"][0]["vorgangs_id"],
+                "vorgang_tx_newer",
+            )
+            self.assertEqual(
+                payload["zulaessige_vorgaenge"][0]["titel"],
+                "",
+            )
+            self.assertEqual(
+                payload["zulaessige_vorgaenge"][0]["status"],
+                "in_bearbeitung",
+            )
+            self.assertEqual(
+                payload["zulaessige_vorgaenge"][0]["belege"][0]["dateiname"],
+                "beleg_1.pdf",
+            )
 
         request = Request(
             self.base_url + "/api/transactions/tx_newer/splits",
@@ -4543,6 +4559,10 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     editor = page.locator(".split-editor")
                     expect(editor).to_be_visible()
                     expect(editor).to_contain_text("Teilbetrag Eintritt")
+                    vorgang_select = editor.locator("[data-split-vorgang]").first()
+                    expect(vorgang_select).to_have_value("vorgang_tx_newer")
+                    expect(editor).to_contain_text("Belege des Vorgangs")
+                    expect(editor).to_contain_text("beleg_1.pdf")
                     expect(
                         editor.locator("[data-split-summary='original']")
                     ).to_contain_text("Originalbetrag")
@@ -4621,6 +4641,10 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     second_row.locator(
                         "[data-split-professional]"
                     ).fill("Browser-Test")
+                    second_row.locator("[data-split-vorgang]").select_option(
+                        "vorgang_tx_newer"
+                    )
+                    expect(second_row).to_contain_text("beleg_1.pdf")
 
                     with page.expect_response(
                         lambda response: (
@@ -4659,6 +4683,10 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     self.assertEqual(
                         "Vermögensverwaltung",
                         persisted[0]["sphere"],
+                    )
+                    self.assertEqual(
+                        ["vorgang_tx_newer", "vorgang_tx_newer"],
+                        [split["vorgangs_id"] for split in persisted],
                     )
 
                     editor.locator("[data-split-amount]").first().fill("")
