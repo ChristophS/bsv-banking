@@ -2,7 +2,45 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
+## 1. Bedienoberfläche für Saldoabweichungen und manuelle Saldo-Korrekturen ergänzen
+
+**Epic-ID:** epic-balance-correction
+
+**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
+
+**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
+
+**Teilpaket:** Teil 2
+
+**Priorität:** hoch
+
+**Grund:** Nach der sicheren Persistenz- und API-Grundlage benötigt der Kassierer eine verständliche lokale Oberfläche, die Abweichung, Folgen, Begründung und vorhandene Korrekturen sichtbar macht sowie eine bewusste Eingabe ermöglicht.
+
+**Feedback:**
+
+- Inbox: Kontostand der Volksbank-Kontoübersicht passt nicht zum neuesten CSV-Saldo in ausstattung.csv
+- Inbox: Möglichkeit zum händischen Fixen benötigt
+
+## 2. Lokale Testbaseline für die Dashboard- und Transaktionspfade ausführen und Befunde dokumentieren
+
+**Epic-ID:** epic-system-consistency
+
+**Epic-Titel:** Systematische Qualitäts- und Konsistenzprüfung des Vereins-Finanztools
+
+**Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
+
+**Teilpaket:** Teil 1
+
+**Priorität:** hoch
+
+**Grund:** Die vollständige Unit-Test-Suite soll reproduzierbar ausgeführt, eindeutig belegte kleine Kernfehler sollen gezielt korrigiert und alle weiteren Befunde strukturiert dokumentiert werden.
+
+**Feedback:**
+
+- Inbox: gesamten Code auf Konsistenz und Funktion prüfen
+- Bisheriges aktives Arbeitspaket
+
+## 3. Kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -14,14 +52,14 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Nach der Testbaseline sollen die lokalen API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine gezielt auf konsistente Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
+**Grund:** Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
 
 **Feedback:**
 
 - Inbox: gesamten Code auf Konsistenz und Funktion prüfen
 - Folgepaket der automatisierten Konsistenz-Baseline
 
-## 2. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
+## 4. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -33,14 +71,14 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Die zentrale Vorgangsarchitektur verknüpft Transaktionen, Belege, Mails, To-Dos und Termine. Änderungen, Löschungen, Abschlussprüfungen und Split-Speicherung müssen Datenintegrität und zulässige N:M-Verknüpfungen zuverlässig erhalten.
+**Grund:** Änderungen, Löschungen, Abschlussprüfungen und Split-Speicherung müssen die Datenintegrität sowie die zulässigen N:M-Verknüpfungen zwischen Transaktionen, Vorgängen, Belegen, Mails, To-Dos und Terminen erhalten.
 
 **Feedback:**
 
 - Inbox: gesamten Code auf Konsistenz und Funktion prüfen
 - Architekturregel: Vorgänge und bestehende Verknüpfungsstrukturen verwenden
 
-## 3. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
+## 5. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -52,14 +90,14 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Banking, Microsoft Graph und DFBnet dürfen keine unkontrollierten produktiven Aktionen ausführen. Ihre Fehler-, Abbruch- und Testpfade müssen daher getrennt mit Mocks, Fakes oder Fixtures geprüft werden.
+**Grund:** Banking, Microsoft Graph und DFBnet dürfen keine unkontrollierten produktiven Aktionen ausführen; Fehler-, Abbruch- und Testpfade müssen deshalb getrennt mit Mocks, Fakes oder Fixtures geprüft werden.
 
 **Feedback:**
 
 - Inbox: gesamten Code auf Konsistenz und Funktion prüfen
 - Projektregel: externe Dienste nur mit Mocks, Fakes oder Fixtures testen
 
-## 4. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
+## 6. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
 
 **Epic-ID:** epic-cashier-usability
 
@@ -71,13 +109,13 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Für maximalen Benutzerkomfort muss zuerst nachvollziehbar beschrieben werden, wie ein Kassierer tägliche Vorgänge bearbeitet: Kontobewegungen sichten, klassifizieren, Belege und Mails zuordnen, offene Arbeit erkennen und Vorgänge abschließen.
+**Grund:** Vor UI-Änderungen sollen die täglichen Abläufe beim Sichten, Klassifizieren, Zuordnen und Abschließen von Vorgängen aus Kassierersicht nachvollziehbar erfasst und priorisiert werden.
 
 **Feedback:**
 
 - Inbox: Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 
-## 5. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
+## 7. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
 
 **Epic-ID:** epic-cashier-usability
 
@@ -89,14 +127,14 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Die vorhandenen Kennzahlen für offene Vorgänge, unklassifizierte Transaktionen, Mails, To-Dos, Dokumente und Termine sollen nach der Workflow-Analyse zu klaren, direkt bearbeitbaren Einstiegspunkten führen.
+**Grund:** Kennzahlen für offene Vorgänge, unklassifizierte Transaktionen, Mails, To-Dos, Dokumente und Termine sollen zu klaren, direkt bearbeitbaren Einstiegspunkten führen.
 
 **Feedback:**
 
 - Inbox: maximalen Benutzerkomfort ohne Leistungs- und Featureeinbußen erreichen
 - Vorhaben: Kassiererfreundliche Arbeitsabläufe
 
-## 6. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
+## 8. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -108,14 +146,14 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Die zentrale Vorgangsarbeit umfasst mehrere Entitätstypen. Einheitliche Such-, Auswahl-, Bestätigungs- und Fehlerrückmeldungen reduzieren Fehlzuordnungen und verkürzen wiederkehrende Bearbeitungsschritte.
+**Grund:** Einheitliche Suche, Auswahl, Bestätigung und Fehlerrückmeldungen sollen Fehlzuordnungen reduzieren und wiederkehrende Bearbeitungsschritte beschleunigen, ohne die Vorgangsarchitektur zu umgehen.
 
 **Feedback:**
 
 - Inbox: Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 - Architekturregel: Vorgänge sind das zentrale fachliche Objekt
 
-## 7. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
+## 9. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -127,14 +165,14 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Ein Kassierer muss erkennen können, warum ein Vorgang nicht abgeschlossen werden kann und welche Klassifikationsfelder oder Belege fehlen, ohne Details und vorhandene Validierung zu umgehen.
+**Grund:** Kassierer sollen erkennen können, warum ein Vorgang nicht abgeschlossen werden kann und welche Klassifikationsfelder oder Belege fehlen, ohne bestehende Validierung zu umgehen.
 
 **Feedback:**
 
-- Inbox: maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen erreichen
+- Inbox: maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
 - Bestehender Dashboard-Kontext: Abschlussprüfungen und Klassifikationsstatus
 
-## 8. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
+## 10. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -146,7 +184,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Transaktions-, Vorgangs-, Mail-, Beleg-, To-Do- und Terminlisten müssen bei typischen Vereinsdaten verständlich filterbar, suchbar und performant bleiben; Verbesserungen sollen keine Feature- oder Leistungseinbußen verursachen.
+**Grund:** Transaktions-, Vorgangs-, Mail-, Beleg-, To-Do- und Terminlisten sollen bei typischen Vereinsdaten verständlich filterbar, suchbar und performant bleiben.
 
 **Feedback:**
 
