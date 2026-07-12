@@ -2,25 +2,7 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Bedienoberfläche für Saldoabweichungen und manuelle Saldo-Korrekturen ergänzen
-
-**Epic-ID:** epic-balance-correction
-
-**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
-
-**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
-
-**Teilpaket:** Teil 2
-
-**Priorität:** hoch
-
-**Grund:** Nach der vorhandenen Persistenz- und API-Grundlage benötigt der Kassierer eine verständliche lokale Oberfläche, die Abweichung, Folgen, Begründung und vorhandene Korrekturen sichtbar macht sowie eine bewusste Eingabe ermöglicht.
-
-**Feedback:**
-
-- Für die Oberfläche eine explizite Anzeige von beobachtetem Bankwert, lokalem Vergleichsanker, Stichtag und Begründung vorsehen.
-
-## 2. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
+## 1. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
 
 **Epic-ID:** epic-balance-correction
 
@@ -38,7 +20,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen.
 
-## 3. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
+## 2. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
 
 **Epic-ID:** epic-balance-correction
 
@@ -56,7 +38,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen.
 
-## 4. Kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
+## 3. Kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -75,7 +57,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Folgepaket der automatisierten Konsistenz-Baseline
 
-## 5. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
+## 4. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -94,7 +76,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Architekturregel: Vorgänge und bestehende Verknüpfungsstrukturen verwenden
 
-## 6. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
+## 5. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -113,7 +95,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Projektregel: externe Dienste nur mit Mocks, Fakes oder Fixtures testen
 
-## 7. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
+## 6. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
 
 **Epic-ID:** epic-cashier-usability
 
@@ -131,7 +113,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 
-## 8. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
+## 7. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
 
 **Epic-ID:** epic-cashier-usability
 
@@ -150,7 +132,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - maximalen Benutzerkomfort ohne Leistungs- und Featureeinbußen erreichen
 - Vorhaben: Kassiererfreundliche Arbeitsabläufe
 
-## 9. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
+## 8. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -169,7 +151,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 - Architekturregel: Vorgänge sind das zentrale fachliche Objekt
 
-## 10. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
+## 9. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -188,7 +170,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
 - Bestehender Dashboard-Kontext: Abschlussprüfungen und Klassifikationsstatus
 
-## 11. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
+## 10. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
 
 **Epic-ID:** epic-cashier-usability
 
