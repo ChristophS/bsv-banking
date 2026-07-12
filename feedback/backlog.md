@@ -2,26 +2,7 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Split-Editor für Vorgangs- und Rechnungszuordnungen bereitstellen
-
-**Epic-ID:** epic-transaction-splits
-
-**Epic-Titel:** Transaktionen in Teilbeträge und weitere Zuordnungsfälle aufteilen
-
-**Epic-Ziel:** Transaktionen fachlich so aufteilen können, dass Teilbeträge getrennt klassifiziert und darauf aufbauende Rechnungs- und Vorgangszuordnungen unterstützt werden.
-
-**Teilpaket:** Teil 5
-
-**Priorität:** hoch
-
-**Grund:** Nach der abgesicherten Backend- und API-Grundlage muss die Zuordnung von Split-Zeilen zu vorhandenen Vorgängen und den daraus sichtbaren Rechnungsbelegen im Transaktionsdetail bedienbar werden.
-
-**Feedback:**
-
-- existing_backlog
-- Ich benötige die Möglichkeit Transaktionen zu splitten. Da auf einer Rechnung oder innerhalb einer Transaktion Teilsummen zu Kategorie A und Teilsummen zu Kategorie B gehören können.
-
-## 2. Dokumente einer Mail innerhalb eines Vorgangs gezielt Transaktionsbezügen zuordnen
+## 1. Dokumente einer Mail innerhalb eines Vorgangs gezielt Transaktionsbezügen zuordnen
 
 **Epic-ID:** epic-mail-document-assignment
 
@@ -40,7 +21,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - existing_backlog
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege, wie man geschickt damit umgehen kann.
 
-## 3. Vorgangsbasierte Auswahl-API für Mail-Dokumentzuordnungen bereitstellen
+## 2. Vorgangsbasierte Auswahl-API für Mail-Dokumentzuordnungen bereitstellen
 
 **Epic-ID:** epic-mail-document-assignment
 
@@ -59,7 +40,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - existing_backlog
 - Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
-## 4. Mail-Detailansicht für die vorgangsbasierte Dokumentzuordnung umsetzen
+## 3. Mail-Detailansicht für die vorgangsbasierte Dokumentzuordnung umsetzen
 
 **Epic-ID:** epic-mail-document-assignment
 
@@ -78,7 +59,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - existing_backlog
 - Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
-## 5. Adressdatenbestand für Spendenbescheinigungen fachlich und persistent anlegen
+## 4. Adressdatenbestand für Spendenbescheinigungen fachlich und persistent anlegen
 
 **Epic-ID:** epic-donation-certificates
 
@@ -97,7 +78,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - existing_backlog
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern.
 
-## 6. Spendenbescheinigungen aus lokalen Empfänger- und Vorgangsdaten erzeugen
+## 5. Spendenbescheinigungen aus lokalen Empfänger- und Vorgangsdaten erzeugen
 
 **Epic-ID:** epic-donation-certificates
 
@@ -116,7 +97,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - existing_backlog
 - Dann auch eine automatische Erzeugung der Spendenbescheinigung.
 
-## 7. DFBnet-Vereinsdaten für Spendenbescheinigungen als getrennte Leseintegration prüfen
+## 6. DFBnet-Vereinsdaten für Spendenbescheinigungen als getrennte Leseintegration prüfen
 
 **Epic-ID:** epic-donation-certificates
 
