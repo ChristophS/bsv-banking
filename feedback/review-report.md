@@ -8,34 +8,36 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen: manuelle Korrekturen werden separat und auditierbar persistiert, der lokale API-Flow validiert Konto, Betrag, Datum und Begründung, passende bestätigte Korrekturen werden nur stichtags- und kontogenau verwendet, und beobachtete Banksalden sowie Quelldateien bleiben getrennt erhalten. Die relevanten Regressionstests und API-Tests sind ergänzt. Der GitHub-Branch ist zwei Commits vor main und enthält keine fehlenden Vergleichsänderungen.
+Die Umsetzung erfüllt das Arbeitspaket. Die vollständige unittest-Suite wurde vor und nach dem Fix ausgeführt: jeweils 263 Tests, 256 erfolgreich, 0 Fehler, 0 Fehlgeschlagen, 7 optionale Playwright-Tests übersprungen. Der reproduzierte ResourceWarning durch eine nicht geschlossene CSV-Datei wurde mit einem Context Manager behoben. Der GitHub-Compare ist sauber und enthält ausschließlich die erwarteten Änderungen.
 
-## Review-Ergebnis
+# Review
 
-**Entscheidung: Angenommen**
+## Ergebnis
 
-### Erfüllte Anforderungen
+**Akzeptiert.**
 
-- Die Migration auf Schema-Version 19 legt eine separate Tabelle `manual_balance_corrections` an.
-- Die Korrektur enthält Kontoidentität, Integer-Centbetrag, Stichtag, Begründung, Erstellzeitpunkt, Quelle, Kennzeichnung als manuelle Korrektur und Bestätigungsstatus.
-- Eine fachlich identische Korrektur ist idempotent; eine abweichende Korrektur für dasselbe Konto und denselben Stichtag wird abgelehnt.
-- Der API-Endpunkt `POST /api/balance-corrections` verlangt genau die Pflichtfelder `account_id`, `balance_minor`, `balance_as_of` und `reason`.
-- Unbekannte Konten, ungültige Datumswerte, fehlende Begründungen und Nicht-Integer-Centbeträge werden kontrolliert als Client- oder Not-Found-Fehler beantwortet.
-- `GET /api/balance-corrections` stellt die gespeicherten Korrekturen einschließlich Kontoidentität und Auditfeldern abrufbar bereit.
-- Der Import sucht ausschließlich nach einer bestätigten Korrektur mit passendem Provider, passender Kontonummer und exakt passendem Stichtag.
-- Der beobachtete Banksaldo und der lokale Vergleichsanker werden getrennt geführt. Das Manifest weist beide Werte getrennt aus.
-- Die archivierte CSV-Datei und ihre Rohfelder werden nicht verändert.
-- Ohne passende Korrektur bleibt die bestehende Volksbank-Saldoabweichung ein Validierungsfehler.
-- Die Tests decken den Abbruch ohne Korrektur, den erfolgreichen Import mit Korrektur, die Unverändertheit der CSV-Daten, die getrennten Manifestwerte sowie API-Validierung und Idempotenz ab.
+## Geprüfte Anforderungen
 
-### Architektur- und Scope-Prüfung
+- Die vollständige lokale Unit-Test-Suite wurde mit `unittest discover -s tests -v` ausgeführt.
+- Der Lauf wurde nach der Korrektur erneut vollständig ausgeführt.
+- Die Ergebnisse sind klar dokumentiert: 263 Tests insgesamt, 256 erfolgreich, 0 Fehler, 0 Fehlgeschlagen und 7 Überspringungen.
+- Die Überspringungen sind auf optionale Browser-Tests wegen fehlender Playwright-Abhängigkeit begrenzt und nachvollziehbar dokumentiert.
+- Der reproduzierte `ResourceWarning` im Test `test_matching_manual_balance_correction_unblocks_snapshot_without_changing_raw_data` wurde durch deterministisches Schließen der CSV-Datei mit einem Context Manager behoben.
+- Die bestehende Testassertion zur unveränderten CSV-Zeile bleibt fachlich erhalten.
+- Die Änderung bleibt eng auf Test-Ressourcenmanagement und die zugehörige Dokumentation begrenzt.
+- Es wurden keine Produktivlogik, keine externen Integrationen und keine Architektur umgangen oder umgebaut.
+- Der bereitgestellte Test verwendet temporäre Verzeichnisse und lokale Testdaten. Die im Report dokumentierte Stichprobe zu Mocks, Fakes und lokalen Setups ist mit dem geforderten Scope vereinbar.
+- Der GitHub-Compare ist `ahead` mit einem Commit, `behind_by` ist 0. Es gibt keine fehlenden oder zusätzlichen Dateien gegenüber dem Runner-Compare.
 
-Die Umsetzung führt eine separate lokale Korrektur-Faktentabelle ein und verändert weder Vorgänge noch bestehende N:M-Verknüpfungen. Es gibt keine echte Banking-Aktion und keine externen Dienstaufrufe in den neuen Tests. Die Änderung bleibt innerhalb des Arbeitspakets.
+## Diff-Prüfung
 
-### Branch- und Vergleichsprüfung
+Der tatsächliche Diff enthält ausschließlich:
 
-Der Branch ist laut GitHub Compare `ahead` mit zwei Commits und nicht hinter `main`. `missing_from_github_compare` ist leer. Die zusätzlichen GitHub-Änderungen an `banking_dashboard/server.py` und `tests/test_dashboard.py` gehören fachlich zur API-Umsetzung und sind durch den GitHub-Diff nachvollziehbar.
+- `tests/test_transactions.py`: CSV-Datei wird beim Lesen über einen Context Manager geschlossen.
+- `feedback/implementation_report.md`: Testlauf, Befund, Korrektur, Überspringungen und Einschränkungen werden strukturiert dokumentiert.
 
-### Optionale Verbesserungen
+Die Änderung ist konsistent mit dem Implementation Report und stellt keinen Scope Creep dar.
 
-Die API könnte Stringtypen strenger validieren und konkurrierende Inserts explizit behandeln. Außerdem sollte der Runner künftig sämtliche im GitHub-Compare geänderten Dateien validieren, insbesondere Dashboard-Server und Dashboard-Tests.
+## Verbleibende Hinweise
+
+Die sieben übersprungenen Browser-Tests sind als optionale lokale Abhängigkeit dokumentiert. Das ist für dieses Arbeitspaket kein Blocker, da keine Installation oder externe Browserumgebung erzwungen werden soll.
