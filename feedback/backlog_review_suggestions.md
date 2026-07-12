@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+Optional könnte in einem späteren Arbeitspaket die lokale Browser-Testbaseline separat mit installierter Playwright-Abhängigkeit geprüft werden. Dabei müssen weiterhin ausschließlich lokale Testdaten und kontrollierte Testumgebungen verwendet werden.
