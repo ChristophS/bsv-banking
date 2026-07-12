@@ -14,13 +14,13 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Nach der sicheren Persistenz- und API-Grundlage benötigt der Kassierer eine verständliche lokale Oberfläche, die Abweichung, Folgen, Begründung und vorhandene Korrekturen sichtbar macht sowie eine bewusste Eingabe ermöglicht.
+**Grund:** Nach der vorhandenen Persistenz- und API-Grundlage benötigt der Kassierer eine verständliche lokale Oberfläche, die Abweichung, Folgen, Begründung und vorhandene Korrekturen sichtbar macht sowie eine bewusste Eingabe ermöglicht.
 
 **Feedback:**
 
 - Für die Oberfläche eine explizite Anzeige von beobachtetem Bankwert, lokalem Vergleichsanker, Stichtag und Begründung vorsehen.
 
-## 2. Widerruf oder bewusster Ersatz bestehender manueller Saldo-Korrekturen ergänzen
+## 2. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
 
 **Epic-ID:** epic-balance-correction
 
@@ -32,11 +32,11 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Neben dem Anlegen einer manuellen Korrektur wird später ein klar geregelter Weg benötigt, um bestehende Korrekturen bewusst zu widerrufen oder zu ersetzen.
+**Grund:** Neben dem Anlegen einer manuellen Korrektur wird ein klar geregelter Weg benötigt, bestehende Korrekturen bewusst zu widerrufen oder zu ersetzen.
 
 **Feedback:**
 
-- Widerruf oder bewusster Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen.
+- Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen.
 
 ## 3. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
 
@@ -56,26 +56,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen.
 
-## 4. Lokale Testbaseline für die Dashboard- und Transaktionspfade ausführen und Befunde dokumentieren
-
-**Epic-ID:** epic-system-consistency
-
-**Epic-Titel:** Systematische Qualitäts- und Konsistenzprüfung des Vereins-Finanztools
-
-**Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
-
-**Teilpaket:** Teil 1
-
-**Priorität:** hoch
-
-**Grund:** Die vollständige Unit-Test-Suite soll reproduzierbar ausgeführt, eindeutig belegte kleine Kernfehler sollen gezielt korrigiert und alle weiteren Befunde strukturiert dokumentiert werden.
-
-**Feedback:**
-
-- gesamten Code auf Konsistenz und Funktion prüfen
-- Bisheriges aktives Arbeitspaket
-
-## 5. Kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
+## 4. Kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -94,7 +75,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Folgepaket der automatisierten Konsistenz-Baseline
 
-## 6. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
+## 5. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -113,7 +94,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Architekturregel: Vorgänge und bestehende Verknüpfungsstrukturen verwenden
 
-## 7. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
+## 6. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -132,7 +113,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Projektregel: externe Dienste nur mit Mocks, Fakes oder Fixtures testen
 
-## 8. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
+## 7. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
 
 **Epic-ID:** epic-cashier-usability
 
@@ -150,7 +131,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 
-## 9. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
+## 8. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
 
 **Epic-ID:** epic-cashier-usability
 
@@ -169,7 +150,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - maximalen Benutzerkomfort ohne Leistungs- und Featureeinbußen erreichen
 - Vorhaben: Kassiererfreundliche Arbeitsabläufe
 
-## 10. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
+## 9. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -188,7 +169,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 - Architekturregel: Vorgänge sind das zentrale fachliche Objekt
 
-## 11. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
+## 10. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -207,7 +188,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
 - Bestehender Dashboard-Kontext: Abschlussprüfungen und Klassifikationsstatus
 
-## 12. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
+## 11. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
 
 **Epic-ID:** epic-cashier-usability
 
