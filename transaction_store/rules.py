@@ -319,6 +319,11 @@ def apply_completion_rules(
             and matching_completion_rules(transaction, rules)
             for transaction in transactions
         )
+        if completed:
+            completed = all(
+                _has_complete_classification(split)
+                for split in _vorgang_splits(connection, vorgangs_id)
+            )
         if completed and _vorgang_requires_document(connection, vorgangs_id):
             completed = _vorgang_has_document(connection, vorgangs_id)
         status = "abgeschlossen" if completed else "in_bearbeitung"
@@ -658,6 +663,36 @@ def _vorgang_transactions(
             ORDER BY t.transaction_id
             """,
             (vorgangs_id,),
+        )
+    )
+
+
+def _vorgang_splits(
+    connection: sqlite3.Connection,
+    vorgangs_id: str,
+) -> list[sqlite3.Row]:
+    """Return splits relevant to a Vorgang through explicit or inherited links."""
+    return list(
+        connection.execute(
+            """
+            SELECT
+                split.transaction_type, split.top_category,
+                split.sub_category, split.sphere,
+                split.professional_description
+            FROM transaction_splits AS split
+            WHERE split.vorgangs_id = ?
+               OR (
+                    split.vorgangs_id IS NULL
+                    AND EXISTS (
+                        SELECT 1
+                        FROM transaktion_vorgaenge AS tv
+                        WHERE tv.transaktions_id = split.transaction_id
+                          AND tv.vorgangs_id = ?
+                    )
+               )
+            ORDER BY split.transaction_id, split.sort_order, split.rowid
+            """,
+            (vorgangs_id, vorgangs_id),
         )
     )
 

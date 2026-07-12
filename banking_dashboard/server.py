@@ -554,8 +554,17 @@ class DashboardDataStore:
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         splits = _transaction_splits_from_payload(transaktions_id, payload)
+        with closing(
+            connect_rules_database(self.rules_database_path)
+        ) as rules_connection:
+            completion_rules = load_completion_rules(rules_connection)
         with closing(self._connect(writable=True)) as connection:
             replace_transaction_splits(connection, transaktions_id, splits)
+            apply_completion_rules(
+                connection,
+                completion_rules,
+                [transaktions_id],
+            )
             connection.commit()
         detail = self.transaction_detail(transaktions_id)
         if detail is None:
