@@ -8,65 +8,38 @@
 
 ## Begründung
 
-Die nachgeladenen Dateien bestätigen die vorhandene Schema- und Trigger-Grundlage sowie die 400/404-Fehlerbehandlung. Der Diff implementiert die API vollständig innerhalb der vorgangsbasierten Verknüpfungen und der Branch ist sauber vor main.
+Die geladenen API- und Testdateien reichen für die finale Prüfung aus. Der GitHub-Compare ist mit einem Commit vor main und ohne Abweichungen zum Runner verwendbar.
 
 ## Zusammenfassung
 
-Die GET-/PUT-API für Mail-Dokumentzuordnungen wurde mit strikter Payload- und Kontextvalidierung umgesetzt. Sie verwendet ausschließlich vorgang_belege und transaktion_vorgaenge samt opaker bezugs_id, ohne eine direkte Transaktion-Beleg-Beziehung einzuführen.
+Die Vorgangsdetailansicht lädt und bearbeitet Mail-Dokumentzuordnungen über die bestehenden Endpunkte. Die Auswahl ist auf Transaktionen des aktuellen Vorgangs begrenzt, unterstützt die explizite Aufhebung und lädt nach erfolgreichem Speichern konsistent neu.
 
-# Review Report
+# Review
 
 ## Ergebnis
 
-**Accepted:** ja
+**Freigegeben.**
 
-## Geprüfter Umfang
+## Prüfung der Anforderungen
 
-- `banking_dashboard/server.py`
-- `tests/test_dashboard.py`
-- Nachgeladener Kontext aus `transaction_store/database.py`
-- GitHub-Compare-Status: Branch ist `ahead` um 2 Commits und nicht hinter `main`.
+- `loadVorgangWorkspace` lädt die bestehende Ressource `GET /api/vorgaenge/<vorgangs_id>/mail-dokumentzuordnungen` parallel zu den vorhandenen Vorgangsdaten.
+- Der neue Editor zeigt jeden vom vorgangsspezifischen Endpoint gelieferten Beleg mit Dateiname und verfügbaren Metadaten. Mail-Anhänge werden anhand von `mail_inbox_id` und `mail_attachment_index` gekennzeichnet.
+- Die Optionen werden ausschließlich aus `assignmentPayload.transaktionen` aufgebaut. Der Server liefert diese aus `transaktion_vorgaenge` für genau den angeforderten Vorgang und validiert PUT-Zuordnungen erneut gegen diesen Vorgang.
+- Die erste Option `Keine spezifische Transaktion` besitzt den Leerwert und wird beim Speichern korrekt als `transaktions_id: null` serialisiert.
+- Beim Speichern werden alle sichtbaren Selects als vollständige Liste unter `zuordnungen` per PUT an den vorhandenen Endpoint gesendet.
+- Nach erfolgreichem PUT wird der vollständige Vorgangs-Workspace neu geladen. Bei Fehlern bleibt die lokale Auswahl sichtbar, der Status wird als Fehler angezeigt und die globale Fehlermeldung wird gesetzt; ein Erfolg wird nicht dargestellt.
+- Unveränderte Werte aktivieren den Speichern-Button nicht. Für keine Dokumente und für Vorgänge ohne verknüpfte Transaktionen existieren klare Leerzustände.
 
-## Umsetzung
+## Architektur und Scope
 
-Die neue API ist unter folgendem bestehenden Vorgangsnamensraum abgegrenzt:
-
-- `GET /api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen`
-- `PUT /api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen`
-
-Der lesende Endpunkt liefert den Vorgang, dessen verknüpfte Transaktionen einschließlich lesbarer Transaktionsinformationen, die über `vorgang_belege` verfügbaren Dokumente sowie die aktuell über `vorgangsbezug_id` aufgelösten Transaktionszuordnungen.
-
-Der schreibende Endpunkt validiert:
-
-- den adressierten Vorgang,
-- erlaubte Top-Level- und Elementfelder,
-- Payload- und URL-Vorgangs-ID auf Widerspruch,
-- Typ und Inhalt der Zuordnungsliste,
-- Beleg-IDs einschließlich Zugehörigkeit zum Vorgang,
-- Transaktions-IDs einschließlich Existenz und Zugehörigkeit zum Vorgang,
-- doppelt übermittelte Beleg-IDs.
-
-`ValueError` wird im PUT-Handler als HTTP 400 und `LookupError` als HTTP 404 zurückgegeben. Damit entsprechen die neuen Endpunkte der etablierten Fehlerstruktur.
-
-## Architektur und Persistenz
-
-Die Zuordnung wird nicht als direkte Beziehung zwischen `transactions` und `belege` persistiert. Stattdessen wird ausschließlich `vorgang_belege.vorgangsbezug_id` auf die opake, eindeutige `transaktion_vorgaenge.bezugs_id` gesetzt. Der GET-Endpunkt löst die fachlich benötigte Transaktions-ID erst über den Join im Vorgangskontext auf.
-
-Der nachgeladene Datenbankkontext bestätigt:
-
-- `transaktion_vorgaenge.bezugs_id` wird nachinitialisiert und eindeutig indiziert.
-- `vorgang_belege` enthält keine direkte `transaktions_id`-Spalte.
-- Der bestehende Löschtrigger leert nur den abhängigen opaken Vorgangsbezug, wenn der zugrunde liegende Transaktion-Vorgang-Link entfernt wird.
-
-Die Anpassung der Link-Ersetzung ist fachlich erforderlich: Unveränderte Transaktion- und Beleglinks werden nicht mehr gelöscht und erneut erstellt. Dadurch bleiben stabile `bezugs_id`-Werte und gespeicherte Dokumentauswahlen bei einem Vorgangs-Update erhalten. Entfernte Transaktionslinks lösen weiterhin den vorgesehenen Trigger zur Bereinigung ihrer Dokumentbezüge aus.
+Die Umsetzung verwendet ausschließlich die vorhandene vorgangsbasierte API und die bestehende Persistenz über `vorgang_belege.vorgangsbezug_id` beziehungsweise `transaktion_vorgaenge.bezugs_id`. Es wurden weder Tabellen, Migrationen noch eine direkte Transaktion-Beleg-Beziehung ergänzt. Externe Mail-, Banking-, Graph- oder Login-Aktionen wurden nicht eingeführt.
 
 ## Tests
 
-Die ergänzten Dashboard-Tests decken erfolgreichen Abruf und Änderung, idempotentes erneutes Speichern, unbekannte Beleg- und Transaktions-IDs, kontextfremde Transaktionen, widersprüchliche Vorgangs-IDs, unbekannte Payload-Felder, die Unverändertheit nach fehlerhaften Requests sowie die Abwesenheit einer direkten `transaktions_id` in `vorgang_belege` ab. Ein weiterer Regressionstest prüft die Erhaltung der auflösbaren Zuordnung nach `update_vorgang`.
+Die vorhandene lokale HTTP-Prüfung `test_mail_document_assignment_api_validates_vorgang_context` deckt das Laden per GET, erfolgreiches und idempotentes Speichern per PUT, ungültige Beleg- und Transaktions-IDs, vorgangsfremde Transaktionen, widersprüchliche Vorgangs-IDs, unbekannte Payload-Felder sowie den unveränderten bestätigten Stand nach Fehlern ab. Sie verwendet ausschließlich lokale Testdaten und Fakes.
 
-Laut Umsetzungsbericht laufen die Dashboard-, Mail- und Transaktionstests lokal ohne produktive Daten oder externe Dienste. Die Änderungen enthalten keine externen Banking-, Mail-, Graph- oder Login-Aktionen.
+Laut Implementation Report liefen zusätzlich `node --check banking_dashboard/static/app.js`, die Dashboard-Suite mit 112 bestandenen und 6 übersprungenen Tests sowie `git diff --check` erfolgreich.
 
-## Nicht-blockierende Hinweise
+## Compare-Status
 
-- Ein expliziter Test für einen nicht vorhandenen Vorgang würde die Testabdeckung der Anforderung noch vollständiger sichtbar machen.
-- Die partielle PUT-Semantik für nicht gesendete Belege sollte für künftige API-Clients dokumentiert werden.
+Der Branch ist gegenüber `main` um einen Commit voraus, nicht hinter `main`, und die vom Runner validierten beziehungsweise gestagten Dateien entsprechen dem GitHub-Compare. Es bestehen keine Compare-Abweichungen.
