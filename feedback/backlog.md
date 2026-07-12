@@ -1,25 +1,8 @@
 # Backlog
 
-## 1. Klassifikationsvorschläge im Split-Editor an bestehende Kategorien koppeln
+Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-**Epic-ID:** epic-transaction-splits
-
-**Epic-Titel:** Transaktionen in Teilbeträge und weitere Zuordnungsfälle aufteilen
-
-**Epic-Ziel:** Transaktionen fachlich so aufteilen können, dass Teilbeträge getrennt klassifiziert und darauf aufbauende Rechnungs- und Vorgangszuordnungen unterstützt werden.
-
-**Teilpaket:** Teil 3.2
-
-**Priorität:** hoch
-
-**Grund:** Nach der Statusgrundlage benötigen einzelne Split-Zeilen dieselben nutzbaren Vorschläge und Kategorieabhängigkeiten wie die bestehende Transaktionsklassifikation.
-
-**Feedback:**
-
-- existing_backlog
-- bekannte Epic-Zuordnung für Split-Klassifikation, Statusableitung und Vorschlagslisten
-
-## 2. Vorgangsstatus unter Berücksichtigung klassifizierter Split-Zeilen ableiten
+## 1. Vorgangsstatus unter Berücksichtigung klassifizierter Split-Zeilen ableiten
 
 **Epic-ID:** epic-transaction-splits
 
@@ -31,14 +14,14 @@
 
 **Priorität:** hoch
 
-**Grund:** Die fachliche Statusberechnung soll nach stabiler Split-Klassifikation gezielt in die bestehende vorgangsbasierte Abschlusslogik integriert werden, ohne manuelle Statuswerte zu überschreiben.
+**Grund:** Nach stabiler Split-Klassifikation soll die fachliche Statusberechnung gezielt in die bestehende vorgangsbasierte Abschlusslogik integriert werden, ohne manuelle Statuswerte zu überschreiben.
 
 **Feedback:**
 
 - existing_backlog
 - Klassifikation, Vorschläge und Statusableitung für Split-Zeilen fachlich vervollständigen
 
-## 3. Split-Zeilen innerhalb eines Vorgangs Rechnungen und Teilrechnungen zuordnen
+## 2. Split-Zeilen innerhalb eines Vorgangs Rechnungen und Teilrechnungen zuordnen
 
 **Epic-ID:** epic-transaction-splits
 
@@ -55,9 +38,9 @@
 **Feedback:**
 
 - existing_backlog
-- ich benötige die Möglichkeit Transaktionen zu splitten. Da auf einer Rechnung oder innerhalb einer Transaktion Teilsummen zu Kategorie A und Teilsummen zu Kategorie B gehören können.
+- Ich benötige die Möglichkeit Transaktionen zu splitten. Da auf einer Rechnung oder innerhalb einer Transaktion Teilsummen zu Kategorie A und Teilsummen zu Kategorie B gehören können.
 
-## 4. Dokumente einer Mail innerhalb eines Vorgangs gezielt Transaktionsbezügen zuordnen
+## 3. Dokumente einer Mail innerhalb eines Vorgangs gezielt Transaktionsbezügen zuordnen
 
 **Epic-ID:** epic-mail-document-assignment
 
@@ -76,7 +59,7 @@
 - existing_backlog
 - Ich habe jetzt eine Mail mit verschiedenen Dokumenten, die verschiedenen Transaktionen zugewiesen werden sollen. Das Ganze ist ein Vorgang. Überlege, wie man geschickt damit umgehen kann.
 
-## 5. Vorgangsbasierte Auswahl-API für Mail-Dokumentzuordnungen bereitstellen
+## 4. Vorgangsbasierte Auswahl-API für Mail-Dokumentzuordnungen bereitstellen
 
 **Epic-ID:** epic-mail-document-assignment
 
@@ -95,7 +78,7 @@
 - existing_backlog
 - Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
-## 6. Mail-Detailansicht für die vorgangsbasierte Dokumentzuordnung umsetzen
+## 5. Mail-Detailansicht für die vorgangsbasierte Dokumentzuordnung umsetzen
 
 **Epic-ID:** epic-mail-document-assignment
 
@@ -114,7 +97,7 @@
 - existing_backlog
 - Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
 
-## 7. Adressdatenbestand für Spendenbescheinigungen fachlich und persistent anlegen
+## 6. Adressdatenbestand für Spendenbescheinigungen fachlich und persistent anlegen
 
 **Epic-ID:** epic-donation-certificates
 
@@ -133,7 +116,7 @@
 - existing_backlog
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern.
 
-## 8. Spendenbescheinigungen aus lokalen Empfänger- und Vorgangsdaten erzeugen
+## 7. Spendenbescheinigungen aus lokalen Empfänger- und Vorgangsdaten erzeugen
 
 **Epic-ID:** epic-donation-certificates
 
@@ -152,7 +135,7 @@
 - existing_backlog
 - Dann auch eine automatische Erzeugung der Spendenbescheinigung.
 
-## 9. DFBnet-Vereinsdaten für Spendenbescheinigungen als getrennte Leseintegration prüfen
+## 8. DFBnet-Vereinsdaten für Spendenbescheinigungen als getrennte Leseintegration prüfen
 
 **Epic-ID:** epic-donation-certificates
 
