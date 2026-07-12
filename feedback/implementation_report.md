@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260712-125600`
+`agent2/rework-20260712-125747`
 
 ## Geänderte Dateien
 
@@ -22,6 +22,9 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
   nun nachweislich `DonationRecipient`, Schema-Version 18, die Migration
   `_migrate_v17_to_v18`, die Tabelle `donation_recipients`, die drei
   Datenzugriffsfunktionen sowie die zugehörigen Tests und Imports.
+- Der aktuelle Branch zeigt diesen fachlichen Stand konsistent im Commit
+  `76c0577`; die Nacharbeit am Report verweist nun auf den tatsächlich
+  geprüften Rework-Branch `agent2/rework-20260712-125747`.
 - Die vorhandene fachliche Umsetzung wurde unverändert erhalten, da der
   Blocker keinen fachlichen Defekt, sondern den fehlenden Quellstand am
   geprüften Commit betraf.
