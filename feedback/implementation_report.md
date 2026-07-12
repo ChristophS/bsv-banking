@@ -2,68 +2,87 @@
 
 ## Branchname
 
-`agent2/codex-20260712-111333`
+`agent2/rework-20260712-114750`
 
 ## Geänderte Dateien
 
-- `banking_dashboard/static/app.js`
-- `banking_dashboard/static/styles.css`
-- `tests/test_dashboard.py`
+- `transaction_store/database.py`
+- `banking_dashboard/mail_integration.py`
+- `tests/test_mail_integration.py`
+- `tests/test_transactions.py`
 - `feedback/implementation_report.md`
 
 ## Umgesetzte Punkte
 
-- Der Transaktionsarbeitsbereich und die Transaktionsvorschau laden die bereits
-  vorhandene Split-API und verwenden deren `zulaessige_vorgaenge`.
-- Das freie Feld für die Vorgangs-ID wurde je Split-Zeile durch eine Auswahl
-  ersetzt. Angeboten werden ausschließlich die von der Split-API gelieferten
-  Vorgänge; gespeichert wird weiterhin nur das vorhandene Feld `vorgangs_id`.
-- Die leere Auswahl ist ausdrücklich als `Nicht zugeordnet` bezeichnet.
-- Vorgangstitel beziehungsweise Vorgangs-ID und Status sind in der Auswahl
-  sichtbar. Zum ausgewählten Vorgang zeigt die Zeile Status und Belegnamen oder
-  den eindeutigen Hinweis `Keine Belege vorhanden`.
-- Der Hinweis stellt mit `Belege des Vorgangs` klar, dass keine direkte
-  Split- oder Transaktion-Beleg-Zuordnung entsteht.
-- Neu laden aktualisiert Splits, zulässige Vorgänge, vorausgewählte Zuordnung
-  und Beleghinweis gemeinsam.
-- Betrags-, Summen- und Klassifikationsbearbeitung verwenden unverändert die
-  vorhandenen Felder und den bestehenden PUT-Endpunkt.
-- HTTP- und Browser-Regressionstests wurden um Vorgangs-/Belegdaten,
-  Vorauswahl, Anzeige und Speicherung der Split-Zuordnung ergänzt.
+- Schema-Version 17 entfernt die direkte Spalte `transaktionsbezug_id` aus
+  `vorgang_belege`. Stattdessen erhält der bestehende Verknüpfungssatz
+  `transaktion_vorgaenge` einen opaken `bezugs_id`; `vorgang_belege` speichert
+  ausschließlich diesen Vorgangsbezug in `vorgangsbezug_id`.
+- Die Zuordnung wird nur gespeichert, wenn Mail, Anhang, Beleg und Vorgang existieren,
+  die Mail und der Beleg bereits zum Vorgang gehören und die Kombination aus
+  Transaktion und Vorgang in `transaktion_vorgaenge` vorhanden ist.
+- Die auslesbare Zuordnungsrepräsentation enthält Inbox-ID, Anhangsindex,
+  Beleg-ID, Vorgangs-ID und die über den Vorgang aufgelöste Transaktions-ID.
+- Wiederholtes Speichern derselben Zuordnung ist idempotent; ein Anhang kann
+  nicht gleichzeitig einem anderen Beleg zugeordnet werden.
+- Beim Entfernen einer `transaktion_vorgaenge`-Verknüpfung wird der davon
+  abhängige Dokumentbezug geleert, damit keine nicht mehr auflösbare Zuordnung
+  bestehen bleibt.
+- SQLite-Fixture-Tests decken zwei Dokumente mit zwei unterschiedlichen
+  Transaktionsbezügen sowie unbekannte Dokumente, Vorgänge, Transaktionen und
+  Transaktionen außerhalb des Vorgangskontexts ab.
+- Der Regressionstest prüft zusätzlich, dass `vorgang_belege` keine
+  `transaktionsbezug_id` mehr enthält und der persistierte opake Vorgangsbezug
+  nicht der Transaktions-ID entspricht.
+
+## Nachbesserung nach Review
+
+- Das blockierende Architekturproblem wurde behoben: Eine
+  `transactions.transaction_id` wird nicht mehr am Beleg-/Dokumentlink
+  persistiert.
+- Schreiben und Lesen erfolgen über den opaken Schlüssel des bereits bestehenden
+  Datensatzes in `transaktion_vorgaenge`; die Transaktions-ID wird erst beim Lesen
+  durch den Join auf diese Vorgangsverknüpfung aufgelöst.
+- Die Migration entfernt die beanstandete Spalte und den alten Trigger. Der neue
+  Trigger leert nur den opaken Vorgangsbezug, falls die zugrunde liegende
+  Vorgang-Transaktion-Verknüpfung gelöscht wird.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neuen Tabellen, Entitäten, Beziehungen oder API-Endpunkte.
-- Keine Änderungen an der vorhandenen serverseitigen Vorgangsvalidierung oder
-  Persistenz, da diese die Anforderungen bereits erfüllt.
+- Keine öffentliche API, UI oder JavaScript-Interaktion (für Teil 2 vorgesehen).
+- Keine automatische Vorgangserstellung oder Dokumentzuordnung.
+- Keine direkten Beleg-/Mail-Anhang-Transaktions-Tabellen oder Fremdschlüssel.
 
 ## Ausgeführte Tests
 
 ```text
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py
 "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py
 git diff --check
 ```
 
 ## Testergebnis
 
-- Dashboard: `110 passed, 6 skipped` in 30,78 Sekunden.
-- Diff-Prüfung: keine Whitespace-Fehler; nur Hinweise zur vorhandenen
-  LF/CRLF-Konfiguration.
+- Mail-Integration: `40 passed, 1 skipped`.
+- Dashboard: `110 passed, 6 skipped`.
+- Transaktions-/Migrationstests: `34 passed`.
+- `git diff --check`: keine Whitespace-Fehler; nur LF/CRLF-Hinweise.
 
 ## Bekannte Einschränkungen
 
-- Die sechs browserabhängigen Tests wurden von der vorhandenen lokalen
-  Testumgebung übersprungen. Der erweiterte Playwright-Test wurde daher lokal
-  nicht ausgeführt; die HTTP- und Store-Tests liefen erfolgreich.
-- Bei einem Vorgang ohne Titel zeigt die Auswahl wie vorgesehen dessen ID.
+- Für Teil 1 gilt die dokumentierte Annahme: genau ein Transaktionsbezug pro
+  Mail-Dokument. Eine spätere Neuzuordnung ersetzt den bisherigen Bezug.
+- Browserabhängige Tests wurden von der vorhandenen lokalen Testumgebung
+  übersprungen.
 
 ## Hinweise für den Review-Agenten
 
-- Die Auswahl wird beim Öffnen parallel zum bestehenden Transaktionsdetail über
-  `GET /api/transactions/{id}/splits` geladen. Es gibt keine parallele
-  Auswahl-API.
-- Nach einem manuellen Neuladen wird auch `zulaessige_vorgaenge` ersetzt, nicht
-  nur die Split-Liste.
-- Bereits vorhandene, nicht zu diesem Arbeitspaket gehörende Änderungen an
-  `feedback/Review-report.md` sowie die unversionierte Datei
-  `feedback/agent2_prompt.md` wurden nicht verändert.
+- Die Persistenz verwendet ausschließlich die bestehenden Knoten und
+  Verknüpfungen `inbox_attachments`, `inbox_vorgaenge`, `belege`,
+  `vorgang_belege` und `transaktion_vorgaenge`.
+- Die neuen Methoden liegen bewusst intern im `InboxMailStore`; eine öffentliche
+  Bearbeitungsroute wurde entsprechend der Abgrenzung von Teil 1 nicht ergänzt.
+- Die vorbestehende Änderung an `feedback/Review-report.md` sowie die vom Auftrag
+  bereitgestellte unversionierte Datei `feedback/agent2_prompt.md` wurden nicht
+  verändert.

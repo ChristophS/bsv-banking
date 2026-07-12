@@ -31,6 +31,164 @@ from banking_dashboard.mail_integration import (
 from tests.test_dashboard import create_dashboard_database
 
 
+class MailDocumentTransactionReferenceTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.database_path = Path(self.temporary_directory.name) / "mail.sqlite3"
+        create_dashboard_database(self.database_path)
+        self.store = InboxMailStore(self.database_path)
+        now = "2026-06-11T08:00:00+00:00"
+        connection = sqlite3.connect(self.database_path)
+        try:
+            connection.execute(
+                """
+                INSERT INTO inbox_messages (
+                    inbox_id, source, source_message_id, created_at,
+                    updated_at, last_seen_at
+                ) VALUES ('inbox_test', 'fixture', 'mail-1', ?, ?, ?)
+                """,
+                (now, now, now),
+            )
+            for index in (1, 2):
+                connection.execute(
+                    """
+                    INSERT INTO inbox_attachments (
+                        attachment_id, inbox_id, attachment_index, filename,
+                        content_type, created_at
+                    ) VALUES (?, 'inbox_test', ?, ?, 'application/pdf', ?)
+                    """,
+                    (f"attachment_{index}", index, f"beleg-{index}.pdf", now),
+                )
+            connection.execute(
+                """
+                INSERT INTO inbox_vorgaenge (inbox_id, vorgangs_id, created_at)
+                VALUES ('inbox_test', 'vorgang_tx_newer', ?)
+                """,
+                (now,),
+            )
+            connection.execute(
+                """
+                INSERT INTO inbox_vorgaenge (inbox_id, vorgangs_id, created_at)
+                VALUES ('inbox_test', 'vorgang_tx_older', ?)
+                """,
+                (now,),
+            )
+            connection.execute(
+                """
+                INSERT INTO transaktion_vorgaenge (transaktions_id, vorgangs_id)
+                VALUES ('tx_older', 'vorgang_tx_newer')
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO belege (
+                    beleg_id, dateiname, dateipfad, vorhanden, quelle,
+                    erstellt_am, aktualisiert_am
+                ) VALUES ('beleg_2', 'beleg_2.pdf', ?, 0, 'manual', ?, ?)
+                """,
+                (str(self.database_path.parent / "beleg_2.pdf"), now, now),
+            )
+            connection.execute(
+                """
+                INSERT INTO vorgang_belege (vorgangs_id, beleg_id, erstellt_am)
+                VALUES ('vorgang_tx_newer', 'beleg_2', ?)
+                """,
+                (now,),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+    def tearDown(self):
+        self.temporary_directory.cleanup()
+
+    def test_two_documents_use_different_linked_transaction_references(self):
+        first = self.store.assign_document_transaction_reference(
+            "inbox_test", 1, "beleg_1", "vorgang_tx_newer", "tx_newer"
+        )
+        second = self.store.assign_document_transaction_reference(
+            "inbox_test", 2, "beleg_2", "vorgang_tx_newer", "tx_older"
+        )
+        repeated = self.store.assign_document_transaction_reference(
+            "inbox_test", 1, "beleg_1", "vorgang_tx_newer", "tx_newer"
+        )
+
+        self.assertEqual("tx_newer", first["transaktions_id"])
+        self.assertEqual("tx_older", second["transaktions_id"])
+        self.assertEqual(first, repeated)
+        self.assertEqual(
+            ["tx_newer", "tx_older"],
+            [
+                item["transaktions_id"]
+                for item in self.store.document_transaction_references(
+                    "inbox_test"
+                )
+            ],
+        )
+        connection = sqlite3.connect(self.database_path)
+        connection.row_factory = sqlite3.Row
+        try:
+            document_columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(vorgang_belege)")
+            }
+            self.assertNotIn("transaktionsbezug_id", document_columns)
+            self.assertIn("vorgangsbezug_id", document_columns)
+            persisted_reference = connection.execute(
+                """
+                SELECT vb.vorgangsbezug_id, tv.bezugs_id, tv.transaktions_id
+                FROM vorgang_belege AS vb
+                JOIN transaktion_vorgaenge AS tv
+                  ON tv.bezugs_id = vb.vorgangsbezug_id
+                WHERE vb.beleg_id = 'beleg_1'
+                """
+            ).fetchone()
+            self.assertEqual("tx_newer", persisted_reference["transaktions_id"])
+            self.assertEqual(
+                persisted_reference["bezugs_id"],
+                persisted_reference["vorgangsbezug_id"],
+            )
+            self.assertNotEqual(
+                persisted_reference["transaktions_id"],
+                persisted_reference["vorgangsbezug_id"],
+            )
+            connection.execute(
+                """
+                DELETE FROM transaktion_vorgaenge
+                WHERE transaktions_id = 'tx_older'
+                  AND vorgangs_id = 'vorgang_tx_newer'
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+        self.assertEqual(
+            ["tx_newer"],
+            [
+                item["transaktions_id"]
+                for item in self.store.document_transaction_references(
+                    "inbox_test"
+                )
+            ],
+        )
+
+    def test_invalid_document_vorgang_and_transaction_are_rejected(self):
+        with self.assertRaisesRegex(LookupError, "Mail-Dokument"):
+            self.store.assign_document_transaction_reference(
+                "inbox_test", 99, "beleg_1", "vorgang_tx_newer", "tx_newer"
+            )
+        with self.assertRaisesRegex(LookupError, "Vorgang"):
+            self.store.assign_document_transaction_reference(
+                "inbox_test", 1, "beleg_1", "missing", "tx_newer"
+            )
+        with self.assertRaisesRegex(LookupError, "Transaktion"):
+            self.store.assign_document_transaction_reference(
+                "inbox_test", 1, "beleg_1", "vorgang_tx_newer", "missing"
+            )
+        with self.assertRaisesRegex(ValueError, "gehoert nicht"):
+            self.store.assign_document_transaction_reference(
+                "inbox_test", 1, "beleg_1", "vorgang_tx_older", "tx_newer"
+            )
 class FakeSpamScorer:
     model = "test-model"
 
