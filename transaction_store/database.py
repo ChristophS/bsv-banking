@@ -473,6 +473,57 @@ def replace_transaction_splits(
                 "mehrfach vorkommen."
             )
         seen_split_ids.add(split.split_id)
+
+    vorgangs_ids = sorted(
+        {
+            split.vorgangs_id
+            for split in normalized
+            if split.vorgangs_id is not None
+        }
+    )
+    if vorgangs_ids:
+        placeholders = ", ".join("?" for _ in vorgangs_ids)
+        existing_vorgangs_ids = {
+            str(row[0])
+            for row in connection.execute(
+                f"""
+                SELECT vorgangs_id
+                FROM vorgaenge
+                WHERE vorgangs_id IN ({placeholders})
+                """,
+                tuple(vorgangs_ids),
+            )
+        }
+        unknown_vorgangs_ids = sorted(
+            set(vorgangs_ids) - existing_vorgangs_ids
+        )
+        if unknown_vorgangs_ids:
+            raise ValueError(
+                "Unbekannte Vorgangs-ID: "
+                + ", ".join(unknown_vorgangs_ids)
+                + "."
+            )
+        linked_vorgangs_ids = {
+            str(row[0])
+            for row in connection.execute(
+                f"""
+                SELECT vorgangs_id
+                FROM transaktion_vorgaenge
+                WHERE transaktions_id = ?
+                  AND vorgangs_id IN ({placeholders})
+                """,
+                (transaction_id, *vorgangs_ids),
+            )
+        }
+        foreign_vorgangs_ids = sorted(
+            set(vorgangs_ids) - linked_vorgangs_ids
+        )
+        if foreign_vorgangs_ids:
+            raise ValueError(
+                "Vorgangs-ID ist nicht mit dieser Transaktion verknuepft: "
+                + ", ".join(foreign_vorgangs_ids)
+                + "."
+            )
     if normalized:
         expected_amount = int(transaction["amount_minor"])
         actual_amount = sum(split.amount_minor for split in normalized)
