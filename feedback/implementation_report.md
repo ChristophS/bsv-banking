@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260712-125952`
+`agent2/rework-20260712-130215`
 
 ## Geänderte Dateien
 
@@ -23,9 +23,10 @@ unversionierten Dateien `feedback/agent2_prompt.md` sowie
   `_migrate_v17_to_v18`, die Tabelle `donation_recipients`, die drei
   Datenzugriffsfunktionen sowie die zugehörigen Tests und Imports.
 - Branchangabe und Prüfstand wurden korrigiert. Dieser Report beschreibt den
-  Arbeitsbaum von `agent2/rework-20260712-125952` auf Basis des Ausgangs-HEAD
-  `ec1cc32`; er verweist nicht mehr auf den fremden Commit `76c0577` oder den
-  abgelehnten Vorgängerbranch.
+  Arbeitsbaum von `agent2/rework-20260712-130215` am Branch-HEAD `49eeaa2`.
+  Die fachlichen Dateien sind Bestandteil der Branch-Historie und im
+  vollständigen HEAD-Dateistand enthalten; die Prüfung wurde nicht aus dem
+  isolierten Diff des letzten Einzelcommits abgeleitet.
 - Die vorhandene fachliche Umsetzung wurde unverändert erhalten, da der
   Blocker keinen fachlichen Defekt, sondern den fehlenden Quellstand am
   geprüften Commit betraf.
