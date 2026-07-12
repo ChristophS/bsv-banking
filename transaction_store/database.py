@@ -8,6 +8,7 @@ import os
 import re
 import sqlite3
 from collections import defaultdict
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -16,10 +17,15 @@ from uuid import uuid4
 from banking_readonly.security import ensure_private_directory, protect_file
 
 from .classification import SQL_CLASSIFICATION_STATUS_EXPRESSION
-from .models import ParsedFile, ParsedTransaction, TransactionSplit
+from .models import (
+    DonationRecipient,
+    ParsedFile,
+    ParsedTransaction,
+    TransactionSplit,
+)
 
 
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 BELEGE_DIRECTORY_ENV = "BSV_BELEGE_DIR"
 VORGANG_STATUS_IN_PROGRESS = "in_bearbeitung"
 VORGANG_STATUS_COMPLETED = "abgeschlossen"
@@ -50,6 +56,121 @@ NORMALIZED_COLUMNS = (
     "klassifikationsstatus",
     "budget_id",
 )
+
+
+def create_donation_recipient(
+    connection: sqlite3.Connection,
+    recipient: DonationRecipient,
+) -> DonationRecipient:
+    normalized = _normalize_donation_recipient(recipient)
+    now = datetime.now(timezone.utc).isoformat()
+    connection.execute(
+        """
+        INSERT INTO donation_recipients (
+            recipient_id, name, address_addition, street, house_number,
+            postal_code, city, country, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            normalized.recipient_id,
+            normalized.name,
+            normalized.address_addition,
+            normalized.street,
+            normalized.house_number,
+            normalized.postal_code,
+            normalized.city,
+            normalized.country,
+            now,
+            now,
+        ),
+    )
+    return replace(normalized, created_at=now, updated_at=now)
+
+
+def update_donation_recipient(
+    connection: sqlite3.Connection,
+    recipient: DonationRecipient,
+) -> DonationRecipient:
+    normalized = _normalize_donation_recipient(recipient)
+    now = datetime.now(timezone.utc).isoformat()
+    cursor = connection.execute(
+        """
+        UPDATE donation_recipients
+        SET name = ?, address_addition = ?, street = ?, house_number = ?,
+            postal_code = ?, city = ?, country = ?, updated_at = ?
+        WHERE recipient_id = ?
+        """,
+        (
+            normalized.name,
+            normalized.address_addition,
+            normalized.street,
+            normalized.house_number,
+            normalized.postal_code,
+            normalized.city,
+            normalized.country,
+            now,
+            normalized.recipient_id,
+        ),
+    )
+    if cursor.rowcount == 0:
+        raise ValueError(
+            f"Spendenempfaenger nicht gefunden: {normalized.recipient_id}"
+        )
+    row = connection.execute(
+        "SELECT * FROM donation_recipients WHERE recipient_id = ?",
+        (normalized.recipient_id,),
+    ).fetchone()
+    return _donation_recipient_from_row(row)
+
+
+def list_donation_recipients(
+    connection: sqlite3.Connection,
+) -> list[DonationRecipient]:
+    rows = connection.execute(
+        """
+        SELECT * FROM donation_recipients
+        ORDER BY name COLLATE NOCASE, recipient_id
+        """
+    ).fetchall()
+    return [_donation_recipient_from_row(row) for row in rows]
+
+
+def _normalize_donation_recipient(
+    recipient: DonationRecipient,
+) -> DonationRecipient:
+    values = {
+        field: " ".join(str(getattr(recipient, field)).split())
+        for field in (
+            "recipient_id",
+            "name",
+            "address_addition",
+            "street",
+            "house_number",
+            "postal_code",
+            "city",
+            "country",
+        )
+    }
+    if not values["recipient_id"]:
+        raise ValueError("Empfaenger-ID darf nicht leer sein.")
+    if not values["name"]:
+        raise ValueError("Empfaengername darf nicht leer sein.")
+    return DonationRecipient(**values)
+
+
+def _donation_recipient_from_row(row: sqlite3.Row) -> DonationRecipient:
+    return DonationRecipient(
+        recipient_id=str(row["recipient_id"]),
+        name=str(row["name"]),
+        address_addition=str(row["address_addition"]),
+        street=str(row["street"]),
+        house_number=str(row["house_number"]),
+        postal_code=str(row["postal_code"]),
+        city=str(row["city"]),
+        country=str(row["country"]),
+        created_at=str(row["created_at"]),
+        updated_at=str(row["updated_at"]),
+    )
 
 
 def connect_database(path: Path) -> sqlite3.Connection:
@@ -950,6 +1071,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
                 14: _migrate_v14_to_v15,
                 15: _migrate_v15_to_v16,
                 16: _migrate_v16_to_v17,
+                17: _migrate_v17_to_v18,
             }
             while version < SCHEMA_VERSION:
                 migration = migrations.get(version)
@@ -969,6 +1091,7 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
         _create_document_tables(connection)
         _create_termin_tables(connection)
         _create_transaction_split_table(connection)
+        _create_donation_recipients_table(connection)
         _create_vorgang_triggers(connection)
         _enforce_vorgang_completion_invariant(connection)
         _recreate_normalized_view(connection)
@@ -1332,6 +1455,38 @@ def _migrate_v16_to_v17(connection: sqlite3.Connection) -> None:
     _create_transaction_link_tables(connection)
     _create_document_tables(connection)
     connection.execute("UPDATE schema_info SET version = 17")
+
+
+def _migrate_v17_to_v18(connection: sqlite3.Connection) -> None:
+    _create_donation_recipients_table(connection)
+    connection.execute("UPDATE schema_info SET version = 18")
+
+
+def _create_donation_recipients_table(
+    connection: sqlite3.Connection,
+) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS donation_recipients (
+            recipient_id TEXT PRIMARY KEY CHECK (TRIM(recipient_id) <> ''),
+            name TEXT NOT NULL CHECK (TRIM(name) <> ''),
+            address_addition TEXT NOT NULL DEFAULT '',
+            street TEXT NOT NULL DEFAULT '',
+            house_number TEXT NOT NULL DEFAULT '',
+            postal_code TEXT NOT NULL DEFAULT '',
+            city TEXT NOT NULL DEFAULT '',
+            country TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_donation_recipients_name
+            ON donation_recipients(name COLLATE NOCASE, recipient_id)
+        """
+    )
 
 
 def _create_transaction_split_table(connection: sqlite3.Connection) -> None:

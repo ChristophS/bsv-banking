@@ -28,6 +28,12 @@ from .rules import (
     upsert_classification_rule,
     upsert_completion_rule,
 )
+from .database import (
+    create_donation_recipient,
+    list_donation_recipients,
+    update_donation_recipient,
+)
+from .models import DonationRecipient
 
 __all__ = [
     "ClassificationStatus",
@@ -36,8 +42,10 @@ __all__ = [
     "HistoricalAccountSummary",
     "HistoricalImportSummary",
     "ImportSummary",
+    "DonationRecipient",
     "can_be_auto_classified",
     "classification_status",
+    "create_donation_recipient",
     "apply_classification_rules",
     "apply_completion_rules",
     "apply_rule_pipeline",
@@ -46,10 +54,12 @@ __all__ = [
     "import_transaction_directory",
     "ingest_export_run",
     "list_classification_rules",
+    "list_donation_recipients",
     "list_completion_rules",
     "load_classification_rules",
     "load_completion_rules",
     "requires_manual_classification_review",
     "upsert_classification_rule",
     "upsert_completion_rule",
+    "update_donation_recipient",
 ]
