@@ -1612,6 +1612,10 @@ def _create_vorgang_triggers(connection: sqlite3.Connection) -> None:
         "DROP TRIGGER IF EXISTS "
         "trg_transaktion_vorgaenge_enforce_completion"
     )
+    for action in ("insert", "update", "delete"):
+        connection.execute(
+            f"DROP TRIGGER IF EXISTS trg_transaction_splits_{action}_vorgang"
+        )
     connection.execute(
         f"""
         CREATE TRIGGER trg_transactions_update_vorgang
@@ -1677,6 +1681,65 @@ def _create_vorgang_triggers(connection: sqlite3.Connection) -> None:
         END
         """
     )
+    incomplete_split = """
+        TRIM(COALESCE(split.transaction_type, '')) = ''
+        OR TRIM(COALESCE(split.top_category, '')) = ''
+        OR TRIM(COALESCE(split.sub_category, '')) = ''
+        OR TRIM(COALESCE(split.sphere, '')) = ''
+    """
+    for action, reference in (
+        ("INSERT", "NEW"),
+        ("UPDATE", "NEW"),
+        ("DELETE", "OLD"),
+    ):
+        connection.execute(
+            f"""
+            CREATE TRIGGER trg_transaction_splits_{action.lower()}_vorgang
+            AFTER {action} ON transaction_splits
+            BEGIN
+                UPDATE vorgaenge
+                SET
+                    status = '{VORGANG_STATUS_IN_PROGRESS}',
+                    aktualisiert_am = STRFTIME(
+                        '%Y-%m-%dT%H:%M:%fZ', 'now'
+                    )
+                WHERE status_manuell = 0
+                  AND status = '{VORGANG_STATUS_COMPLETED}'
+                  AND (
+                        vorgangs_id = {reference}.vorgangs_id
+                        OR (
+                            {reference}.vorgangs_id IS NULL
+                            AND EXISTS (
+                                SELECT 1
+                                FROM transaktion_vorgaenge AS tv
+                                WHERE tv.transaktions_id =
+                                      {reference}.transaction_id
+                                  AND tv.vorgangs_id = vorgaenge.vorgangs_id
+                            )
+                        )
+                  )
+                  AND EXISTS (
+                        SELECT 1
+                        FROM transaction_splits AS split
+                        WHERE (
+                            split.vorgangs_id = vorgaenge.vorgangs_id
+                            OR (
+                                split.vorgangs_id IS NULL
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM transaktion_vorgaenge AS linked
+                                    WHERE linked.transaktions_id =
+                                          split.transaction_id
+                                      AND linked.vorgangs_id =
+                                          vorgaenge.vorgangs_id
+                                )
+                            )
+                        )
+                          AND ({incomplete_split})
+                  );
+            END
+            """
+        )
     connection.execute(
         f"""
         CREATE TRIGGER trg_transaktion_vorgaenge_enforce_completion
@@ -1717,6 +1780,7 @@ def _enforce_vorgang_completion_invariant(
             status = '{VORGANG_STATUS_IN_PROGRESS}',
             aktualisiert_am = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
         WHERE status = '{VORGANG_STATUS_COMPLETED}'
+          AND status_manuell = 0
           AND EXISTS (
                 SELECT 1
                 FROM transaktion_vorgaenge AS tv
@@ -1742,6 +1806,32 @@ def _enforce_vorgang_completion_invariant(
                         )) = ''
                   )
           )
+           OR (
+                status = '{VORGANG_STATUS_COMPLETED}'
+                AND status_manuell = 0
+                AND EXISTS (
+                    SELECT 1
+                    FROM transaction_splits AS split
+                    WHERE (
+                        split.vorgangs_id = vorgaenge.vorgangs_id
+                        OR (
+                            split.vorgangs_id IS NULL
+                            AND EXISTS (
+                                SELECT 1
+                                FROM transaktion_vorgaenge AS linked
+                                WHERE linked.transaktions_id = split.transaction_id
+                                  AND linked.vorgangs_id = vorgaenge.vorgangs_id
+                            )
+                        )
+                    )
+                      AND (
+                        TRIM(COALESCE(split.transaction_type, '')) = ''
+                        OR TRIM(COALESCE(split.top_category, '')) = ''
+                        OR TRIM(COALESCE(split.sub_category, '')) = ''
+                        OR TRIM(COALESCE(split.sphere, '')) = ''
+                      )
+                )
+           )
         """
     )
 

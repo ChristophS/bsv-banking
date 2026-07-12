@@ -889,6 +889,62 @@ class DashboardDataStoreTests(unittest.TestCase):
             "vorgang_tx_newer",
         )
 
+    def test_split_classification_recalculates_automatic_vorgang_status(self):
+        completed = self.store.update_transaction_classification(
+            "tx_newer",
+            {"transaktionstyp": "Vergütung"},
+        )
+        self.assertEqual(completed["vorgaenge"][0]["status"], "abgeschlossen")
+
+        incomplete = self.store.replace_transaction_splits(
+            "tx_newer",
+            {
+                "splits": [
+                    {
+                        "amount_minor": 2500,
+                        "transaction_type": "Einnahme",
+                        "top_category": "Spielbetrieb",
+                        "sub_category": "Eintritt",
+                    }
+                ]
+            },
+        )
+        self.assertEqual(
+            self.store.vorgang_detail("vorgang_tx_newer")["status"],
+            "in_bearbeitung",
+        )
+
+        complete = self.store.replace_transaction_splits(
+            "tx_newer",
+            {
+                "splits": [
+                    {
+                        "amount_minor": 2500,
+                        "transaction_type": "Einnahme",
+                        "top_category": "Spielbetrieb",
+                        "sub_category": "Eintritt",
+                        "sphere": "Zweckbetrieb",
+                    }
+                ]
+            },
+        )
+        self.assertEqual(
+            self.store.vorgang_detail("vorgang_tx_newer")["status"],
+            "abgeschlossen",
+        )
+
+    def test_split_changes_preserve_manual_vorgang_status(self):
+        self.store.update_vorgang_status("vorgang_tx_newer", True)
+
+        response = self.store.replace_transaction_splits(
+            "tx_newer",
+            {"splits": [{"amount_minor": 2500}]},
+        )
+
+        vorgang = self.store.vorgang_detail("vorgang_tx_newer")
+        self.assertEqual(vorgang["status"], "abgeschlossen")
+        self.assertTrue(vorgang["status_manuell"])
+
     def test_transaction_splits_validate_negative_amounts(self):
         result = self.store.replace_transaction_splits(
             "tx_older",
@@ -916,6 +972,34 @@ class DashboardDataStoreTests(unittest.TestCase):
             [split["split_id"] for split in self.store.transaction_detail(
                 "tx_newer"
             )["splits"]],
+            ["split_tx_newer_1"],
+        )
+
+    def test_invalid_split_sum_keeps_automatic_vorgang_status(self):
+        self.store.update_transaction_classification(
+            "tx_newer",
+            {"transaktionstyp": "Vergütung"},
+        )
+        self.assertEqual(
+            self.store.vorgang_detail("vorgang_tx_newer")["status"],
+            "abgeschlossen",
+        )
+
+        with self.assertRaises(ValueError):
+            self.store.replace_transaction_splits(
+                "tx_newer",
+                {"splits": [{"betrag_cent": 2499}]},
+            )
+
+        self.assertEqual(
+            self.store.vorgang_detail("vorgang_tx_newer")["status"],
+            "abgeschlossen",
+        )
+        self.assertEqual(
+            [
+                split["split_id"]
+                for split in self.store.transaction_detail("tx_newer")["splits"]
+            ],
             ["split_tx_newer_1"],
         )
 
@@ -2742,6 +2826,10 @@ class DashboardHTTPTests(unittest.TestCase):
                         {
                             "amount_minor": 1500,
                             "description": "API Teil 2",
+                            "transaction_type": "Einnahme",
+                            "top_category": "Spielbetrieb",
+                            "sub_category": "Eintritt",
+                            "sphere": "Zweckbetrieb",
                         },
                     ]
                 }

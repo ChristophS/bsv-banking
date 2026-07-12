@@ -2,83 +2,70 @@
 
 ## Branchname
 
-agent2/rework-20260712-103557
+`agent2/codex-20260712-104754`
 
-## Geaenderte Dateien
+## Geänderte Dateien
 
-- banking_dashboard/static/app.js
-- tests/test_dashboard.py
-- feedback/implementation_report.md
+- `transaction_store/rules.py`
+- `transaction_store/database.py`
+- `banking_dashboard/server.py`
+- `tests/test_dashboard.py`
+- `feedback/implementation_report.md`
 
 ## Umgesetzte Punkte
 
-- Die bereits aus `GET /api/classification-options` gespeisten Vorschlaege fuer
-  Transaktionstyp, Oberkategorie und passende Unterkategorien im Split-Editor
-  vervollstaendigt.
-- Unterkategorie pro Split-Zeile deaktiviert, solange keine Oberkategorie
-  eingetragen ist; freie Texteingabe bleibt nach Wahl einer Oberkategorie
-  moeglich.
-- Eine bevorzugte Sphaere wird fuer eine bekannte Ober-/Unterkategorie nur
-  gesetzt, wenn die Split-Zeile noch keine Sphaere enthaelt. Vorhandene oder
-  manuell ausgewaehlte Werte werden bei Kategorieaenderungen nicht
-  ueberschrieben.
-- Bereits gespeicherte Sphaerenwerte, die nicht mehr in der aktuellen
-  Optionsliste vorkommen, bleiben beim Rendern sichtbar und speicherbar.
-- Den vorhandenen Browser-Flow um die Kategorieabhaengigkeit, gefilterte
-  Unterkategorie-Vorschlaege, den Schutz einer manuellen Sphaere und deren
-  Persistenz im bestehenden Split-Payload erweitert.
-- Die vorhandene Split-Speicher-API und das Datenmodell unveraendert gelassen.
+- Automatische Abschlussregeln berücksichtigen neben den verknüpften
+  Transaktionen nun alle für einen Vorgang relevanten Split-Zeilen.
+- Splits mit expliziter `vorgangs_id` wirken auf diesen Vorgang; Splits ohne
+  `vorgangs_id` wirken über die bestehende Zuordnung ihrer Ursprungstransaktion
+  in `transaktion_vorgaenge` auf die verknüpften Vorgänge.
+- Unvollständige relevante Splits verhindern den automatischen Abschluss und
+  setzen automatisch verwaltete abgeschlossene Vorgänge auf
+  `in_bearbeitung` zurück.
+- Nach dem atomaren Ersetzen von Splits werden die bestehenden Abschlussregeln
+  vor demselben Commit erneut angewendet. Vollständige Splits können dadurch
+  den Vorgang wieder automatisch abschließen, sofern alle bisherigen Regeln
+  dies zulassen.
+- INSERT-, UPDATE- und DELETE-Trigger sichern die Wiederöffnungsinvariante bei
+  direkten Split-Änderungen ab.
+- Manuelle Vorgangsstatus (`status_manuell = 1`) bleiben bei Split-Änderungen
+  unverändert.
+- Die bestehende Split-Antwort liefert nach dem Speichern weiterhin das neu
+  geladene Transaktionsdetail; darin sind die aktuell abgeleiteten
+  Vorgangsdaten unmittelbar sichtbar.
+- Regressionstests decken automatisches Wiederöffnen und Abschließen,
+  manuelle Status sowie die Atomarität bei ungültiger Split-Summe ab.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderungen an Server, Datenmodell, Split-Summenvalidierung oder
-  Vorgangszuordnungen, da die vorhandene API bereits alle erforderlichen
-  Klassifikationsoptionen und Persistenzfelder bereitstellt.
-- Keine externen Dienste, Logins oder produktiven Laufzeitdaten verwendet.
-- Die vorhandene fremde Aenderung an `feedback/Review-report.md` wurde nicht
-  bearbeitet.
+- Keine UI-Änderung, da die bestehende Split-Speicherung bereits das neu
+  geladene Transaktionsdetail zurückgibt und die vorhandene UI die enthaltenen
+  Vorgangsdaten aktualisiert.
+- Keine Schemaänderung oder neue Persistenzstruktur.
 
-## Ausgefuehrte Tests
+## Ausgeführte Tests
 
-- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `git diff --check`
+```text
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py tests/test_dashboard.py -q
+```
 
 ## Testergebnis
 
-- `tests/test_dashboard.py`: 105 bestanden, 6 uebersprungen.
-- Diff-Pruefung ohne Fehler; nur bestehender Hinweis auf die spaetere
-  LF/CRLF-Konvertierung der Arbeitskopie.
+`141 passed, 6 skipped, 7 subtests passed`
 
-## Bekannte Einschraenkungen
+## Bekannte Einschränkungen
 
-- Sechs browserabhaengige Tests, darunter der erweiterte Split-Editor-Flow,
-  werden ohne die optionale lokale Playwright-/Chromium-Umgebung uebersprungen.
-  Die API- und Store-Tests laufen ohne Browser und externe Dienste.
+- Das automatische Abschließen benötigt weiterhin die vorhandene
+  Abschlussregelverwaltung. Datenbanktrigger allein öffnen bei
+  unvollständigen Splits sicher wieder; die vollständige Regelbewertung wird
+  im bestehenden Servicepfad ausgeführt.
 
-## Hinweise fuer den Review-Agenten
+## Hinweise für den Review-Agenten
 
-- Die UI nutzt weiterhin ausschliesslich `state.classificationOptions`, das
-  ueber den bestehenden Endpunkt `/api/classification-options` geladen wird.
-- Die relevante Korrektur liegt in `splitSphereField(...)` und
-  `configureSplitClassificationFields(...)`.
-- Der bestehende Test
-  `DashboardTransactionBrowserTests.test_transaction_split_editor_updates_and_shows_errors`
-  prueft nun auch die neue Split-Klassifikationsinteraktion und Persistenz.
-- `feedback/next_task.md`, `feedback/backlog.md`, Prompt- und
-  Review-Report-Dateien wurden nicht geaendert.
-
-## Nachbesserung nach Review
-
-- Den blockierenden Kodierungsfehler im Browser-Test
-  `DashboardTransactionBrowserTests.test_transaction_split_editor_updates_and_shows_errors`
-  behoben: Auswahl, UI-Assertion und Payload-Assertion verwenden jetzt
-  einheitlich den tatsaechlichen Optionswert `Vermögensverwaltung`.
-- Dadurch kann Playwright den vorhandenen Wert aus `SPHERE_OPTIONS` exakt
-  auswaehlen und der Split-Editor-Flow prueft weiterhin den Schutz der manuell
-  gesetzten Sphaere sowie deren Persistenz.
-- Es waren keine Aenderungen am Produktionscode oder an der bestehenden
-  fachlichen Funktion erforderlich.
-- Nach der Korrektur wurde die komplette Datei `tests/test_dashboard.py`
-  erneut ausgefuehrt: 105 Tests bestanden, 6 browserabhaengige Tests wurden
-  wegen der lokal nicht vorhandenen optionalen Playwright-/Chromium-Umgebung
-  uebersprungen.
+- Bitte besonders die festgelegte Relevanzsemantik für Splits ohne
+  `vorgangs_id` prüfen: Sie erben alle bestehenden Vorgangszuordnungen der
+  Ursprungstransaktion; explizite Split-Zuordnungen wirken nur auf den
+  angegebenen Vorgang.
+- Bereits vorhandene, nicht zu diesem Arbeitspaket gehörende Änderungen an
+  `feedback/Review-report.md` und die unversionierte Datei
+  `feedback/agent2_prompt.md` wurden nicht verändert.
