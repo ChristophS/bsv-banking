@@ -2701,6 +2701,13 @@ th[aria-sort="descending"] .sort-indicator {
   line-height: 1.4;
 }
 
+.split-classification-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+}
+
 .split-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -9394,7 +9394,8 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
     configureSplitClassificationFields(row);
     const meta = document.createElement("div");
     meta.className = "split-meta";
-    meta.textContent = split.split_id
+    const metadata = document.createElement("span");
+    metadata.textContent = split.split_id
       ? [
           `ID ${split.split_id}`,
           `erstellt ${formatDateTime(split.created_at || split.erstellt_am)}`,
@@ -9403,6 +9404,16 @@ function appendSplitEditor(transaction, target = elements.detailContent) {
           )}`,
         ].join(" · ")
       : "Neue Split-Zeile";
+    const classificationStatus = document.createElement("span");
+    classificationStatus.className = "split-classification-status";
+    classificationStatus.dataset.splitClassificationStatus = "true";
+    classificationStatus.append(
+      document.createTextNode("Split-Klassifikation: "),
+      classificationStatusBadge(
+        split.klassifikationsstatus ?? split.classification_status,
+      ),
+    );
+    meta.append(metadata, classificationStatus);
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "secondary-action split-remove";

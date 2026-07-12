@@ -861,6 +861,39 @@ class TransactionParserTests(unittest.TestCase):
 
 
 class ClassificationTests(unittest.TestCase):
+    def test_individual_split_classification_statuses(self):
+        cases = (
+            (
+                TransactionSplit("split_empty", "tx", 1000),
+                ClassificationStatus.UNCLASSIFIED,
+            ),
+            (
+                TransactionSplit(
+                    "split_complete",
+                    "tx",
+                    1000,
+                    transaction_type="Einnahme",
+                    top_category="Spielbetrieb",
+                    sub_category="Eintritt",
+                    sphere="Zweckbetrieb",
+                ),
+                ClassificationStatus.FULLY_CLASSIFIED,
+            ),
+            (
+                TransactionSplit(
+                    "split_description_only",
+                    "tx",
+                    1000,
+                    professional_description="Nur eine Beschreibung",
+                ),
+                ClassificationStatus.INCOMPLETELY_CLASSIFIED,
+            ),
+        )
+
+        for split, expected in cases:
+            with self.subTest(split_id=split.split_id):
+                self.assertEqual(classification_status(split), expected)
+
     def test_empty_classification_can_be_automatically_classified(self):
         transaction = {
             "transaction_type": " ",

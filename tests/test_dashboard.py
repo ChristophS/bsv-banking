@@ -2661,6 +2661,10 @@ class DashboardHTTPTests(unittest.TestCase):
                 payload["splits"][0]["transaction_id"],
                 "tx_newer",
             )
+            self.assertEqual(
+                payload["splits"][0]["klassifikationsstatus"],
+                "vollstaendig_klassifiziert",
+            )
 
         request = Request(
             self.base_url + "/api/transactions/tx_newer/splits",
@@ -2678,6 +2682,7 @@ class DashboardHTTPTests(unittest.TestCase):
                         {
                             "amount_minor": 1500,
                             "description": "API Teil 2",
+                            "professional_description": "Nur Beschreibung",
                         },
                     ]
                 }
@@ -2698,6 +2703,16 @@ class DashboardHTTPTests(unittest.TestCase):
                     "transaction"
                 ]["splits"]],
                 [1, 2],
+            )
+            self.assertEqual(
+                [
+                    split["klassifikationsstatus"]
+                    for split in payload["transaction"]["splits"]
+                ],
+                [
+                    "vollstaendig_klassifiziert",
+                    "unvollstaendig_klassifiziert",
+                ],
             )
 
         invalid_request = Request(
@@ -4344,6 +4359,11 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     expect(editor).to_be_visible()
                     expect(editor).to_contain_text("Teilbetrag Eintritt")
                     expect(
+                        editor.locator("[data-split-classification-status]")
+                    ).to_contain_text(
+                        "Split-Klassifikation: Vollständig klassifiziert"
+                    )
+                    expect(
                         editor.locator("[data-split-summary='original']")
                     ).to_contain_text("Originalbetrag")
                     expect(
@@ -4398,6 +4418,7 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                     second_row.locator(
                         "[data-split-professional]"
                     ).fill("Browser-Test")
+                    second_row.locator("[data-split-sphere]").select_option("")
 
                     with page.expect_response(
                         lambda response: (
@@ -4413,6 +4434,13 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         ).click()
                     expect(editor.locator(".save-state")).to_contain_text(
                         "Gespeichert"
+                    )
+                    expect(
+                        editor.locator(
+                            "[data-split-classification-status]"
+                        ).nth(1)
+                    ).to_contain_text(
+                        "Split-Klassifikation: Unvollständig klassifiziert"
                     )
 
                     persisted = page.evaluate(
