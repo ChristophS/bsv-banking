@@ -8,43 +8,40 @@
 
 ## Begründung
 
-Die nachgeladenen Produktionsdateien bestätigen, dass die geforderte Statusableitung bereits zentral implementiert, nicht persistiert und in beiden Split-Antwortpfaden serialisiert ist. Der Diff ergänzt dazu einen passenden Regressionstest.
+Die nachgeladenen vollständigen Dateien bestätigen, dass der Split-Editor ausschließlich die bereits über /api/classification-options geladenen state.classificationOptions verwendet, Klassifikationswerte im bestehenden Split-Payload überträgt und die Änderungen die geforderten Abhängigkeiten sowie den Schutz manueller Sphären korrekt ergänzen.
 
 ## Zusammenfassung
 
-Akzeptiert: Der Branch sichert die bereits vorhandene zentrale Ableitung des Klassifikationsstatus für Split-Zeilen mit einem Regressionstest ab. Die Implementierung verwendet dieselben vier Pflichtfelder wie Transaktionen, berücksichtigt die optionale fachliche Beschreibung korrekt und liefert den abgeleiteten Status beim Speichern sowie Lesen von Splits.
+Akzeptiert: Der Split-Editor nutzt die bestehende Klassifikationsquelle, deaktiviert Unterkategorien ohne Oberkategorie, filtert Vorschläge nach Oberkategorie und überschreibt eine vorhandene/manuelle Sphäre nicht mehr. Nicht mehr angebotene gespeicherte Sphären bleiben sichtbar und im unveränderten Split-Payload erhaltbar. Der erweiterte Browser-Flow deckt Kategorienabhängigkeit, manuelle Sphäre und Persistenz ab.
 
 # Review Report
 
 ## Ergebnis
 
-**Accepted:** true
+**Accepted:** ja
 
 ## Geprüfte Umsetzung
 
-Der Compare enthält einen neuen Regressionstest in `tests/test_dashboard.py`. Die im Folge-Review nachgeladenen Produktionsdateien belegen, dass die fachliche Umsetzung bereits im vorhandenen Code enthalten ist:
+- `banking_dashboard/static/app.js`
+- `tests/test_dashboard.py`
+- GitHub-Compare-Diff zum Commit `4631a68bcd2ee03c7cadd6eadec234302e4f8452`
 
-- `classification_status(...)` in `transaction_store/classification.py` verwendet zentral die vier Pflichtfelder `transaction_type`, `top_category`, `sub_category` und `sphere`.
-- Sind alle fünf Klassifikationsfelder leer, wird `unklassifiziert` geliefert.
-- Sind alle vier Pflichtfelder befüllt, wird unabhängig von der fachlichen Beschreibung `vollstaendig_klassifiziert` geliefert.
-- Teilweise Pflichtfeldbefüllung oder alleinige `professional_description` ergeben `unvollstaendig_klassifiziert`.
-- `TransactionSplit` enthält keinen persistierten Statuswert.
-- `_serialize_transaction_split(...)` leitet den Status unmittelbar aus dem gespeicherten `TransactionSplit` ab und liefert ihn kompatibel unter `klassifikationsstatus` sowie `classification_status`.
-- Sowohl `transaction_splits(...)` für die Split-Leseantwort als auch `replace_transaction_splits(...)` über die anschließende Detailantwort verwenden diese Serialisierung.
+## Bewertung
 
-## Testabdeckung
+Die Implementierung erfüllt die Anforderungen des Arbeitspakets:
 
-Der neue Test `test_split_responses_derive_each_classification_status` prüft für die Schreibantwort und eine nachfolgende Leseantwort:
+- Der Split-Editor verwendet weiterhin ausschließlich `state.classificationOptions`. Diese werden beim Laden des Transaktions-Workspaces über den bestehenden Endpunkt `GET /api/classification-options` bezogen; es wurde keine zweite Kategorienquelle eingeführt.
+- Jede Split-Zeile erzeugt Datalists für Transaktionstyp und Oberkategorie aus den vorhandenen Optionen.
+- Die Unterkategorie wird beim Initialisieren und bei Änderungen der Oberkategorie deaktiviert, solange keine Oberkategorie befüllt ist. Bei befüllter Oberkategorie wird ihre Datalist ausschließlich mit den zugeordneten Unterkategorien aufgebaut. Freie Texteingaben bleiben möglich.
+- Die Sphären-Vorauswahl wird nur vorgenommen, wenn die Split-Zeile noch keine Sphäre besitzt. Damit bleiben gespeicherte und manuell gesetzte Sphären bei Kategorieänderungen erhalten.
+- `splitSphereField(...)` ergänzt einen gespeicherten Sphärenwert, der nicht mehr in den aktuellen Optionen vorkommt, als auswählbare Option. Der Wert bleibt dadurch sichtbar und wird beim bestehenden PUT-Payload erneut übertragen.
+- Der bestehende Persistenzweg `PUT /api/transactions/<id>/splits` und das Split-Datenmodell bleiben unverändert. `readRows()` übernimmt alle Klassifikationsfelder, und `renderRows()` rendert die vom Server zurückgegebenen Werte wieder in derselben Reihenfolge.
+- Der ergänzte Playwright-Flow prüft das Deaktivieren/Aktivieren der Unterkategorie, die gefilterte Vorschlagsliste, den Schutz einer manuell gesetzten Sphäre und deren Persistenz im abgerufenen Split-Ergebnis.
 
-1. vollständig leere Klassifikationsfelder: `unklassifiziert`
-2. teilweise Pflichtfeldbefüllung: `unvollstaendig_klassifiziert`
-3. ausschließlich fachliche Beschreibung: `unvollstaendig_klassifiziert`
-4. alle vier Pflichtfelder: `vollstaendig_klassifiziert`
+## Tests
 
-Zusätzlich prüft er, dass die Klassifikationsfelder und der Status der Ursprungstransaktion in der Schreibantwort unverändert bleiben. Die vorhandene Persistenzlogik ersetzt ausschließlich Split-Zeilen, behält die Betragsvalidierung bei und übernimmt weiterhin Split-ID, Reihenfolge sowie optionale `vorgangs_id`.
+Laut Umsetzungsbericht wurde `tests/test_dashboard.py` mit **105 bestanden, 6 übersprungen** ausgeführt. Die übersprungenen Tests benötigen optional Playwright/Chromium; die Erweiterung ist in den bestehenden Browser-Test integriert und benötigt weder Bankzugang noch externe Dienste.
 
-Laut Umsetzungsbericht wurde `tests/test_dashboard.py` mit **105 bestanden, 6 übersprungen** ausgeführt. Die übersprungenen browserabhängigen Tests sind plausibel dokumentiert und nicht blockierend.
+## Hinweis
 
-## Fazit
-
-Die Akzeptanzkriterien sind erfüllt. Es ist keine Schemaänderung und kein zusätzlicher persistierter Statuswert eingeführt worden; die Statuslogik bleibt zentral und konsistent zur Transaktionsklassifikation.
+`banking_dashboard/static/app.js` erscheint in GitHub Compare, obwohl sie nicht in den vom Runner gestagten beziehungsweise validierten Pfaden auftaucht. Der GitHub-Compare-Diff ist für die Review maßgeblich; die geänderten Stellen wurden anhand der nachgeladenen vollständigen Datei geprüft und sind fachlich konsistent.
