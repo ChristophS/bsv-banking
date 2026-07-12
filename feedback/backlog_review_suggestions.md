@@ -1,3 +1,3 @@
-# Review Backlog Suggestions
+## Spätere Verbesserung
 
-Keine offenen Review-Vorschläge.
+Einen kompakten API-Vertragstest für alle Vorgangs- und Beleg-Endpunkte ergänzen, der Erfolgsstatuscodes, Fehlerstatuscodes und das einheitliche `{"error": ...}`-Format tabellarisch absichert.
