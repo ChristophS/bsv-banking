@@ -4433,6 +4433,147 @@ class DashboardHTTPTests(unittest.TestCase):
         with urlopen(delete_request, timeout=5) as response:
             self.assertTrue(json.load(response)["deleted"])
 
+    def test_todo_create_rejects_invalid_payloads_with_json_error(self):
+        invalid_payloads = (
+            {"title": "Unbekanntes Feld", "unexpected": True},
+            {"title": "Ungueltige Prioritaet", "priority": "sofort"},
+            {"title": "Ungueltiges Datum", "due_date": "morgen"},
+            {"title": "Ungueltige Links", "vorgangs_ids": "vorgang_tx_newer"},
+        )
+
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                request = Request(
+                    self.base_url + "/api/todos",
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=5)
+
+                self.assertEqual(400, caught.exception.code)
+                error_payload = json.loads(
+                    caught.exception.read().decode("utf-8")
+                )
+                self.assertIsInstance(error_payload.get("error"), str)
+                self.assertTrue(error_payload["error"])
+
+        with urlopen(self.base_url + "/api/todos", timeout=5) as response:
+            self.assertEqual(0, json.load(response)["count"])
+
+    def test_todo_patch_rejects_invalid_payloads_without_changes(self):
+        todo = self.server.data_store.create_todo(
+            {
+                "title": "Unveraendertes To-Do",
+                "description": "Ausgangszustand",
+                "priority": "normal",
+                "due_date": "2026-07-01",
+                "vorgangs_ids": ["vorgang_tx_newer"],
+            }
+        )
+        invalid_payloads = (
+            {"unexpected": True},
+            {"priority": "sofort"},
+            {"due_date": "morgen"},
+            {"vorgangs_ids": "vorgang_tx_older"},
+        )
+
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                request = Request(
+                    self.base_url + f"/api/todos/{todo['todo_id']}",
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="PATCH",
+                )
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=5)
+
+                self.assertEqual(400, caught.exception.code)
+                error_payload = json.loads(
+                    caught.exception.read().decode("utf-8")
+                )
+                self.assertIsInstance(error_payload.get("error"), str)
+
+        persisted = self.server.data_store.todo_detail(todo["todo_id"])
+        self.assertEqual(todo, persisted)
+
+    def test_unknown_todo_references_return_404_without_partial_state(self):
+        create_request = Request(
+            self.base_url + "/api/todos",
+            data=json.dumps(
+                {
+                    "title": "Nicht anlegen",
+                    "vorgangs_ids": ["vorgang_missing"],
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as create_error:
+            urlopen(create_request, timeout=5)
+        self.assertEqual(404, create_error.exception.code)
+        self.assertTrue(
+            json.loads(create_error.exception.read().decode("utf-8"))["error"]
+        )
+        self.assertEqual([], self.server.data_store.list_todos())
+
+        todo = self.server.data_store.create_todo(
+            {
+                "title": "Bestehendes To-Do",
+                "vorgangs_ids": ["vorgang_tx_newer"],
+            }
+        )
+        patch_request = Request(
+            self.base_url + f"/api/todos/{todo['todo_id']}",
+            data=json.dumps(
+                {
+                    "title": "Darf nicht gespeichert werden",
+                    "vorgangs_ids": ["vorgang_missing"],
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PATCH",
+        )
+        with self.assertRaises(HTTPError) as patch_error:
+            urlopen(patch_request, timeout=5)
+        self.assertEqual(404, patch_error.exception.code)
+        self.assertTrue(
+            json.loads(patch_error.exception.read().decode("utf-8"))["error"]
+        )
+        self.assertEqual(
+            todo,
+            self.server.data_store.todo_detail(todo["todo_id"]),
+        )
+
+    def test_missing_todo_patch_and_delete_return_404_json_error(self):
+        requests = (
+            Request(
+                self.base_url + "/api/todos/todo_missing",
+                data=json.dumps({"completed": True}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="PATCH",
+            ),
+            Request(
+                self.base_url + "/api/todos/todo_missing",
+                method="DELETE",
+            ),
+        )
+
+        for request in requests:
+            with self.subTest(method=request.method):
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=5)
+                self.assertEqual(404, caught.exception.code)
+                error_payload = json.loads(
+                    caught.exception.read().decode("utf-8")
+                )
+                self.assertEqual(
+                    "To-Do wurde nicht gefunden.",
+                    error_payload["error"],
+                )
+
     def test_belege_catalog_and_vorgang_links_are_available_over_http(self):
         with urlopen(self.base_url + "/api/belege", timeout=5) as response:
             payload = json.load(response)
