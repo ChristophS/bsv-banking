@@ -4464,10 +4464,10 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                             """
                         ),
                     )
-                    first_sphere.select_option("VermÃ¶gensverwaltung")
+                    first_sphere.select_option("Vermögensverwaltung")
                     first_sub.fill("Eintritt")
                     expect(first_sphere).to_have_value(
-                        "VermÃ¶gensverwaltung"
+                        "Vermögensverwaltung"
                     )
 
                     editor.locator("[data-split-amount]").first().fill("10,00")
@@ -4521,7 +4521,7 @@ class DashboardTransactionBrowserTests(unittest.TestCase):
                         [split["description"] for split in persisted],
                     )
                     self.assertEqual(
-                        "VermÃ¶gensverwaltung",
+                        "Vermögensverwaltung",
                         persisted[0]["sphere"],
                     )
 

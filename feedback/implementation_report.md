@@ -2,7 +2,7 @@
 
 ## Branchname
 
-agent2/codex-20260712-103200
+agent2/rework-20260712-103557
 
 ## Geaenderte Dateien
 
@@ -66,3 +66,19 @@ agent2/codex-20260712-103200
   prueft nun auch die neue Split-Klassifikationsinteraktion und Persistenz.
 - `feedback/next_task.md`, `feedback/backlog.md`, Prompt- und
   Review-Report-Dateien wurden nicht geaendert.
+
+## Nachbesserung nach Review
+
+- Den blockierenden Kodierungsfehler im Browser-Test
+  `DashboardTransactionBrowserTests.test_transaction_split_editor_updates_and_shows_errors`
+  behoben: Auswahl, UI-Assertion und Payload-Assertion verwenden jetzt
+  einheitlich den tatsaechlichen Optionswert `Vermögensverwaltung`.
+- Dadurch kann Playwright den vorhandenen Wert aus `SPHERE_OPTIONS` exakt
+  auswaehlen und der Split-Editor-Flow prueft weiterhin den Schutz der manuell
+  gesetzten Sphaere sowie deren Persistenz.
+- Es waren keine Aenderungen am Produktionscode oder an der bestehenden
+  fachlichen Funktion erforderlich.
+- Nach der Korrektur wurde die komplette Datei `tests/test_dashboard.py`
+  erneut ausgefuehrt: 105 Tests bestanden, 6 browserabhaengige Tests wurden
+  wegen der lokal nicht vorhandenen optionalen Playwright-/Chromium-Umgebung
+  uebersprungen.
