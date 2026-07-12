@@ -696,6 +696,14 @@ def replace_transaction_splits(
     if transaction is None:
         raise LookupError("Transaktion nicht gefunden.")
 
+    for index, split in enumerate(splits, start=1):
+        if isinstance(split.amount_minor, bool) or not isinstance(
+            split.amount_minor, int
+        ):
+            raise ValueError(
+                f"Split {index} braucht einen ganzzahligen Betrag in Cent."
+            )
+
     normalized = [
         TransactionSplit(
             split_id=(split.split_id.strip() or f"split_{uuid4().hex}"),

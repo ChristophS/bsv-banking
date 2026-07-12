@@ -7682,12 +7682,11 @@ def _transaction_splits_from_payload(
                     f"Split {index} gehoert nicht zu dieser Transaktion."
                 )
         raw_amount = item.get("betrag_cent", item.get("amount_minor"))
-        try:
-            amount_minor = int(raw_amount)
-        except (TypeError, ValueError) as exc:
+        if isinstance(raw_amount, bool) or not isinstance(raw_amount, int):
             raise ValueError(
                 f"Split {index} braucht einen ganzzahligen Betrag in Cent."
-            ) from exc
+            )
+        amount_minor = raw_amount
         splits.append(
             TransactionSplit(
                 split_id=str(item.get("split_id") or "").strip(),

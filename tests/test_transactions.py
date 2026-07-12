@@ -687,6 +687,33 @@ class DatabaseConnectionTests(unittest.TestCase):
                     ],
                     [(1, 1000), (2, 1500)],
                 )
+                for invalid_amount in (2500.0, "2500", True):
+                    with self.subTest(invalid_amount=invalid_amount):
+                        with self.assertRaisesRegex(
+                            ValueError,
+                            "ganzzahligen Betrag",
+                        ):
+                            replace_transaction_splits(
+                                connection,
+                                "tx_split",
+                                [
+                                    TransactionSplit(
+                                        "",
+                                        "tx_split",
+                                        invalid_amount,
+                                    )
+                                ],
+                            )
+                        self.assertEqual(
+                            [
+                                (split.sort_order, split.amount_minor)
+                                for split in list_transaction_splits(
+                                    connection,
+                                    "tx_split",
+                                )
+                            ],
+                            [(1, 1000), (2, 1500)],
+                        )
                 with self.assertRaises(ValueError):
                     replace_transaction_splits(
                         connection,
