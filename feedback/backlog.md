@@ -2,25 +2,7 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Mail-Detailansicht für die vorgangsbasierte Dokumentzuordnung umsetzen
-
-**Epic-ID:** epic-mail-document-assignment
-
-**Epic-Titel:** Mail-Dokumente über Vorgänge unterschiedlichen Transaktionsbezügen zuordnen
-
-**Epic-Ziel:** Mehrere Dokumente einer Mail innerhalb eines zentralen Vorgangs nachvollziehbar unterschiedlichen zugeordneten Transaktionen zuordnen, ohne die vorgangsbasierte Architektur zu umgehen.
-
-**Teilpaket:** Teil 3
-
-**Priorität:** mittel
-
-**Grund:** Nach der serverseitigen Zuordnungsgrundlage und der Auswahl-API soll die Zuordnung im bestehenden Mail- und Vorgangs-UI nachvollziehbar angezeigt und bedienbar werden.
-
-**Feedback:**
-
-- Mehrere Dokumente einer Mail unterschiedlichen Transaktionen innerhalb eines Vorgangs zuordnen
-
-## 2. Adressdatenbestand für Spendenbescheinigungen fachlich und persistent anlegen
+## 1. Adressdatenbestand für Spendenbescheinigungen fachlich und persistent anlegen
 
 **Epic-ID:** epic-donation-certificates
 
@@ -38,7 +20,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Spendenbescheinigung: baue eine Adressdatenbank auf mit allen bisherigen Spendenempfängern.
 
-## 3. Spendenbescheinigungen aus lokalen Empfänger- und Vorgangsdaten erzeugen
+## 2. Spendenbescheinigungen aus lokalen Empfänger- und Vorgangsdaten erzeugen
 
 **Epic-ID:** epic-donation-certificates
 
@@ -56,7 +38,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Dann auch eine automatische Erzeugung der Spendenbescheinigung.
 
-## 4. DFBnet-Vereinsdaten für Spendenbescheinigungen als getrennte Leseintegration prüfen
+## 3. DFBnet-Vereinsdaten für Spendenbescheinigungen als getrennte Leseintegration prüfen
 
 **Epic-ID:** epic-donation-certificates
 
