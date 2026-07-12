@@ -1333,6 +1333,24 @@ class TransactionPipelineTests(unittest.TestCase):
             payload = json.loads(corrected_manifest.read_text(encoding="utf-8"))
             self.assertEqual(payload["files"][0]["observed_account_balance"], "200.00")
             self.assertEqual(payload["files"][0]["manual_balance_correction"]["balance"], "100.00")
+            connection = connect_database(summary.database_path)
+            try:
+                account = connection.execute(
+                    "SELECT current_balance_minor, balance_as_of FROM accounts"
+                ).fetchone()
+                transaction_balance = connection.execute(
+                    "SELECT account_balance_minor FROM transactions"
+                ).fetchone()[0]
+            finally:
+                connection.close()
+            self.assertEqual(account["current_balance_minor"], 20000)
+            self.assertEqual(account["balance_as_of"], "2026-06-10")
+            self.assertEqual(transaction_balance, 10000)
+            from banking_dashboard import DashboardDataStore
+
+            balance_summary = DashboardDataStore(summary.database_path).balance_summary()
+            self.assertEqual(balance_summary["konten"][0]["kontostand"], "200.00")
+            self.assertEqual(balance_summary["kontostand_gesamt"], "200.00")
 
     def test_sparkasse_snapshot_backfills_entire_overlapping_history(self):
         with tempfile.TemporaryDirectory() as temp_dir:

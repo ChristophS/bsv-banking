@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260712-155339`
+`agent2/rework-20260712-160107`
 
 ## Geänderte Dateien
 
@@ -54,3 +54,10 @@
 - Besonders prüfen: Migration 18 → 19, Unique-Constraint `(account_id, balance_as_of)` und stichtagsgenaue Auswahl in `manual_balance_correction_for`.
 - Der Regressionstest simuliert zuerst den unveränderten Fehler mit einem Bankanker von 200,00 EUR und importiert anschließend mit einem bestätigten lokalen Anker von 100,00 EUR. Er prüft zusätzlich die unveränderte CSV-Zeile und die getrennten Manifestwerte.
 - Bereits vorhandene fremde Worktree-Änderungen an `feedback/Review-report.md` und die unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
+
+## Nachbesserung nach Review
+
+- Der beobachtete Bank-/Snapshot-Saldo und der manuelle lokale Vergleichsanker werden nun in getrennten Feldern weitergeführt. `ParsedFile.account_balance` enthält wieder ausschließlich den beobachteten Banksaldo; `comparison_account_balance` enthält nur bei einer passenden Korrektur den lokalen Anker.
+- `import_parsed_file` persistiert dadurch in `accounts.current_balance_minor` und `source_files.account_balance_minor` unverändert den beobachteten Bankwert. Der Korrekturwert wird nur zur Parservalidierung und als expliziter Startwert der betroffenen Rückwärtsberechnung verwendet.
+- Das Manifest weist weiterhin beide Werte getrennt aus und verwendet für `manual_balance_correction.balance` nun ausdrücklich den lokalen Vergleichsanker.
+- Der Regressionstest prüft zusätzlich, dass nach einem beobachteten Banksaldo von 200,00 EUR und einem lokalen Anker von 100,00 EUR `accounts.current_balance_minor` sowie `DashboardDataStore.balance_summary()` weiterhin 200,00 EUR anzeigen, während die betroffene Umsatz-Saldokette mit 100,00 EUR berechnet wird.

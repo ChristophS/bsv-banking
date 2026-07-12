@@ -838,6 +838,7 @@ def recalculate_account_balances(
     connection: sqlite3.Connection,
     provider: str,
     account_number: str,
+    comparison_balance_minor: int | None = None,
 ) -> int:
     account_id = _account_id(provider, account_number)
     account = connection.execute(
@@ -889,7 +890,11 @@ def recalculate_account_balances(
 
     ordered_ids = _ordered_transaction_ids(connection, account_id, transactions)
     by_id = {row["transaction_id"]: row for row in transactions}
-    current_balance = int(account["current_balance_minor"])
+    current_balance = (
+        comparison_balance_minor
+        if comparison_balance_minor is not None
+        else int(account["current_balance_minor"])
+    )
     updated = 0
     for transaction_id in ordered_ids:
         transaction = by_id[transaction_id]

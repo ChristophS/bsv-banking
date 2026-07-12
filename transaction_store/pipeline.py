@@ -534,7 +534,9 @@ def _parse_run(
             parsed.append(
                 replace(
                     parsed_file,
+                    account_balance=observation.balance,
                     observed_account_balance=observation.balance,
+                    comparison_account_balance=(effective_balance if correction else None),
                     manual_balance_correction_id=(str(correction["correction_id"]) if correction else None),
                     manual_balance_correction_reason=(str(correction["reason"]) if correction else None),
                 )
@@ -611,7 +613,7 @@ def _archive_and_import_run(
                 ),
                 "manual_balance_correction": (
                     {"correction_id": parsed.manual_balance_correction_id,
-                     "balance": format(parsed.account_balance, ".2f"),
+                     "balance": format(parsed.comparison_account_balance, ".2f"),
                      "balance_as_of": parsed.balance_as_of,
                      "reason": parsed.manual_balance_correction_reason}
                     if parsed.manual_balance_correction_id else None
@@ -633,6 +635,11 @@ def _archive_and_import_run(
                 connection,
                 parsed.account.provider,
                 parsed.account.number,
+                (
+                    int(parsed.comparison_account_balance * 100)
+                    if parsed.comparison_account_balance is not None
+                    else None
+                ),
             )
             recalculated_accounts.add(account_key)
 
