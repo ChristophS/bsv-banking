@@ -436,6 +436,62 @@
         <div class="account-balances" id="account-balances"></div>
       </div>
 
+      <section class="balance-corrections" aria-labelledby="balance-corrections-title">
+        <div class="balance-correction-heading">
+          <div>
+            <p class="eyebrow">Manuell geprüfte Saldoanker</p>
+            <h3 id="balance-corrections-title">Saldo-Korrekturen</h3>
+            <p>
+              Korrekturen verändern keine Originaltransaktionen. Sie dürfen nur
+              nach manueller Prüfung eines Kontoauszugs oder Bankstands angelegt werden.
+            </p>
+          </div>
+          <span id="balance-correction-count">0 Korrekturen</span>
+        </div>
+        <div class="balance-correction-layout">
+          <div>
+            <div class="loading-state" id="balance-correction-loading">
+              <span class="spinner" aria-hidden="true"></span>
+              Korrekturen werden geladen
+            </div>
+            <p class="balance-correction-empty" id="balance-correction-empty" hidden>
+              Noch keine manuellen Saldo-Korrekturen vorhanden.
+            </p>
+            <div class="balance-correction-list" id="balance-correction-list"></div>
+          </div>
+          <form class="balance-correction-form" id="balance-correction-form">
+            <h4>Neue Korrektur</h4>
+            <label>
+              <span>Konto</span>
+              <select name="account_id" required>
+                <option value="">Konto auswählen</option>
+              </select>
+            </label>
+            <label>
+              <span>Saldo in Cent</span>
+              <input name="balance_minor" type="number" step="1" required>
+              <small>Ganzzahliger Centbetrag, zum Beispiel 12345 für 123,45 €.</small>
+            </label>
+            <label>
+              <span>Stichtag</span>
+              <input name="balance_as_of" type="date" required>
+            </label>
+            <label>
+              <span>Begründung</span>
+              <textarea name="reason" rows="3" maxlength="2000" required></textarea>
+            </label>
+            <label class="balance-correction-confirmation">
+              <input name="manual_confirmation" type="checkbox" required>
+              <span>Ich habe Kontoauszug oder Bankstand manuell geprüft.</span>
+            </label>
+            <div class="balance-correction-actions">
+              <button class="primary-action" type="submit">Korrektur anlegen</button>
+              <span id="balance-correction-status" role="status" aria-live="polite"></span>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <div class="toolbar">
         <label class="search-field" for="transaction-search">
           <svg viewBox="0 0 24 24" aria-hidden="true">
