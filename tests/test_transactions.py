@@ -28,10 +28,17 @@ from transaction_store.classification import (
 from transaction_store import database as database_module
 from transaction_store.database import (
     connect_database,
+    create_donation_recipient,
+    list_donation_recipients,
     list_transaction_splits,
     replace_transaction_splits,
+    update_donation_recipient,
 )
-from transaction_store.models import AccountDefinition, TransactionSplit
+from transaction_store.models import (
+    AccountDefinition,
+    DonationRecipient,
+    TransactionSplit,
+)
 from transaction_store.parsers import (
     SPARKASSE_LEGACY_HEADERS,
     SPARKASSE_HEADERS,
@@ -55,6 +62,104 @@ from transaction_store.rules import (
 
 
 class DatabaseConnectionTests(unittest.TestCase):
+    def test_creates_updates_and_lists_donation_recipients(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            connection = connect_database(Path(temp_dir) / "transactions.sqlite3")
+            try:
+                created = create_donation_recipient(
+                    connection,
+                    DonationRecipient(
+                        recipient_id=" donor_1 ",
+                        name=" Beispiel   Verein ",
+                        street=" Sportweg  1 ",
+                        postal_code=" 12345 ",
+                        city=" Musterstadt ",
+                        country=" DE ",
+                    ),
+                )
+                updated = update_donation_recipient(
+                    connection,
+                    DonationRecipient(
+                        recipient_id="donor_1",
+                        name="Anna Beispiel",
+                        address_extra="c/o Beispiel Verein",
+                        street="Sportweg 2",
+                        postal_code="12345",
+                        city="Musterstadt",
+                        country="DE",
+                    ),
+                )
+                recipients = list_donation_recipients(connection)
+            finally:
+                connection.close()
+
+        self.assertEqual("donor_1", created.recipient_id)
+        self.assertEqual("Beispiel Verein", created.name)
+        self.assertTrue(created.created_at)
+        self.assertEqual([updated], recipients)
+        self.assertEqual(created.created_at, updated.created_at)
+        self.assertTrue(updated.updated_at)
+
+    def test_rejects_invalid_donation_recipients_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            connection = connect_database(Path(temp_dir) / "transactions.sqlite3")
+            try:
+                for recipient in (
+                    DonationRecipient(recipient_id=" ", name="Name"),
+                    DonationRecipient(recipient_id="donor_1", name="  "),
+                ):
+                    with self.assertRaisesRegex(ValueError, "darf nicht leer"):
+                        create_donation_recipient(connection, recipient)
+                count = connection.execute(
+                    "SELECT COUNT(*) FROM donation_recipients"
+                ).fetchone()[0]
+            finally:
+                connection.close()
+
+        self.assertEqual(0, count)
+
+    def test_database_version_seventeen_migrates_donation_recipients(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                connection.execute("DROP TABLE donation_recipients")
+                connection.execute("UPDATE schema_info SET version = 17")
+                connection.execute(
+                    "INSERT INTO accounts (account_id, provider, account_name, "
+                    "account_number) VALUES ('existing', 'test', 'Konto', '1')"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            migrated = connect_database(path)
+            try:
+                version = migrated.execute(
+                    "SELECT version FROM schema_info"
+                ).fetchone()[0]
+                account = migrated.execute(
+                    "SELECT account_name FROM accounts WHERE account_id = 'existing'"
+                ).fetchone()[0]
+                columns = {
+                    row["name"]
+                    for row in migrated.execute(
+                        "PRAGMA table_info(donation_recipients)"
+                    )
+                }
+            finally:
+                migrated.close()
+
+        self.assertEqual(18, version)
+        self.assertEqual("Konto", account)
+        self.assertEqual(
+            {
+                "recipient_id", "name", "address_extra", "street",
+                "postal_code", "city", "country", "created_at", "updated_at",
+            },
+            columns,
+        )
+
     def test_empty_sqlite_sidecars_are_discarded(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "transactions.sqlite3"
@@ -153,7 +258,7 @@ class DatabaseConnectionTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    17,
+                    18,
                 )
                 columns = {
                     row["name"]
@@ -232,7 +337,7 @@ class DatabaseConnectionTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    17,
+                    18,
                 )
                 self.assertIsNotNone(
                     migrated.execute(
@@ -1809,7 +1914,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    17,
+                    18,
                 )
                 row = migrated.execute(
                     "SELECT * FROM normalized_transactions"
@@ -1997,7 +2102,7 @@ class TransactionPipelineTests(unittest.TestCase):
                     migrated.execute(
                         "SELECT version FROM schema_info"
                     ).fetchone()[0],
-                    17,
+                    18,
                 )
                 self.assertEqual(
                     [
