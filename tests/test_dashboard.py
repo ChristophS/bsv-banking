@@ -889,6 +889,54 @@ class DashboardDataStoreTests(unittest.TestCase):
             "vorgang_tx_newer",
         )
 
+    def test_transaction_split_options_include_linked_vorgang_belege(self):
+        response = self.store.transaction_splits("tx_newer")
+
+        self.assertEqual(
+            [item["vorgangs_id"] for item in response["zulaessige_vorgaenge"]],
+            ["vorgang_tx_newer"],
+        )
+        self.assertEqual(
+            response["zulaessige_vorgaenge"][0]["belege"],
+            [
+                {
+                    "beleg_id": "beleg_1",
+                    "dateiname": "beleg_1.pdf",
+                    "kategorie": "sonstige_dokumente",
+                    "dokumentdatum": "",
+                    "betrag": "",
+                }
+            ],
+        )
+
+    def test_invalid_split_vorgang_keeps_existing_splits(self):
+        original = self.store.transaction_splits("tx_newer")["splits"]
+
+        for vorgangs_id, message in (
+            ("vorgang_missing", "Unbekannte Vorgangs-ID"),
+            (
+                "vorgang_tx_older",
+                "nicht mit dieser Transaktion verknuepft",
+            ),
+        ):
+            with self.subTest(vorgangs_id=vorgangs_id):
+                with self.assertRaisesRegex(ValueError, message):
+                    self.store.replace_transaction_splits(
+                        "tx_newer",
+                        {
+                            "splits": [
+                                {
+                                    "betrag_cent": 2500,
+                                    "vorgangs_id": vorgangs_id,
+                                }
+                            ]
+                        },
+                    )
+                self.assertEqual(
+                    self.store.transaction_splits("tx_newer")["splits"],
+                    original,
+                )
+
     def test_split_classification_recalculates_automatic_vorgang_status(self):
         completed = self.store.update_transaction_classification(
             "tx_newer",

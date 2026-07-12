@@ -535,18 +535,80 @@ class DashboardDataStore:
             splits = [
                 _serialize_transaction_split(item) for item in split_items
             ]
+            zulaessige_vorgaenge = self._transaction_split_vorgaenge(
+                connection,
+                cleaned_id,
+            )
         return {
             "transaction_id": cleaned_id,
             "amount_minor": int(transaction["amount_minor"]),
             "betrag_cent": int(transaction["amount_minor"]),
             "betrag": str(transaction["amount"] or ""),
             "splits": splits,
+            "zulaessige_vorgaenge": zulaessige_vorgaenge,
             "split_klassifikationsstatus": (
                 aggregate_classification_status(split_items).value
                 if split_items
                 else None
             ),
         }
+
+    @staticmethod
+    def _transaction_split_vorgaenge(
+        connection: sqlite3.Connection,
+        transaktions_id: str,
+    ) -> list[dict[str, Any]]:
+        rows = connection.execute(
+            """
+            SELECT
+                vorgang.vorgangs_id,
+                vorgang.titel,
+                vorgang.beschreibung,
+                vorgang.vorgangstyp,
+                vorgang.status,
+                beleg.beleg_id,
+                beleg.dateiname,
+                beleg.kategorie,
+                beleg.dokumentdatum,
+                beleg.betrag
+            FROM transaktion_vorgaenge AS tv
+            JOIN vorgaenge AS vorgang
+              ON vorgang.vorgangs_id = tv.vorgangs_id
+            LEFT JOIN vorgang_belege AS vb
+              ON vb.vorgangs_id = vorgang.vorgangs_id
+            LEFT JOIN belege AS beleg
+              ON beleg.beleg_id = vb.beleg_id
+            WHERE tv.transaktions_id = ?
+            ORDER BY vorgang.titel, vorgang.vorgangs_id,
+                     beleg.dateiname, beleg.beleg_id
+            """,
+            (transaktions_id,),
+        ).fetchall()
+        vorgaenge: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            vorgangs_id = str(row["vorgangs_id"])
+            item = vorgaenge.setdefault(
+                vorgangs_id,
+                {
+                    "vorgangs_id": vorgangs_id,
+                    "titel": str(row["titel"] or ""),
+                    "beschreibung": str(row["beschreibung"] or ""),
+                    "vorgangstyp": str(row["vorgangstyp"] or ""),
+                    "status": str(row["status"] or ""),
+                    "belege": [],
+                },
+            )
+            if row["beleg_id"] is not None:
+                item["belege"].append(
+                    {
+                        "beleg_id": str(row["beleg_id"]),
+                        "dateiname": str(row["dateiname"] or ""),
+                        "kategorie": str(row["kategorie"] or ""),
+                        "dokumentdatum": str(row["dokumentdatum"] or ""),
+                        "betrag": str(row["betrag"] or ""),
+                    }
+                )
+        return list(vorgaenge.values())
 
     def replace_transaction_splits(
         self,
