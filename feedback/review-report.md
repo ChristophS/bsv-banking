@@ -8,53 +8,40 @@
 
 ## Zusammenfassung
 
-Die Muss-Anforderungen sind im GitHub-Diff umgesetzt: lokale HTML-Bescheinigung, centgenaue Summe aus amount_minor, Empfänger- und Vorgangsvalidierung, automatische Belegkatalogisierung sowie ausschließliche Verknüpfung über vorgang_belege. Erfolgs-, Fehler-, API-, Atomicitäts- und UI-nahe Tests wurden ergänzt. Der GitHub-Branch ist gegenüber main um vier Commits voraus und enthält keine fehlenden Compare-Dateien.
+Die Dokumentation erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Sie grenzt lokale Stammdaten und Bescheinigungslogik klar von einer optionalen DFBnet-Lesequelle ab, beschreibt Sicherheitsgrenzen, Risiken, Entscheidungskriterien sowie einen isolierten read-only Adapter ohne produktive Implementierung oder neue Entitätsbeziehungen.
 
 # Technischer Review
 
-## Entscheidung
+## Ergebnis
 
-**Akzeptiert.**
+**Accepted:** Ja
 
-## Geprüfte Anforderungen
+## Geprüfter Umfang
 
-- Für einen vorhandenen Vorgang und einen vorhandenen Spendenempfänger wird eine lokale Bescheinigung erzeugt.
-- Unbekannte Vorgangs- und Empfänger-IDs werden vor Datei- und Datenbankschreibzugriffen abgewiesen.
-- Empfänger-, Vorgangs- und zugeordnete Transaktionsdaten werden aus den bestehenden Tabellen gelesen.
-- Der Betrag wird als Summe der ganzzahligen `amount_minor`-Werte berechnet und ohne Gleitkommaarithmetik als Centbetrag formatiert.
-- Die Ausgabe ist eine lokal gespeicherte UTF-8-HTML-Datei und als steuerrechtlich ungeprüfter Entwurf gekennzeichnet.
-- Erstellzeit, Empfänger-ID, Vorgangsreferenz und die einbezogenen Transaktionen werden ausgegeben.
-- Die Datei wird im bestehenden geschützten Belegverzeichnis unter einer geeigneten Kategorie abgelegt.
-- Der Beleg wird mit Quelle `automatic` und Kategorie `spendenbescheinigungen` im bestehenden Katalog gespeichert.
-- Die Verknüpfung erfolgt ausschließlich über `vorgang_belege`; eine direkte Transaktion-Beleg-Beziehung wurde nicht eingeführt.
-- Wiederholte Erzeugungen beschädigen bestehende Verknüpfungen nicht und erzeugen versionierte Dateien.
-- Der API-Endpunkt akzeptiert exakt ein nichtleeres String-Feld `recipient_id`.
-- Der manuelle Auslöser ist im Vorgangsdetail vorhanden.
+Der GitHub-Compare-Stand ist konsistent: Der Branch ist gegenüber `main` um einen Commit voraus, nicht hinterher, und enthält ausschließlich die erwarteten Änderungen an `README.md` und `feedback/implementation_report.md`. Die Änderungen bleiben dokumentarisch; es wurden keine produktiven DFBnet-, Datenbank-, Vorgangs-, Beleg- oder Adresskomponenten verändert.
 
-## Transaktionalität und Fehlerbehandlung
+## Erfüllte Muss-Anforderungen
 
-Die Validierung der Quelldaten erfolgt vor dem Dokumentaufbau. `create_document_from_bytes` verwendet weiterhin den bestehenden Katalogpfad. Bei einem Fehler während Datei-, Katalog- oder Verknüpfungsschreibzugriff wird die Datenbanktransaktion zurückgerollt und eine in diesem Aufruf geschriebene Datei bereinigt. Die ergänzten Tests prüfen insbesondere, dass nach einem erzwungenen Katalogfehler weder Beleg noch Vorgang-Beleg-Link noch HTML-Datei verbleiben.
+- Die bestehende DFBnet-Spielerprämienintegration wurde anhand des geladenen Quellcodes als Referenz für Sicherheits- und Isolationsmuster bewertet. Dokumentiert sind das separate Browserprofil, lokal geladene Credentials, geschützte Laufzeitverzeichnisse, deaktivierte Downloads, gekapselte Fehlerbehandlung und maskierte Loginfelder in Fehler-Screenshots.
+- Die Dokumentation benennt die für Bescheinigungsentwürfe benötigten Vereins- und Steuerdaten und stellt klar, dass diese lokal fachlich verbindlich gepflegt werden müssen.
+- DFBnet wird ausdrücklich nicht als Quelle für Spendenempfänger, steuerliche Nachweise oder die lokale Bescheinigungslogik verwendet.
+- Vorgänge bleiben das zentrale fachliche Objekt; direkte Beziehungen zwischen DFBnet-Daten und Empfänger-, Transaktions-, Vorgangs- oder Belegtabellen werden ausgeschlossen.
+- Ein späterer Adapter ist als getrennte read-only-Schnittstelle mit Snapshot-DTO beschrieben. Der Adapter soll keine Datenbankmodelle kennen, keine Bescheinigungen erzeugen und nicht direkt in den Store schreiben.
+- Die Dokumentation beschreibt manuelle Abweichungsklärung sowie einen bewusst ausgelösten, feldweisen und protokollierten Import als mögliche spätere Option.
+- Risiken wie instabile Selektoren, geänderte Anmeldung, Nichtverfügbarkeit, unvollständige oder veraltete Daten und fehlende fachliche Autorität werden benannt.
+- Klare Go-/No-Go-Kriterien für eine spätere Implementierung sind enthalten.
+- Fixtures, Mocks und Fakes sowie das ausdrückliche Verbot echter Credentials, produktiver Logins, Netzwerkanfragen und DFBnet-Schreibaktionen für spätere Tests sind festgelegt.
 
-## Tests
+## Architektur- und Sicherheitsprüfung
 
-Die Änderungen ergänzen Unit- und API-Tests für:
+Die bestehende Implementierung in `banking_dashboard/player_premiums.py` führt zwar einen DFBnet-Login durch und schreibt lokale Ergebnisdateien, enthält aber keine dokumentierte DFBnet-Schreibaktion. Sie verwendet ein separates persistentes Profil, lokal geladene Credentials, `accept_downloads=False`, geschützte Laufzeitpfade sowie maskierte Zugangsfelder in Fehler-Screenshots. Die neue Dokumentation behandelt diese Implementierung korrekt nur als Sicherheitsreferenz und überträgt weder ihre Selektoren noch ihre Ergebnisstruktur auf Spendenbescheinigungen.
 
-- erfolgreichen API-Ablauf,
-- centgenaue Betragsermittlung,
-- Inhalt der HTML-Datei,
-- Katalogdaten und Quelle,
-- Verknüpfung mit genau dem angefragten Vorgang,
-- unbekannten Empfänger,
-- unbekannten Vorgang,
-- ungültige `recipient_id`-Typen und Leerwerte,
-- Fehlerbereinigung nach Katalogfehlern.
+Die vorgeschlagene spätere Schnittstelle ist ausreichend isoliert beschrieben und umgeht weder bestehende Tabellen noch die Vorgangs- und Belegarchitektur. Es wird keine neue fachliche Grundarchitektur eingeführt.
 
-Die gemeldete relevante Testsuite umfasst 155 bestandene Tests und sechs übersprungene Tests. Die Tests verwenden temporäre SQLite-Datenbanken und synthetische Daten ohne externe Kommunikation.
+## Tests und Änderungsumfang
 
-## Scope und Architektur
+Für ein rein dokumentarisches Arbeitspaket sind keine neuen Anwendungstests erforderlich. Der Agent hat die bestehenden DFBnet-Unit-Tests ausgeführt, Whitespace-Fehler ausgeschlossen und keine externen Aktionen durchgeführt. Die tatsächlichen Änderungen entsprechen dem Bericht und dem GitHub-Diff.
 
-Die vorhandenen Tabellen, Services und der bestehende Belegkatalog werden verwendet. Es wurde keine zweite Empfängertabelle und keine unerlaubte direkte Transaktion-Beleg-Verknüpfung eingeführt. PDF, Signatur, Versand, DFBnet und externe Dokumentdienste bleiben außerhalb des Scopes.
+## Fazit
 
-## Compare- und Runner-Prüfung
-
-Der GitHub-Compare ist nutzbar: Der Agent-Branch ist gegenüber `main` vier Commits voraus und nicht hinterher. `missing_from_github_compare` ist leer. Die Runner-Metadaten sind allerdings nicht vollständig synchron: Dort wurde lediglich der Implementation Report als validierter beziehungsweise gestagter Pfad angegeben, obwohl der GitHub-Compare die eigentlichen Quell- und Teständerungen enthält. Das ist ein Prozesshinweis, aber kein fachlicher Blocker für den geprüften GitHub-Commit.
+Die Umsetzung ist als technische Entscheidungsvorlage belastbar und erfüllt den geforderten Scope. Eine produktive DFBnet-Integration wurde nicht vorzeitig implementiert, und die fachliche Verantwortung für Spendenempfänger und Bescheinigungsgrundlagen bleibt nachvollziehbar lokal.
