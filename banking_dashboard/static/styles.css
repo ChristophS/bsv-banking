@@ -3170,6 +3170,50 @@ th[aria-sort="descending"] .sort-indicator {
   cursor: wait;
 }
 
+.mail-document-assignment-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mail-document-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(240px, 1.4fr);
+  gap: 16px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.mail-document-assignment-document,
+.mail-document-assignment-meta {
+  display: block;
+}
+
+.mail-document-assignment-meta,
+.assignment-empty-hint {
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mail-document-assignment-row select {
+  min-width: 0;
+  width: 100%;
+}
+
+.mail-document-assignment-form .vorgang-form-actions {
+  margin-top: 14px;
+}
+
+@media (max-width: 720px) {
+  .mail-document-assignment-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .vorgang-rule-manager {
   position: sticky;
   top: 0;
