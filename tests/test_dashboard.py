@@ -3540,6 +3540,7 @@ class DashboardHTTPTests(unittest.TestCase):
             method="PATCH",
         )
         with urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 200)
             payload = json.load(response)
 
         self.assertEqual(
@@ -3547,6 +3548,96 @@ class DashboardHTTPTests(unittest.TestCase):
             "vollstaendig_klassifiziert",
         )
         self.assertEqual(payload["vorgaenge"][0]["status"], "abgeschlossen")
+
+    def test_classification_http_rejects_invalid_payloads_without_changes(self):
+        endpoint = self.base_url + "/api/transactions/tx_newer/classification"
+        with urlopen(
+            self.base_url + "/api/transactions/tx_newer",
+            timeout=5,
+        ) as response:
+            original = json.load(response)["transaction"]
+        classification_fields = (
+            "transaktionstyp",
+            "oberkategorie",
+            "unterkategorie",
+            "sphaere",
+            "fachliche_beschreibung",
+            "klassifikationsstatus",
+        )
+        expected_classification = {
+            field: original[field] for field in classification_fields
+        }
+        expected_vorgang_status = self.server.data_store.vorgang_detail(
+            "vorgang_tx_newer"
+        )["status"]
+        invalid_payloads = (
+            ({}, "Mindestens ein Klassifikationsfeld"),
+            (
+                {
+                    "oberkategorie": "Wuerde sonst gespeichert",
+                    "unbekanntes_feld": "nicht erlaubt",
+                },
+                "Unbekannte Klassifikationsfelder: unbekanntes_feld",
+            ),
+            (
+                {"oberkategorie": 123},
+                "Das Feld oberkategorie muss Text enthalten.",
+            ),
+            (
+                {"oberkategorie": "x" * 2001},
+                "Das Feld oberkategorie darf h\u00f6chstens 2000 "
+                "Zeichen enthalten.",
+            ),
+        )
+
+        for payload, expected_error in invalid_payloads:
+            with self.subTest(payload=payload):
+                request = Request(
+                    endpoint,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="PATCH",
+                )
+                with self.assertRaises(HTTPError) as raised:
+                    urlopen(request, timeout=5)
+                self.assertEqual(raised.exception.code, 400)
+                self.assertIn(
+                    expected_error,
+                    json.load(raised.exception)["error"],
+                )
+
+                with urlopen(
+                    self.base_url + "/api/transactions/tx_newer",
+                    timeout=5,
+                ) as response:
+                    unchanged = json.load(response)["transaction"]
+                self.assertEqual(
+                    {field: unchanged[field] for field in classification_fields},
+                    expected_classification,
+                )
+                self.assertEqual(
+                    self.server.data_store.vorgang_detail(
+                        "vorgang_tx_newer"
+                    )["status"],
+                    expected_vorgang_status,
+                )
+
+    def test_classification_http_returns_json_404_for_unknown_transaction(self):
+        request = Request(
+            self.base_url + "/api/transactions/tx_missing/classification",
+            data=json.dumps({"oberkategorie": "Personal"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PATCH",
+        )
+
+        with self.assertRaises(HTTPError) as raised:
+            urlopen(request, timeout=5)
+
+        self.assertEqual(raised.exception.code, 404)
+        self.assertEqual(
+            json.load(raised.exception),
+            {"error": "Transaktion nicht gefunden."},
+        )
 
     def test_vorgang_status_can_be_updated_over_http(self):
         request = Request(

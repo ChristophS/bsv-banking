@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260712-164643`
+`agent2/codex-20260712-182928`
 
 ## Geänderte Dateien
 
@@ -11,19 +11,18 @@
 
 ## Umgesetzte Punkte
 
-- Bestehende POST-, PATCH- und DELETE-Flows für `/api/todos` einschließlich Store-Validierung und Handler-Fehlerabbildung geprüft.
-- Regressionstests für unbekannte Felder, ungültige Priorität, ungültiges Datum und nicht listenförmige `vorgangs_ids` bei POST und PATCH ergänzt.
-- HTTP-400-Status und nicht leeres JSON-Fehlerobjekt werden getrennt von Erfolgsdaten geprüft.
-- Regressionstests für unbekannte Vorgangs-IDs bei POST und PATCH ergänzt; beide Antworten werden als HTTP 404 mit JSON-Fehler geprüft.
-- Persistenzsicherheit abgesichert: Ein fehlgeschlagener POST hinterlässt kein To-Do; ein fehlgeschlagener PATCH verändert weder das bestehende To-Do noch seine `todo_vorgaenge`-Verknüpfungen.
-- PATCH und DELETE für eine unbekannte To-Do-ID werden auf HTTP 404 und den konsistenten Fehlertext `To-Do wurde nicht gefunden.` geprüft.
-- Der vorhandene erfolgreiche CRUD-Test bestätigt weiterhin Erstellung, Änderung, Löschung sowie die bestehenden N:M-Verknüpfungen zu Vorgängen.
+- Bestehenden PATCH-Flow für `/api/transactions/<id>/classification` in Store und HTTP-Handler geprüft.
+- Erfolgsfall explizit auf HTTP 200, aktualisierte Klassifikation und weiterhin ausgeführte Abschlussregelverarbeitung abgesichert.
+- HTTP-Regressionstests für ein leeres Objekt, unbekannte Felder, nicht-textuelle Werte und Werte über 2000 Zeichen ergänzt.
+- Validierungsfehler werden auf HTTP 400 und ein verständliches JSON-Objekt mit `error` geprüft.
+- Eine unbekannte Transaktions-ID wird auf HTTP 404 und den JSON-Fehler `Transaktion nicht gefunden.` geprüft.
+- Nach jedem abgewiesenen Validierungsrequest werden Klassifikationsfelder und Vorgangsstatus erneut gelesen und auf unveränderte Werte geprüft.
 - Alle Tests verwenden die vorhandene temporäre SQLite-Testdatenbank und den lokalen Testserver.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Änderung an `banking_dashboard/server.py`, weil die vorhandenen Validierungshelfer, Store-Transaktionen und Handler bereits alle geforderten Statuscodes, JSON-Fehlerantworten und Rollback-Eigenschaften bereitstellen.
-- Keine Änderungen am Datenmodell, an `todo_vorgaenge`, an der UI oder an anderen API-Bereichen.
+- Keine Änderung an `banking_dashboard/server.py`, weil der bestehende Code alle geforderten Validierungen vor dem Schreibzugriff durchführt, unbekannte IDs zurückrollt und `ValueError`/`LookupError` bereits konsistent auf HTTP 400/404 abbildet.
+- Keine Änderungen an Split-API, Datenmodell, Vorgangsarchitektur, UI oder externen Integrationen.
 - Keine externen Dienste, echten Logins oder Browser-Automationen ausgeführt.
 
 ## Ausgeführte Tests
@@ -33,17 +32,17 @@
 
 ## Testergebnis
 
-- Dashboard-Testlauf: 122 bestanden, 6 übersprungen, 0 fehlgeschlagen (128 gesammelt).
+- Dashboard-Testlauf: 124 bestanden, 6 übersprungen, 0 fehlgeschlagen (130 gesammelt).
 - Die sechs Überspringungen betreffen vorhandene optionale Tests; es wurden keine Abhängigkeiten installiert.
 - Diff-Prüfung ohne Whitespace-Fehler.
 
 ## Bekannte Einschränkungen
 
-- Die Absicherung erfolgt über lokale HTTP-Integrationstests und direkte Persistenzprüfung; es wurde bewusst kein echter Browser verwendet.
-- Die Implementierung verändert keine Fehlertexte, da die bestehenden To-Do-Pfade bereits konsistente Texte liefern.
+- Die Absicherung erfolgt über lokale HTTP-Integrationstests; ein echter Browser war nicht erforderlich.
+- Der bestehende Endpunkt akzeptiert weiterhin leere Strings, weil sie fachlich zum gezielten Zurücksetzen einzelner Klassifikationsfelder verwendet werden.
 
 ## Hinweise für den Review-Agenten
 
-- Besonders relevant sind die neuen Tests ab `test_todo_create_rejects_invalid_payloads_with_json_error` in `tests/test_dashboard.py`.
-- Der Test für eine ungültige Vorgangsreferenz kombiniert beim PATCH eine Titeländerung mit dem ungültigen Link. Damit weist er nach, dass weder Fachdaten noch N:M-Verknüpfungen partiell gespeichert werden.
+- Relevant sind `test_classification_can_be_updated_over_http`, `test_classification_http_rejects_invalid_payloads_without_changes` und `test_classification_http_returns_json_404_for_unknown_transaction` in `tests/test_dashboard.py`.
+- Der gemischte Payload aus gültigem und unbekanntem Feld weist nach, dass selbst ein ansonsten speicherbarer Wert bei HTTP 400 nicht partiell übernommen wird.
 - Bereits vorhandene Änderungen an `feedback/Review-report.md` und die bereitgestellte unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
