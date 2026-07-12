@@ -9567,6 +9567,12 @@ function splitSphereField(value) {
     option.textContent = sphere;
     select.append(option);
   }
+  if (value && ![...select.options].some((option) => option.value === value)) {
+    const existing = document.createElement("option");
+    existing.value = value;
+    existing.textContent = value;
+    select.append(existing);
+  }
   select.value = [...select.options].some((option) => option.value === value)
     ? value
     : "";
@@ -9631,6 +9637,7 @@ function configureSplitClassificationFields(row) {
 
   const refreshSubcategories = () => {
     const topValue = topCategory.value.trim();
+    subCategory.disabled = !topValue;
     subcategoryDatalist.replaceChildren();
     const values = subcategories.get(
       topValue.toLocaleLowerCase("de-DE"),
@@ -9645,7 +9652,7 @@ function configureSplitClassificationFields(row) {
   const applySphereDefault = () => {
     const topValue = topCategory.value.trim();
     const subValue = subCategory.value.trim();
-    if (!topValue || !subValue) {
+    if (sphere.value || !topValue || !subValue) {
       return;
     }
     const preferred = sphereDefaults.get(
