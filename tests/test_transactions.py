@@ -1324,10 +1324,9 @@ class TransactionPipelineTests(unittest.TestCase):
                 connection.close()
 
             import_existing_exports([app_config(export_dir)], store_root)
-            self.assertEqual(
-                list(csv.reader((corrected_run / "hauptkonto.csv").open(encoding="utf-8-sig"), delimiter=";"))[1],
-                original_row,
-            )
+            with (corrected_run / "hauptkonto.csv").open(encoding="utf-8-sig") as corrected_csv:
+                corrected_row = list(csv.reader(corrected_csv, delimiter=";"))[1]
+            self.assertEqual(corrected_row, original_row)
             manifests = list((store_root / "archive" / "manifests").rglob("*.json"))
             corrected_manifest = next(path for path in manifests if "20260610T080000" in path.name)
             payload = json.loads(corrected_manifest.read_text(encoding="utf-8"))
