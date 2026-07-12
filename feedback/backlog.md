@@ -131,7 +131,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- Inbox: maximalen Benutzerkomfort ohne Leistungs- und Featureeinbußen erreichen
+- Inbox: maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen erreichen
 - Bestehender Dashboard-Kontext: Abschlussprüfungen und Klassifikationsstatus
 
 ## 8. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
