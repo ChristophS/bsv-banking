@@ -2,43 +2,7 @@
 
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
-
-**Epic-ID:** epic-balance-correction
-
-**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
-
-**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
-
-**Teilpaket:** Teil 3
-
-**Priorität:** mittel
-
-**Grund:** Neben dem Anlegen einer manuellen Korrektur wird ein klar geregelter Weg benötigt, bestehende Korrekturen bewusst zu widerrufen oder zu ersetzen.
-
-**Feedback:**
-
-- Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen.
-
-## 2. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
-
-**Epic-ID:** epic-balance-correction
-
-**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
-
-**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
-
-**Teilpaket:** Teil 4
-
-**Priorität:** mittel
-
-**Grund:** Falls fachliche Prüfung und Anlegen des lokalen Ankers künftig getrennte Schritte werden sollen, braucht die API eine explizite Bestätigungsaktion.
-
-**Feedback:**
-
-- Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen.
-
-## 3. Kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
+## 1. Restliche kritische Dashboard-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -46,18 +10,18 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
 
-**Teilpaket:** Teil 2
+**Teilpaket:** Teil 2.2
 
 **Priorität:** hoch
 
-**Grund:** Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
+**Grund:** Der ursprüngliche Prüfauftrag umfasst neben To-Dos auch Transaktionen, Vorgänge, Belege und Termine. Diese Endpunkte bleiben offen, werden aber nach der abgegrenzten To-Do-Absicherung separat geprüft.
 
 **Feedback:**
 
 - gesamten Code auf Konsistenz und Funktion prüfen
-- Folgepaket der automatisierten Konsistenz-Baseline
+- Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
 
-## 4. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
+## 2. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -76,7 +40,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Architekturregel: Vorgänge und bestehende Verknüpfungsstrukturen verwenden
 
-## 5. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
+## 3. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -94,6 +58,42 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Projektregel: externe Dienste nur mit Mocks, Fakes oder Fixtures testen
+
+## 4. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
+
+**Epic-ID:** epic-balance-correction
+
+**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
+
+**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
+
+**Teilpaket:** Teil 3
+
+**Priorität:** mittel
+
+**Grund:** Neben dem Anlegen einer manuellen Korrektur wird ein klar geregelter Weg benötigt, bestehende Korrekturen bewusst zu widerrufen oder zu ersetzen.
+
+**Feedback:**
+
+- Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen.
+
+## 5. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
+
+**Epic-ID:** epic-balance-correction
+
+**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
+
+**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
+
+**Teilpaket:** Teil 4
+
+**Priorität:** mittel
+
+**Grund:** Falls fachliche Prüfung und Anlegen des lokalen Ankers künftig getrennte Schritte werden sollen, braucht die API eine explizite Bestätigungsaktion.
+
+**Feedback:**
+
+- Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen.
 
 ## 6. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
 
