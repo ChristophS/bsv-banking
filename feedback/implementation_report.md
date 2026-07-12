@@ -2,78 +2,111 @@
 
 ## Branchname
 
-`agent2/codex-20260712-132428`
+`agent2/rework-20260712-134632`
 
 ## Geaenderte Dateien
 
 - `transaction_store/database.py`
 - `transaction_store/models.py`
-- `transaction_store/__init__.py`
+- `banking_dashboard/server.py`
+- `banking_dashboard/static/app.js`
+- `tests/test_dashboard.py`
 - `tests/test_transactions.py`
 - `feedback/implementation_report.md`
 
 Die bereits vorhandene Aenderung an `feedback/Review-report.md` und die
-unversionierte Datei `feedback/agent2_prompt.md` wurden nicht veraendert.
+unversionierten Dateien `feedback/agent2_prompt.md` sowie
+`feedback/agent2_review_request.md` wurden nicht veraendert.
 
 ## Umgesetzte Punkte
 
-- Schema-Version kontrolliert von 17 auf 18 erhoeht und Migration 17 auf 18
-  in das bestehende Migrationsmuster aufgenommen.
-- Lokale Tabelle `donation_recipients` mit stabiler Empfaenger-ID, Name,
-  Adresszusatz, Strasse, Hausnummer, Postleitzahl, Ort und Land angelegt.
-- Erstell- und Aktualisierungszeitpunkte werden im vorhandenen UTC-ISO-Format
-  gespeichert.
-- Typisierte unveraenderliche Datenstruktur `DonationRecipient` ergaenzt.
-- Gekapselte Funktionen zum Anlegen, Aktualisieren und geordneten Auflisten
-  implementiert und ueber `transaction_store` oeffentlich exportiert.
-- ID und Name werden vor jedem Schreibzugriff auf nichtleere Werte validiert.
-  Alle Textfelder werden getrimmt und interne Leerraumfolgen normalisiert.
-- Die Liste wird deterministisch nach Name ohne Beachtung der Gross-/
-  Kleinschreibung und anschliessend nach Empfaenger-ID sortiert.
-- Tests fuer Neuanlage des Schemas, Migration von Version 17 ohne Verlust von
-  Bestandsdaten, Speichern, Aktualisieren, Auslesen, Sortierung, Normalisierung
-  und verstaendliche Validierungsfehler ergaenzt.
-- Bestehende Migrations-Erwartungen wurden auf die neue Endversion 18
-  aktualisiert; der komplette Testbestand bestaetigt die unveraenderte
-  Funktionsfaehigkeit der vorhandenen Tabellen und Verknuepfungen.
+- Typisierte Lesedaten fuer Empfaenger, Vorgang und dessen zugeordnete
+  Transaktionen ergaenzt; der Gesamtbetrag wird ausschliesslich als Summe der
+  ganzzahligen `amount_minor`-Werte gebildet und ohne Gleitkommaarithmetik
+  formatiert.
+- Lokale, UTF-8-kodierte HTML-Bescheinigung als deutlich gekennzeichneten,
+  steuerrechtlich ungeprueften Entwurf erzeugt. Sie enthaelt Erstellzeit,
+  stabile Empfaenger- und Vorgangsreferenzen sowie die Transaktionsliste.
+- Sicheren, versionierten Dateinamen aus Vorgangs-ID und Erstellzeit verwendet.
+- Datei im geschuetzten Beleg-Unterordner `Spendenbescheinigungen` abgelegt,
+  mit Kategorie `spendenbescheinigungen` und Quelle `automatic` katalogisiert
+  und ausschliesslich ueber `vorgang_belege` verknuepft.
+- Vor Datei- und Datenbankschreibzugriff werden Vorgang und Empfaenger
+  vollstaendig validiert. Bei einem Katalog-/Verknuepfungsfehler rollt die
+  Datenbanktransaktion zurueck und die bereits geschriebene Entwurfsdatei wird
+  entfernt.
+- POST-Endpunkt
+  `/api/vorgaenge/{vorgangs_id}/spendenbescheinigung` mit exakt einem
+  `recipient_id`-Parameter ergaenzt.
+- Im Vorgangsdetail einen manuellen Ausloeser mit Empfaenger-ID eingebaut.
+- API-Tests fuer Erfolg, centgenauen Betrag, Inhalt, Katalogdaten,
+  Vorgang-Beleg-Link und unbekannte IDs ohne Seiteneffekte ergaenzt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Dashboard- oder HTTP-API-Aenderungen.
-- Keine Zuordnung von Empfaengern zu Transaktionen, Vorgaengen oder Belegen.
-- Keine Bescheinigungserzeugung und keine externen Integrationen oder Importe.
-- Keine weiteren Adressfelder verpflichtend gemacht, da deren fachliche und
-  rechtliche Verbindlichkeit laut Arbeitspaket noch offen ist.
+- Keine PDF-Erzeugung, Signatur, E-Mail, steuerrechtliche Vollstaendigkeits-
+  pruefung oder externe Integration.
+- Keine direkte Empfaenger-, Transaktion- oder Belegbeziehung eingefuehrt.
+
+## Nachbesserung nach Review
+
+- Der vollstaendige Arbeitsbaum des aktuellen Rework-Branches wurde gegen den
+  Review-Hinweis abgeglichen. Die zuvor im
+  Dateikontext vermissten Symbole `donation_certificate_data`,
+  `DonationCertificateData`, `DonationCertificateTransaction`,
+  `create_donation_certificate` und der POST-Endpunkt sind in den
+  vollstaendigen Quelldateien vorhanden und importierbar.
+- `recipient_id` wird am API-Rand nun explizit als nichtleerer String
+  validiert. `null`, Zahlen, leere Strings und reine Leerzeichen werden mit
+  HTTP 400 abgewiesen, statt implizit per `str()` umgewandelt zu werden.
+- Ein API-Test sichert ab, dass diese 4xx-Anfragen weder automatische Belege
+  oder Vorgang-Beleg-Verknuepfungen noch lokale Dateien hinterlassen.
+- Die Fehlerbereinigung wurde in `create_document_from_bytes` verschoben. Dort
+  steht der tatsaechlich durch `_safe_filename` bereinigte und durch
+  `_unique_file_path` gegebenenfalls uniquifizierte Zielpfad zur Verfuegung.
+  Bei einem Katalog- oder Verknuepfungsfehler wird nur die in diesem Aufruf
+  tatsaechlich geschriebene Datei entfernt; die Datenbanktransaktion bleibt
+  unveraendert zurueckgerollt.
+- Der fehlerhafte Cleanup in `create_donation_certificate`, der den
+  unsanitisierten Dateinamen verwendete, wurde entfernt.
+- In `tests/test_transactions.py` sichern isolierte Unit-Tests den
+  Datenbank-Helper einschliesslich exakter Integer-Cent-Summe und unbekannter
+  IDs ab. Ein erzwungener SQLite-Katalogfehler prueft zudem, dass weder Beleg,
+  Vorgang-Beleg-Link noch eine Datei mit sanitisiertem Namen zurueckbleiben.
+- Die vom Server importierten Symbole `donation_certificate_data`,
+  `DonationCertificateData` und `DonationCertificateTransaction` sind im
+  aktuellen Branch in den vollstaendigen Quelldateien vorhanden.
 
 ## Ausgefuehrte Tests
 
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py tests/test_dashboard.py`
+- Expliziter Python-Importcheck fuer `donation_certificate_data`,
+  `DonationCertificateData`, `DonationCertificateTransaction` und
+  `DashboardDataStore.create_donation_certificate`
 - `git diff --check`
 
 ## Testergebnis
 
-- Transaktionssuite: 38 bestanden.
-- Gesamtsuite: 249 bestanden, 7 uebersprungen.
-- Die uebersprungenen Tests sind vorhandene optionale Umgebungs-/
-  Integrationstests.
+- Gemeinsame relevante Testsuite: 155 bestanden, 6 uebersprungen.
+- Der explizite Importcheck war erfolgreich.
 - `git diff --check` meldet keine Whitespace-Fehler.
 
 ## Bekannte Einschraenkungen
 
-- Nur Empfaenger-ID und Name sind verpflichtend. Vollstaendigkeitsregeln fuer
-  Anschriften muessen festgelegt werden, bevor Bescheinigungen erzeugt werden.
-- Es gibt in diesem Teilpaket bewusst keine direkte fachliche Verknuepfung zu
-  Transaktionen; spaetere Zuordnungen muessen ueber Vorgaenge erfolgen.
-- Aktualisierungen unbekannter IDs liefern einen `ValueError`; eine separate
-  Lesefunktion fuer einen einzelnen Empfaenger war nicht gefordert.
+- Die UI verwendet bewusst ein schmales Freitextfeld fuer die stabile
+  Empfaenger-ID; ein eigener Empfaenger-Auswahlkatalog ist nicht vorhanden.
+- Wiederholtes Erzeugen legt jeweils einen neuen zeitgestempelten Entwurf an
+  und laesst vorhandene Belegzuordnungen unveraendert.
+- Vereinsdaten und ein verbindlicher Bescheinigungstext sind weiterhin offen;
+  der HTML-Inhalt behauptet deshalb keine steuerrechtliche Gueltigkeit.
 
 ## Hinweise fuer den Review-Agenten
 
-- Migration und Tabellenerzeugung befinden sich in
-  `_migrate_v17_to_v18` und `_create_donation_recipients_table`.
-- Die CRUD-Funktionen validieren und normalisieren vor dem ersten
-  Schreibzugriff. Fehlerhafte Eingaben hinterlassen daher keine Teilobjekte.
-- Alle neuen Tests verwenden ausschliesslich temporaere SQLite-Datenbanken und
-  synthetische Daten.
+- Der Datenbank-Helper `donation_certificate_data` liest ausschliesslich die
+  bestehenden Tabellen `donation_recipients`, `vorgaenge`,
+  `transaktion_vorgaenge` und `transactions`.
+- Der vorhandene Katalogweg `create_document_from_bytes` wird wiederverwendet;
+  es wurde keine neue Persistenzstruktur angelegt.
+- Die neuen Tests verwenden ausschliesslich temporaere SQLite-Datenbanken und
+  synthetische Daten, ohne Netzwerkzugriff auf externe Dienste.
 - Es wurde nicht committet und nicht gepusht.
