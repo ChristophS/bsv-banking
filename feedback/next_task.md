@@ -2,93 +2,86 @@
 
 ## Titel
 
-Lokale Testbaseline für die Dashboard- und Transaktionspfade ausführen und Befunde dokumentieren
+Manuelle, nachvollziehbare Saldo-Korrektur für abweichende Volksbank-Saldoanker bereitstellen
 
 ## Epic
 
-**Epic-ID:** epic-system-consistency
+**Epic-ID:** epic-balance-correction
 
-**Epic-Titel:** Systematische Qualitäts- und Konsistenzprüfung des Vereins-Finanztools
+**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
 
-**Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
+**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
 
 **Teilpaket:** Teil 1
 
 ## Ziel
 
-Den aktuellen Zustand der vorhandenen Unit-Tests lokal reproduzierbar feststellen und dabei nur eindeutig nachweisbare kleine Fehler in Dashboard- oder Transaktionskern beheben; alle übrigen Befunde sauber als Folgeaufgaben festhalten.
+Ein Kassierer kann für ein Konto einen ausdrücklich bestätigten lokalen Saldoanker hinterlegen, damit ein nachweislich fehlerhafter oder abweichender Saldo aus der Kontoübersicht den Import nicht dauerhaft blockiert, ohne CSV-Originaldaten oder Bankdaten zu verändern.
 
 ## Relevante Dateien
 
-- tests/test_dashboard.py
-- tests/test_transactions.py
-- tests/test_config.py
-- tests/test_detector.py
-- tests/test_exporter.py
-- tests/test_login.py
-- tests/test_mail_integration.py
-- tests/test_player_payments.py
-- tests/test_player_premiums.py
-- tests/test_session.py
-- banking_dashboard/server.py
 - transaction_store/database.py
-- transaction_store/classification.py
-- transaction_store/rules.py
-- feedback/Review-report.md
+- transaction_store/models.py
+- transaction_store/pipeline.py
+- banking_readonly/balance_snapshot.py
+- banking_dashboard/server.py
+- tests/test_transactions.py
+- tests/test_dashboard.py
 
 ## Wahrscheinliche Änderungsstellen
 
-- tests/ zur Reproduktion und Absicherung konkreter Befunde
-- banking_dashboard/server.py für lokale API-, Validierungs- oder Dashboard-Datenflüsse
-- transaction_store/database.py für eindeutig nachweisbare Persistenz- oder Integritätsfehler
-- transaction_store/classification.py und transaction_store/rules.py für eindeutig testbare Klassifikations- oder Statusinkonsistenzen
-- feedback/Review-report.md für die knappe Dokumentation der Testbaseline und offener Befunde
+- Schlanke, versionierte SQLite-Migration und Persistenzfunktionen für explizite manuelle Saldoanker in transaction_store/database.py
+- Import- beziehungsweise Saldoabgleichspfad in transaction_store/pipeline.py und gegebenenfalls banking_readonly/balance_snapshot.py
+- Lokaler Dashboard-API-Endpunkt zur validierten Anlage und Abfrage einer Saldo-Korrektur in banking_dashboard/server.py
+- Unit-Tests mit temporären SQLite-Datenbanken und synthetischen Volksbank-Exportdaten
 
 ## Muss umgesetzt werden
 
-- Die vollständige lokale Unit-Test-Suite mit `python -m unittest discover -s tests -v` ausführen; keine echten Banking-, Microsoft-Graph-, DFBnet-, Mail- oder OpenAI-Aktionen auslösen.
-- Fehlgeschlagene Tests in reproduzierbare Fehler, Umgebungsprobleme und erwartete Testanpassungen unterscheiden.
-- Höchstens kleine, klar reproduzierbare Fehler im lokalen Dashboard- oder Transaktionskern beheben, wenn Ursache und erwartetes Verhalten durch bestehende Tests oder Architekturregeln eindeutig belegt sind.
-- Für jede Codekorrektur einen passenden Regressionstest ergänzen oder einen vorhandenen Test gezielt präzisieren.
-- Eine kurze Testbaseline mit ausgeführten Tests, Ergebnis und nicht innerhalb dieses Pakets lösbaren Befunden in `feedback/Review-report.md` festhalten.
+- Die Ursache einer Saldoabweichung weiterhin als Import- beziehungsweise Validierungsfehler erkennbar halten; eine manuelle Korrektur darf nicht stillschweigend erfolgen.
+- Eine separate, auditierbare lokale Korrektur speichern, mindestens mit Kontoidentität, korrigiertem Saldo in Cent, Stichtag, Begründung, Erstellzeitpunkt und Kennzeichnung als manuelle Korrektur.
+- Keine archivierte CSV-Datei, keine Rohtransaktion und keinen aus der Bank gelesenen Übersichts-Saldo überschreiben.
+- Einen lokalen, validierten API-Flow bereitstellen, der nur für ein bestehendes Konto eine Korrektur mit vollständigen Pflichtangaben anlegt und die gespeicherte Korrektur abrufbar macht.
+- Den Saldoabgleich so ergänzen, dass eine passende bestätigte manuelle Korrektur als lokaler Saldoanker verwendet wird und der Import bei dadurch aufgelöster Abweichung fortgesetzt werden kann.
+- Ungültige Beträge, fehlende Konto- oder Stichtagsangaben, unbekannte Konten und unpassende Korrekturen mit verständlichen lokalen Fehlerantworten ablehnen.
+- Regressionstests für den bisherigen Abbruch bei nicht korrigierter Volksbank-Abweichung, die erfolgreiche Behandlung mit passender Korrektur sowie die Unverändertheit der Rohdaten ergänzen.
 
 ## Soll umgesetzt werden
 
-- Bei bestandenem Testlauf prüfen, ob die vorhandenen Dashboard-Tests die lokalen Kernpfade für Transaktionsdetails, Vorgangsverknüpfungen und Split-Endpunkte ausreichend abdecken.
-- Befunde mit möglichem Einfluss auf Datenintegrität, Vorgangsverknüpfungen oder Nutzeraktionen als hohe Folgepriorität markieren.
-- Keine produktiven Laufzeitdaten in die Dokumentation übernehmen; ausschließlich Testnamen, anonymisierte Fehlerbilder und technische Ursachen festhalten.
+- Die API-Antworten so strukturieren, dass die spätere Oberfläche Abweichung, verwendeten lokalen Korrekturanker, Betrag, Stichtag und Begründung eindeutig anzeigen kann.
+- Mehrfaches Anlegen derselben fachlichen Korrektur idempotent oder eindeutig konfliktbehaftet behandeln, statt unklare parallele Anker zuzulassen.
+- Die Korrekturfunktion mit einem knappen Hinweis dokumentieren, dass sie nur nach manueller Prüfung des Kontoauszugs beziehungsweise Bankstands verwendet werden soll.
 
 ## Nicht Teil dieses Arbeitspakets
 
-- Keine umfassende Umgestaltung des Dashboards oder neuer UI-Flow.
-- Keine neue fachliche Architektur und keine direkten Beziehungen außerhalb der bestehenden Vorgangs- und Verknüpfungsstruktur.
-- Keine Migration oder grundlegende Umstrukturierung bestehender Tabellen ohne konkreten, testbaren Befund.
-- Keine echten externen Logins, Netzwerkanfragen, Browserprofile, Downloads, Mailaktionen oder DFBnet-Aktionen.
-- Keine Bearbeitung umfangreicher Folgeprobleme, die erst aus dem Testlauf entstehen; diese werden als getrennte Backlog-Punkte geplant.
-- Keine Umsetzung der ausstehend geplanten Kassierer-Usability-Verbesserungen.
+- Keine echte Banking-Anmeldung, kein CSV-Download und keine produktive Bankaktion.
+- Keine Änderung der Volksbank-Exportautomatisierung oder ihrer Selektoren.
+- Keine nachträgliche Massenkorrektur historischer Kontostände außerhalb der durch den neuen Anker eindeutig betroffenen Berechnung.
+- Keine umfassende Dashboard-Oberfläche, kein komplexer Korrekturverlauf und keine Freigabe-Workflows mit mehreren Rollen.
+- Keine Umgestaltung der bestehenden Vorgangs-, Transaktions- oder Belegverknüpfungsarchitektur.
 
 ## Akzeptanzkriterien
 
-- Die vollständige lokale Unit-Test-Suite wurde ausgeführt und ihr Ergebnis ist nachvollziehbar dokumentiert.
-- Alle in diesem Paket behobenen Fehler sind durch mindestens einen automatisierten Regressionstest abgesichert.
-- Die geänderte Suite läuft lokal ohne echte externe Dienste, Credentials, produktive Daten oder Browserzugriffe.
-- Der dokumentierte Befund unterscheidet klar zwischen bestandenem Zustand, behobenen Defekten und offenen Folgearbeiten.
-- Es wurden keine produktiven Banking-, Mail-, Microsoft-Graph- oder DFBnet-Aktionen ausgelöst.
+- Eine manuelle Saldo-Korrektur wird getrennt von Rohdaten und Transaktionen lokal persistiert und enthält Konto, Saldo, Stichtag, Begründung sowie einen auditierbaren Herkunftshinweis.
+- Ohne passende manuelle Korrektur bleibt die bekannte Volksbank-Saldoabweichung ein verständlicher, reproduzierbarer Validierungsfehler.
+- Mit einer passenden Korrektur kann der betroffene lokale Saldoabgleich den korrigierten Anker verwenden, ohne CSV- oder Bankoriginalwerte zu ändern.
+- Der lokale API-Flow lehnt unvollständige und fachlich unzulässige Eingaben mit einem kontrollierten Clientfehler ab.
+- Die neuen und bestehenden relevanten Unit-Tests laufen ohne Browser, Netzwerk, Credentials, Bankzugriff oder produktive Laufzeitdaten.
 
 ## Hinweise für den Umsetzungs-Agenten
 
-- Bestehende Fakes, Fixtures und Dependency-Injection-Punkte der Testumgebung weiterverwenden.
-- Fehler nur dort korrigieren, wo ein eindeutiger reproduzierbarer Widerspruch zwischen Test, API-Vertrag oder bestehender Vorgangsarchitektur vorliegt.
-- Bei unklarer fachlicher Erwartung keine stillschweigende Verhaltensänderung vornehmen, sondern eine offene Frage oder einen Backlog-Befund dokumentieren.
-- Die Auswertung soll insbesondere sicherstellen, dass lokale Validierungs- und Fehlerpfade keine unkontrollierten Serverfehler erzeugen.
-- Vorgänge bleiben die zentrale fachliche Einheit; bestehende N:M-Verknüpfungen zwischen Transaktionen, Vorgängen, Belegen, Mails, To-Dos und Terminen dürfen nicht durch direkte Ersatzbeziehungen umgangen werden.
+- Für Geldbeträge ausschließlich Integer-Centwerte verwenden; keine Float-Vergleiche einführen.
+- Die Korrektur ist ein zusätzlicher lokaler Fakt mit Quelle und Begründung, nicht eine Änderung des von der Bank gelieferten Snapshots.
+- Vorhandene Kontoidentifikation und Saldo-Rekonstruktionslogik wiederverwenden.
+- Die Korrektur darf keine direkte Beziehung zu Belegen oder anderen Entitäten einführen; Vorgänge und bestehende N:M-Verknüpfungen bleiben unverändert.
+- Bei konkurrierenden oder zeitlich nicht passenden Ankern muss der Import weiterhin sicher abbrechen statt einen Wert zu raten.
 
 ## Manuelle Testhinweise
 
-- Kein echter externer manueller Test erforderlich.
-- Optional nach einem lokalen, vollständig grünen Testlauf einen bereits vorhandenen Testdatenbank-Workflow starten und ausschließlich lokal prüfen, dass Dashboard und Transaktionsdetail erreichbar bleiben.
+- Ausschließlich mit einer temporären lokalen Testdatenbank und synthetischen Volksbank-CSV-/Saldo-Fixtures prüfen.
+- Eine bekannte Differenz simulieren, den erwarteten Validierungsfehler prüfen, danach eine begründete Korrektur über den lokalen API-Flow hinterlegen und den erfolgreichen erneuten Abgleich prüfen.
+- Kontrollieren, dass die gespeicherten Rohtransaktionen und archivierten Quelldaten vor und nach der Korrektur identisch bleiben.
 
 ## Offene Fragen
 
-- Falls der vollständige Testlauf Umgebungsabhängigkeiten offenlegt: Sind diese als projektseitige Fehler zu beheben oder als dokumentierte lokale Voraussetzung vorgesehen?
-- Welche Befunde aus der Testbaseline sollen vor weiteren Funktionsausbauten zwingend als Blocker behandelt werden?
+- Soll eine manuelle Korrektur nur für einen einzelnen Exportstichtag gelten oder bis zu einem späteren verifizierten Bank-Saldoanker fortwirken?
+- Soll eine spätere Oberfläche bestehende Korrekturen nur anzeigen oder auch bewusst widerrufen beziehungsweise ersetzen können?
