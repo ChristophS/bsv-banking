@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260712-115932`
+`agent2/rework-20260712-120459`
 
 ## Geänderte Dateien
 
@@ -35,6 +35,22 @@ Bereits vorhandene, nicht zu diesem Arbeitspaket gehörende Änderungen an
   partiellen Änderungen.
 - API- und Architekturtest ergänzt.
 
+## Nachbesserung nach Review
+
+- `_replace_vorgang_links` verwendet für Transaktionslinks nun eine gezielte
+  Ersetzung. Jeder neu angelegte Link erhält unmittelbar eine eindeutige,
+  nicht leere `tvb_...`-Referenz; vorhandene leere Referenzen werden repariert.
+- Unveränderte Transaktionslinks werden bei einem Vorgangs-Update nicht mehr
+  gelöscht. Dadurch bleibt ihre stabile `bezugs_id` erhalten und der
+  Löschtrigger leert keine weiterhin gültige Dokumentzuordnung.
+- Auch die vorhandene generische Link-Ersetzung löscht nur noch tatsächlich
+  entfernte Links. So bleibt insbesondere bei unveränderten Beleglinks die in
+  `vorgang_belege.vorgangsbezug_id` gespeicherte Auswahl erhalten.
+- Ein Regressionstest legt einen Vorgang über `create_vorgang` mit Transaktion
+  und Beleg an, speichert die Auswahl über PUT, aktualisiert den Vorgang über
+  `update_vorgang` und prüft danach per GET den weiterhin aufgelösten
+  Transaktionsbezug sowie die nicht leere `bezugs_id`.
+
 ## Nicht umgesetzte Punkte
 
 - Keine Frontend-Bedienung; sie ist ausdrücklich nicht Teil des Pakets.
@@ -44,14 +60,15 @@ Bereits vorhandene, nicht zu diesem Arbeitspaket gehörende Änderungen an
 ## Ausgeführte Tests
 
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k mail_document_assignment_api_validates_vorgang_context -q`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k 'mail_document_assignment_api_validates_vorgang_context or created_vorgang_keeps_resolvable_document_assignment_on_update' -q`
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py tests/test_transactions.py`
 - `git diff --check`
 
 ## Testergebnis
 
-- Gezielter Test: 1 bestanden, 116 abgewählt; 5 Subtests bestanden.
-- Dashboard-Suite: 111 bestanden, 6 übersprungen.
+- Gezielte Tests nach Nachbesserung: 2 bestanden, 116 abgewählt; 5 Subtests bestanden.
+- Dashboard-Suite: 112 bestanden, 6 übersprungen.
 - Mail-/Transaktions-Suiten: 74 bestanden, 1 übersprungen.
 - Die übersprungenen Tests sind vorhandene optionale Browser-/Umgebungstests.
 - `git diff --check` meldet keine Whitespace-Fehler.
@@ -71,6 +88,8 @@ Bereits vorhandene, nicht zu diesem Arbeitspaket gehörende Änderungen an
 - Besonders relevant sind die Methoden `mail_document_assignments` und
   `replace_mail_document_assignments` sowie die GET-/PUT-Routen in
   `DashboardRequestHandler`.
+- Für die Nachbesserung sind außerdem `_replace_transaction_vorgang_links`
+  und das differenzielle Verhalten von `_replace_link_rows` relevant.
 - Der Test prüft Erfolg, Idempotenz, unbekannte IDs, fremden Kontext,
   widersprüchliche IDs, unbekannte Felder, unveränderten Zustand nach Fehlern
   und die Abwesenheit einer direkten `transaktions_id`-Spalte in

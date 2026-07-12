@@ -3792,18 +3792,10 @@ class DashboardDataStore:
         vorgangs_id: str,
         values: dict[str, Any],
     ) -> None:
-        self._replace_link_rows(
+        self._replace_transaction_vorgang_links(
             connection,
-            table="transaktion_vorgaenge",
-            entity_table="transactions",
-            entity_column="transaction_id",
-            link_entity_column="transaktions_id",
-            link_vorgang_column="vorgangs_id",
-            entity_ids=values["transaction_ids"],
             vorgangs_id=vorgangs_id,
-            entity_label="Transaktion",
-            entity_first=True,
-            timestamp_column=None,
+            transaction_ids=values["transaction_ids"],
         )
         if _table_exists(connection, "inbox_vorgaenge"):
             self._replace_link_rows(
@@ -3862,6 +3854,81 @@ class DashboardDataStore:
         )
 
     @staticmethod
+    def _replace_transaction_vorgang_links(
+        connection: sqlite3.Connection,
+        *,
+        vorgangs_id: str,
+        transaction_ids: list[str],
+    ) -> None:
+        if transaction_ids:
+            placeholders = ", ".join("?" for _ in transaction_ids)
+            existing_transactions = {
+                str(row[0])
+                for row in connection.execute(
+                    f"""
+                    SELECT transaction_id
+                    FROM transactions
+                    WHERE transaction_id IN ({placeholders})
+                    """,
+                    tuple(transaction_ids),
+                )
+            }
+            missing = [
+                transaction_id
+                for transaction_id in transaction_ids
+                if transaction_id not in existing_transactions
+            ]
+            if missing:
+                raise LookupError(
+                    "Transaktion wurde nicht gefunden: " + ", ".join(missing)
+                )
+
+        requested = set(transaction_ids)
+        current_rows = connection.execute(
+            """
+            SELECT transaktions_id, bezugs_id
+            FROM transaktion_vorgaenge
+            WHERE vorgangs_id = ?
+            """,
+            (vorgangs_id,),
+        ).fetchall()
+        current = {
+            str(row["transaktions_id"]): row["bezugs_id"]
+            for row in current_rows
+        }
+
+        removed = set(current) - requested
+        if removed:
+            placeholders = ", ".join("?" for _ in removed)
+            connection.execute(
+                f"""
+                DELETE FROM transaktion_vorgaenge
+                WHERE vorgangs_id = ? AND transaktions_id IN ({placeholders})
+                """,
+                (vorgangs_id, *removed),
+            )
+
+        for transaction_id in transaction_ids:
+            if transaction_id not in current:
+                connection.execute(
+                    """
+                    INSERT INTO transaktion_vorgaenge (
+                        transaktions_id, vorgangs_id, bezugs_id
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (transaction_id, vorgangs_id, f"tvb_{uuid4().hex}"),
+                )
+            elif not str(current[transaction_id] or "").strip():
+                connection.execute(
+                    """
+                    UPDATE transaktion_vorgaenge
+                    SET bezugs_id = ?
+                    WHERE transaktions_id = ? AND vorgangs_id = ?
+                    """,
+                    (f"tvb_{uuid4().hex}", transaction_id, vorgangs_id),
+                )
+
+    @staticmethod
     def _replace_link_rows(
         connection: sqlite3.Connection,
         *,
@@ -3897,12 +3964,21 @@ class DashboardDataStore:
                     f"{entity_label} wurde nicht gefunden: "
                     + ", ".join(missing)
                 )
-        connection.execute(
-            f"DELETE FROM {table} WHERE {link_vorgang_column} = ?",
-            (vorgangs_id,),
-        )
         if not entity_ids:
+            connection.execute(
+                f"DELETE FROM {table} WHERE {link_vorgang_column} = ?",
+                (vorgangs_id,),
+            )
             return
+        retained_placeholders = ", ".join("?" for _ in entity_ids)
+        connection.execute(
+            f"""
+            DELETE FROM {table}
+            WHERE {link_vorgang_column} = ?
+              AND {link_entity_column} NOT IN ({retained_placeholders})
+            """,
+            (vorgangs_id, *entity_ids),
+        )
         columns = (
             (link_entity_column, link_vorgang_column)
             if entity_first

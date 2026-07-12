@@ -2889,6 +2889,56 @@ class DashboardHTTPTests(unittest.TestCase):
                 },
             )
 
+    def test_created_vorgang_keeps_resolvable_document_assignment_on_update(self):
+        created = self.server.data_store.create_vorgang(
+            {
+                "title": "Mail-Dokumentzuordnung",
+                "transaction_ids": ["tx_newer"],
+                "beleg_ids": ["beleg_1"],
+            }
+        )
+        vorgangs_id = created["vorgangs_id"]
+        endpoint = (
+            self.base_url
+            + f"/api/vorgaenge/{vorgangs_id}/mail-dokumentzuordnungen"
+        )
+        update = Request(
+            endpoint,
+            data=json.dumps(
+                {
+                    "zuordnungen": [
+                        {"beleg_id": "beleg_1", "transaktions_id": "tx_newer"}
+                    ]
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with urlopen(update, timeout=5) as response:
+            assigned = json.load(response)
+        self.assertEqual("tx_newer", assigned["zuordnungen"][0]["transaktions_id"])
+
+        self.server.data_store.update_vorgang(
+            vorgangs_id,
+            {"title": "Mail-Dokumentzuordnung aktualisiert"},
+        )
+
+        with urlopen(endpoint, timeout=5) as response:
+            reloaded = json.load(response)
+        self.assertEqual("tx_newer", reloaded["zuordnungen"][0]["transaktions_id"])
+        with closing(
+            connect_database(self.server.data_store.database_path)
+        ) as connection:
+            reference = connection.execute(
+                """
+                SELECT bezugs_id
+                FROM transaktion_vorgaenge
+                WHERE vorgangs_id = ? AND transaktions_id = 'tx_newer'
+                """,
+                (vorgangs_id,),
+            ).fetchone()["bezugs_id"]
+        self.assertTrue(str(reference).startswith("tvb_"))
+
     def test_dashboard_and_api_are_served(self):
         with urlopen(self.base_url + "/", timeout=5) as response:
             html = response.read().decode("utf-8")
