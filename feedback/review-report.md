@@ -8,40 +8,30 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Anforderungen des Arbeitspakets. Der bestehende PATCH-Flow validiert Payloads vor dem Schreibzugriff, liefert 400/404/200 mit JSON-Antworten und bewahrt bei abgewiesenen Requests den bisherigen Zustand. Die ergänzten lokalen HTTP-Regressionstests decken Erfolg, leeres Objekt, unbekannte Felder, nicht-textuelle Werte, überlange Werte und unbekannte Transaktions-IDs ab.
+Die Split-API validiert Cent-Beträge nun strikt als echte Ganzzahlen und weist Floats, numerische Strings sowie Booleans mit HTTP 400 beziehungsweise ValueError zurück. Die Persistenzvalidierung erfolgt zusätzlich vor dem atomaren Austausch. Bestehende Validierungen, Fehlerabbildungen, Split-Summen- und Vorgangsreferenzprüfungen bleiben erhalten und werden durch passende HTTP- und Persistenztests abgesichert. Der GitHub-Compare ist sauber und enthält keine unerwarteten Dateien.
 
-# Review
+## Review-Ergebnis
 
-## Ergebnis
+### Entscheidung
 
-**Accepted:** Ja
+**Akzeptiert.**
 
-## Geprüfte Änderungen
+### Geprüfte Anforderungen
 
-Der GitHub-Compare-Branch ist brauchbar und enthält genau die gemeldeten Änderungen in `tests/test_dashboard.py` sowie die aktualisierte Implementierungsdokumentation. Der Branch ist gegenüber `main` um einen Commit voraus und nicht hinterher.
+- Der bestehende GET-/PUT-Flow für `/api/transactions/<id>/splits` verwendet weiterhin die vorhandene Split-Persistenz.
+- Leere Transaktions-IDs werden als fachlicher Fehler behandelt; unbekannte Transaktionen führen zu HTTP 404.
+- Ungültiges JSON, unbekannte Split-Felder und widersprüchliche Transaktions-IDs werden als HTTP 400 mit JSON-Fehlernachricht abgelehnt.
+- Cent-Beträge werden im Request-Handler strikt auf echte Integer geprüft. Floats, numerische Strings und Booleans werden nicht mehr still konvertiert.
+- Die gleiche Typprüfung wurde in `transaction_store.database.replace_transaction_splits` ergänzt und erfolgt vor dem Schreibvorgang.
+- Split-Summen, Vorgangsreferenzen und doppelte Split-IDs werden weiterhin über die bestehende Persistenzlogik geprüft.
+- Der eigentliche Austausch der Split-Zeilen bleibt durch Savepoint und die bestehende Transaktion atomar.
+- Tests prüfen erfolgreiche Speicherung, ungültiges JSON, unbekannte Transaktionen, leere IDs, ungültige Cent-Typen sowie unveränderte Splits nach abgelehnten Requests.
+- Die Änderungen umgehen weder Vorgangs- noch N:M-Verknüpfungsstrukturen und führen keine externen Aktionen aus.
 
-## Fachliche Prüfung
+### Diff- und Branch-Prüfung
 
-- Der Erfolgsfall des PATCH-Endpunkts `/api/transactions/<id>/classification` wird mit HTTP 200 geprüft.
-- Die aktualisierte Transaktion wird in der Antwort geprüft.
-- Die bestehende Abschlussregelverarbeitung bleibt erhalten; der Erfolgstest prüft weiterhin den aktualisierten Vorgangsstatus.
-- Ein leeres JSON-Objekt führt zu HTTP 400 und einer JSON-Antwort mit `error`.
-- Unbekannte Klassifikationsfelder werden nicht ignoriert. Der gemischte Payload mit gültigem und unbekanntem Feld wird abgewiesen.
-- Nicht-textuelle Werte werden mit HTTP 400 abgewiesen.
-- Werte über 2000 Zeichen werden mit HTTP 400 abgewiesen.
-- Eine unbekannte Transaktions-ID führt bei gültigem Payload zu HTTP 404 und einer JSON-Fehlermeldung.
-- Die Implementierung verwendet weiterhin `CLASSIFICATION_FIELDS` und `DashboardDataStore.update_transaction_classification`.
-- Die Validierung findet vor dem Schreibzugriff statt. Bei unbekannter ID wird die Schreibtransaktion zurückgerollt; bei Fehlern während der Abschlussregelverarbeitung wird wegen des fehlenden Commits ebenfalls keine Teiländerung persistiert.
-- Die Tests prüfen nach jedem abgewiesenen Validierungsrequest sowohl die Klassifikationsfelder als auch den Vorgangsstatus auf Unverändertheit.
+Der GitHub-Compare ist `ahead` mit einem Commit, nicht hinter `main`, und enthält keine fehlenden oder unerwarteten Dateien. Die Änderungen liegen in den erwarteten Produktions- und Testdateien sowie im Implementierungsbericht. Es gibt keinen erkennbaren Scope Creep oder einen unbrauchbaren Branch-Zustand.
 
-## Fehlerantworten und Architektur
+### Nicht blockierende Hinweise
 
-Der vorhandene Request-Handler übersetzt `ValueError` in HTTP 400 und `LookupError` in HTTP 404 mit JSON-Objekt und `error`. Der Endpunkt verwendet damit die bestehende Fehlerarchitektur und führt keine parallele Implementierung ein. Es wurden keine Änderungen an Split-API, Datenmodell, UI oder externen Integrationen vorgenommen.
-
-## Testqualität
-
-Die ergänzten Tests laufen als lokale HTTP-Integrationstests mit temporärer SQLite-Datenbank und lokalem Testserver. Es werden weder Browser, produktive Daten, Secrets noch externe Dienste benötigt. Die zentralen Akzeptanzkriterien sind durch die neuen beziehungsweise präzisierten Tests angemessen abgedeckt.
-
-## Nicht blockierende Anmerkung
-
-Ein zusätzlicher Test für einen tatsächlich leeren HTTP-Body könnte die bereits vorhandene `_read_json_body`-Validierung noch expliziter dokumentieren. Die aktuelle Implementierung behandelt diesen Fall bereits kontrolliert mit HTTP 400; der vorhandene Test für `{}` deckt den fachlich leeren Payload ab.
+Die Aliasfelder `betrag_cent` und `amount_minor` werden weiterhin nach der etablierten Priorität ausgewertet; eine zusätzliche Konfliktprüfung bei gleichzeitig gesetzten Aliasfeldern wäre lediglich eine optionale Härtung. Ebenso könnte ein zusätzlicher Test die vollständige Antwortstruktur des erfolgreichen PUT noch expliziter gegen alle etablierten Feldnamen prüfen. Beides verhindert die Freigabe nicht.
