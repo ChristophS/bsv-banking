@@ -8,11 +8,11 @@
 
 ## Begründung
 
-Die Nachbesserung ist fachlich stimmig, der Diff belegt nun den geforderten Dashboard-API-/UI-Flow, und der nachgeladene Kontext zeigt, dass der Split-Editor bereits vorhanden war und nun seriös um Laden, explizites Neuladen, Summenbezug zur Originaltransaktion und passende Tests ergänzt wurde.
+Die nachgeladenen Produktionsdateien bestätigen, dass die geforderte Statusableitung bereits zentral implementiert, nicht persistiert und in beiden Split-Antwortpfaden serialisiert ist. Der Diff ergänzt dazu einen passenden Regressionstest.
 
 ## Zusammenfassung
 
-Der bestehende Dashboard-Split-Editor wurde korrekt an einen expliziten Lese-/Speicher-API-Flow für bestehende Splits angebunden, serverseitige Summenvalidierung verbessert und durch API- sowie browsernahe Tests abgesichert. Keine Architekturverletzung erkennbar.
+Akzeptiert: Der Branch sichert die bereits vorhandene zentrale Ableitung des Klassifikationsstatus für Split-Zeilen mit einem Regressionstest ab. Die Implementierung verwendet dieselben vier Pflichtfelder wie Transaktionen, berücksichtigt die optionale fachliche Beschreibung korrekt und liefert den abgeleiteten Status beim Speichern sowie Lesen von Splits.
 
 # Review Report
 
@@ -20,112 +20,31 @@ Der bestehende Dashboard-Split-Editor wurde korrekt an einen expliziten Lese-/Sp
 
 **Accepted:** true
 
-**Needs more context:** false
+## Geprüfte Umsetzung
 
-## Kurzfazit
+Der Compare enthält einen neuen Regressionstest in `tests/test_dashboard.py`. Die im Folge-Review nachgeladenen Produktionsdateien belegen, dass die fachliche Umsetzung bereits im vorhandenen Code enthalten ist:
 
-Die Umsetzung kann akzeptiert werden. Der vorliegende Compare belegt jetzt nachvollziehbar den geforderten Dashboard-Split-Flow für bestehende Transaktions-Splits: Laden über einen dedizierten GET-Endpunkt, Bearbeiten im bestehenden Detailbereich, Speichern über den PUT-Endpunkt, serverseitige Summenvalidierung und ergänzte Tests für API- und UI-nahes Verhalten.
+- `classification_status(...)` in `transaction_store/classification.py` verwendet zentral die vier Pflichtfelder `transaction_type`, `top_category`, `sub_category` und `sphere`.
+- Sind alle fünf Klassifikationsfelder leer, wird `unklassifiziert` geliefert.
+- Sind alle vier Pflichtfelder befüllt, wird unabhängig von der fachlichen Beschreibung `vollstaendig_klassifiziert` geliefert.
+- Teilweise Pflichtfeldbefüllung oder alleinige `professional_description` ergeben `unvollstaendig_klassifiziert`.
+- `TransactionSplit` enthält keinen persistierten Statuswert.
+- `_serialize_transaction_split(...)` leitet den Status unmittelbar aus dem gespeicherten `TransactionSplit` ab und liefert ihn kompatibel unter `klassifikationsstatus` sowie `classification_status`.
+- Sowohl `transaction_splits(...)` für die Split-Leseantwort als auch `replace_transaction_splits(...)` über die anschließende Detailantwort verwenden diese Serialisierung.
 
-## Prüfung gegen das Arbeitspaket
+## Testabdeckung
 
-### 1. Nutzung bestehender Split-Persistenz / Architektur
+Der neue Test `test_split_responses_derive_each_classification_status` prüft für die Schreibantwort und eine nachfolgende Leseantwort:
 
-Erfüllt.
+1. vollständig leere Klassifikationsfelder: `unklassifiziert`
+2. teilweise Pflichtfeldbefüllung: `unvollstaendig_klassifiziert`
+3. ausschließlich fachliche Beschreibung: `unvollstaendig_klassifiziert`
+4. alle vier Pflichtfelder: `vollstaendig_klassifiziert`
 
-- Im nachgeladenen Kontext ist der Split-Editor bereits als Teil des bestehenden Transaktions-Detailflows in `banking_dashboard/static/app.js` vorhanden.
-- Gespeichert wird weiterhin über `replace_transaction_splits(...)` und damit über bestehende `transaction_store`-Strukturen.
-- Es wurde keine neue Parallelarchitektur für Splits eingeführt.
-- Es wurden keine neuen Grundbeziehungen zu Belegen, Rechnungen oder anderen Entitäten eingeführt.
+Zusätzlich prüft er, dass die Klassifikationsfelder und der Status der Ursprungstransaktion in der Schreibantwort unverändert bleiben. Die vorhandene Persistenzlogik ersetzt ausschließlich Split-Zeilen, behält die Betragsvalidierung bei und übernimmt weiterhin Split-ID, Reihenfolge sowie optionale `vorgangs_id`.
 
-Das entspricht den Architekturvorgaben des Arbeitspakets.
+Laut Umsetzungsbericht wurde `tests/test_dashboard.py` mit **105 bestanden, 6 übersprungen** ausgeführt. Die übersprungenen browserabhängigen Tests sind plausibel dokumentiert und nicht blockierend.
 
-### 2. Kleiner API-Flow in `server.py` zum Lesen und Speichern
+## Fazit
 
-Erfüllt.
-
-- Der bestehende GET-Endpunkt `/api/transactions/{id}/splits` wird im Diff sinnvoll erweitert:
-  - `amount_minor`
-  - `betrag_cent`
-  - `betrag`
-- Der PUT-Endpunkt `/api/transactions/{id}/splits` war bereits vorhanden und bleibt die Speicherschnittstelle.
-- Im Kontext ist klar sichtbar, dass beide Endpunkte im Dashboard-Server korrekt verdrahtet sind.
-
-Wichtig: Durch die GET-Erweiterung ist der Soll-Zustand „vorhandene Split-Zeilen einer Transaktion laden“ im Dashboard-API-Flow jetzt explizit belegbar.
-
-### 3. Split-Editor im Transaktions-Detailbereich
-
-Erfüllt.
-
-Der Kontext zeigt, dass der Editor bereits im Transaktionsdetail existierte. Die jetzt eingecheckte Nachbesserung macht den geforderten Flow explizit und überprüfbar:
-
-- Anzeige und Bearbeitung mehrerer Split-Zeilen ist vorhanden.
-- Hinzufügen und Entfernen von Zeilen ist vorhanden.
-- Neu hinzugefügt wurde ein expliziter Button **„Splits neu laden“**, der den GET-Endpunkt aufruft.
-- Das bleibt innerhalb des bestehenden Detaildialogs; es wurde kein neuer Navigationsflow gebaut.
-- `index.html` enthält nun einen klaren statischen Host-Marker am bestehenden Detail-Content-Container.
-
-Damit sind die UI-bezogenen Akzeptanzkriterien erfüllt.
-
-### 4. Summenvalidierung gegen den Originalbetrag
-
-Erfüllt.
-
-- Clientseitig existiert im Kontext bereits eine Summenprüfung im Editor (`updateSummary`, Differenz zum Originalbetrag, Disabled-State bei Betragsformatfehlern).
-- Serverseitig validiert weiterhin `replace_transaction_splits(...)` gegen `transaction.amount_minor`.
-- Der Diff verbessert die serverseitige Fehlermeldung deutlich um:
-  - Erwartungswert
-  - tatsächliche Split-Summe
-  - Differenz
-
-Das erfüllt die Forderung, ungültige Split-Summen zu verhindern oder klar abzuweisen. Die serverseitige Prüfung ist hier besonders wichtig und vorhanden.
-
-### 5. Tests für Laden, Speichern und Validierungsfehler
-
-Erfüllt.
-
-Im Diff und im nachgeladenen Testkontext sind die geforderten Nachweise vorhanden:
-
-- API-Test prüft den GET-/splits-Endpunkt und die zusätzlichen Betragsfelder.
-- API-Test prüft weiterhin PUT-Speichern.
-- API-Test prüft den 400-Fehler bei falscher Split-Summe.
-- API-Test prüft, dass nach Fehler keine Teilpersistenz entstanden ist.
-- Browsernaher Test prüft den Split-Editor inklusive:
-  - Sichtbarkeit im Detaildialog
-  - Bearbeiten
-  - Hinzufügen
-  - Entfernen
-  - Speichern
-  - Validierungsfehler
-  - explizites Neuladen über GET `/api/transactions/tx_newer/splits`
-
-Damit sind die Test-Akzeptanzkriterien ausreichend abgedeckt.
-
-## Abgleich mit dem Implementation Report
-
-Der Report ist im Wesentlichen konsistent mit dem Diff und dem nachgeladenen Kontext:
-
-- Explizites Neuladen über GET-Endpunkt: belegt.
-- Zusätzliche Originalbetragsfelder im Split-GET: belegt.
-- Konkretisierte Fehlermeldung bei falscher Split-Summe: belegt.
-- API- und UI-nahe Tests: belegt.
-
-Es gibt keinen wesentlichen Widerspruch zwischen Report und tatsächlicher Änderung.
-
-## Auffälligkeiten / Hinweise
-
-### Zusätzliche Änderung in `transaction_store/database.py`
-
-Im GitHub-Compare ist zusätzlich `transaction_store/database.py` enthalten und verbessert die Fehlermeldung der Summenvalidierung. Das ist fachlich passend und kein Scope-Creep-Problem, obwohl es gegenüber den Runner-Daten als Zusatz auffällt.
-
-### Bereits vorhandener Split-Editor im Kontext
-
-Der nachgeladene Kontext zeigt, dass ein großer Teil des Split-Editors schon vor dieser Nachbesserung vorhanden war. Für dieses Arbeitspaket ist das okay: Bewertet wird die tatsächlich eingecheckte Nachbesserung gegen das Soll. Diese Nachbesserung schließt genau die im vorherigen Review fehlende Belegbarkeit des Dashboard-API-/UI-Flows.
-
-## Nicht-blockierende Vorschläge
-
-- Die GET-Antwort für Splits enthält mit `amount_minor` und `betrag_cent` zwei semantisch gleiche Cent-Felder; mittelfristig wäre eine API-Vereinheitlichung sinnvoll.
-- Der Prozess um Runner/GitHub-Compare sollte künftig sauberer sein, damit zusätzliche Dateien wie `transaction_store/database.py` nicht als Compare-Abweichung auftauchen.
-
-## Schlussentscheidung
-
-Die Umsetzung erfüllt das Arbeitspaket fachlich und technisch. Insbesondere sind jetzt alle wesentlichen Akzeptanzkriterien im maßgeblichen Diff und im Kontext nachvollziehbar belegt.
+Die Akzeptanzkriterien sind erfüllt. Es ist keine Schemaänderung und kein zusätzlicher persistierter Statuswert eingeführt worden; die Statuslogik bleibt zentral und konsistent zur Transaktionsklassifikation.
