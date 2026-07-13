@@ -2,46 +2,57 @@
 
 ## Branchname
 
-`agent2/codex-20260712-210116`
+`agent2/rework-20260713-144056`
 
 ## Geänderte Dateien
 
-- `banking_dashboard/server.py`
-- `tests/test_dashboard.py`
+- `transaction_store/database.py`
+- `tests/test_transactions.py`
 - `feedback/implementation_report.md`
 
 ## Umgesetzte Punkte
 
-- Vorgangs-API-Eingaben validieren `title`, `description` und `vorgangstyp` jetzt konsistent als Textfelder, statt fremde Datentypen still in Text umzuwandeln.
-- Vorgangs-Verknüpfungslisten akzeptieren nur noch Text-IDs; Listen mit Zahlen, `null` oder anderen Datentypen liefern HTTP 400 mit verständlicher JSON-Fehlermeldung.
-- `POST /api/belege/<beleg_id>/vorgaenge` verlangt für `vorgangs_id` eine nichtleere Zeichenkette und unterscheidet Validierungsfehler (HTTP 400) von unbekannten Objekten (HTTP 404).
-- `DELETE /api/belege/<beleg_id>/vorgaenge/<vorgangs_id>` prüft neben dem Beleg nun auch den Vorgang. Ein unbekannter Vorgang liefert HTTP 404 und verändert bestehende Verknüpfungen nicht.
-- HTTP-Regressionstests decken gültige Beleg-Verknüpfungen, ungültige Vorgangseingaben, unbekannte Vorgänge bei Änderung und Löschung sowie ungültige und unbekannte Beleg-Verknüpfungen ab.
-- Tests prüfen nach abgelehnten Erstellungs- und Verknüpfungsanfragen ausdrücklich, dass keine Vorgänge oder Zuordnungen teilweise persistiert wurden.
+- Explizite Vorgangsreferenzen von Transaktions-Splits werden auf Datenbankebene nur akzeptiert, wenn dieselbe Transaktion über `transaktion_vorgaenge` mit diesem Vorgang verknüpft ist.
+- Die Integritätsprüfung greift beim Anlegen und Ändern eines Splits. Ein Verstoß wird als nachvollziehbarer SQLite-Integritätsfehler atomar abgelehnt.
+- Beim Löschen oder Ändern einer Transaktions-Vorgangs-Verknüpfung wird ein Split-Bezug auf die entfernte alte Beziehung kontrolliert auf `NULL` gesetzt. Dadurch bleiben keine verwaisten Split-Vorgangsbeziehungen zurück.
+- Beim Öffnen einer bestehenden Datenbank werden bereits vorhandene explizite Split-Bezüge ohne passende Transaktions-Vorgangs-Verknüpfung als kontrollierte Reparatur bestehender Daten auf `NULL` gesetzt.
+- Regressionstests belegen die gültige Speicherung, die atomare Ablehnung ungültiger Split-Anlagen und -Änderungen sowie die Bereinigung nach `DELETE` und `UPDATE` von `transaktion_vorgaenge`.
+- Der bestehende Abschluss-Folgeeffekt bleibt erhalten: Wird eine unvollständig klassifizierte Transaktion mit einem automatisch abgeschlossenen Vorgang verknüpft, wird dieser weiterhin auf `in_bearbeitung` zurückgesetzt.
+- Bestehende Fremdschlüsselregeln bleiben unverändert: Transaktionslöschungen entfernen abhängige Links und Splits per Kaskade; Vorgangslöschungen entfernen Links und setzen Split-Vorgangsreferenzen kontrolliert zurück.
+
+## Nachbesserung nach Review
+
+- Der blockierende Befund für `UPDATE` auf `transaktion_vorgaenge` wurde mit dem Trigger `trg_transaktion_vorgaenge_update_clear_split_reference` behoben.
+- Wenn sich `transaktions_id` oder `vorgangs_id` einer bestehenden Verknüpfung tatsächlich ändert, setzt der Trigger Split-Referenzen auf die alte Beziehung innerhalb desselben SQLite-Statements auf `NULL`. Ein Update ohne tatsächlichen Schlüsselwechsel lässt gültige Referenzen unverändert.
+- Der Regressionstest `test_updating_transaction_vorgang_link_clears_old_split_reference` ändert eine Verknüpfung von Vorgang A auf Vorgang B und prüft sowohl die neue Verknüpfung als auch die kontrolliert entfernte alte Split-Referenz.
+- Die bereits korrekte Validierung von Split-Schreibvorgängen und die Bereinigung beim Löschen einer Verknüpfung wurden unverändert beibehalten.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neuen Beleg-Erstellungs-, Änderungs- oder Löschendpunkte eingeführt, da Belege in der vorhandenen Architektur aus dem lokalen Belegverzeichnis katalogisiert werden und das Arbeitspaket keinen Architekturumbau verlangt.
-- Keine Änderungen an Datenmodell, Tabellen, externen Integrationen oder UI-Komponenten.
+- Keine Änderungen an `transaction_store/models.py` oder `transaction_store/pipeline.py`, da der blockierende Review-Befund zentral in der vorhandenen Datenbank- und Triggerlogik geschlossen werden konnte.
+- Keine nicht-blockierenden Erweiterungen außerhalb der direkt zugehörigen Dokumentation.
+- Keine Änderungen an API, Dashboard, UI, Tabellenstruktur, externen Integrationen oder produktiven Daten.
 
 ## Ausgeführte Tests
 
+- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
 - `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `git diff --check -- banking_dashboard/server.py tests/test_dashboard.py`
+- `git diff --check -- transaction_store/database.py tests/test_transactions.py feedback/implementation_report.md`
 
 ## Testergebnis
 
-- Dashboard-Testlauf: 129 bestanden, 6 übersprungen, 0 fehlgeschlagen (135 gesammelt).
+- Transaktionstests: 44 bestanden, 0 fehlgeschlagen.
+- Dashboard-Tests: 129 bestanden, 6 übersprungen, 0 fehlgeschlagen.
 - Diff-Prüfung: bestanden; lediglich vorhandene Git-Hinweise zur künftigen LF/CRLF-Konvertierung.
 
 ## Bekannte Einschränkungen
 
-- Die sechs übersprungenen Tests sind vorhandene optionale Browsertests; für dieses Arbeitspaket waren keine Browser- oder externen Dienstaufrufe erforderlich.
-- Das Entfernen einer bereits nicht vorhandenen Verknüpfung zwischen zwei existierenden Objekten bleibt wie bisher idempotent erfolgreich.
+- `vorgangs_id = NULL` bezeichnet im bestehenden Split-Modell einen nicht explizit auf einen einzelnen Vorgang eingeschränkten Split. Diese vorhandene Semantik wird beim kontrollierten Entfernen eines expliziten Bezugs weiterverwendet.
+- Die sechs übersprungenen Dashboard-Tests sind vorhandene optionale Browsertests; es wurden keine Browser-, Login- oder externen Dienstaufrufe ausgeführt.
 
 ## Hinweise für den Review-Agenten
 
-- Das bestehende Fehlerformat `{"error": "..."}` sowie die Statuskonvention HTTP 400 für Eingabevalidierung und HTTP 404 für unbekannte Fachobjekte wurden beibehalten.
-- Die bestehende Vorgangs-, Beleg- und N:M-Verknüpfungsarchitektur blieb unverändert.
-- Es lag keine Datei `feedback/agent2_review_request.md` vor; umgesetzt wurde die Erstaufgabe aus `feedback/next_task.md`.
-- Die bereits vorhandene Änderung an `feedback/Review-report.md` und die bereitgestellte unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
+- Für die Nachbesserung sind der neue `AFTER UPDATE`-Trigger in `_create_vorgang_triggers` und der zugehörige Regressionstest maßgeblich.
+- Die Korrektur liegt bewusst auf Datenbankebene, damit direkte Persistenzpfade und bestehende Servicepfade dieselbe Invariante einhalten.
+- Die automatische Bereinigung beim Öffnen einer Datenbank ist eine kontrollierte Reparatur bereits inkonsistenter Bestandsdaten; sie setzt ausschließlich unzulässige explizite Split-Vorgangsreferenzen auf `NULL`.
+- Die vorhandenen Änderungen an Review- und Prompt-Dateien wurden nicht verändert.

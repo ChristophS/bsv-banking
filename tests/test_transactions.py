@@ -805,6 +805,199 @@ class DatabaseConnectionTests(unittest.TestCase):
             finally:
                 connection.close()
 
+    def test_transaction_split_vorgang_reference_requires_matching_link(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                _insert_link_test_transaction(connection, "tx_link")
+                connection.executemany(
+                    "INSERT INTO vorgaenge (vorgangs_id) VALUES (?)",
+                    (("vorgang_linked",), ("vorgang_foreign",)),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaktion_vorgaenge (
+                        transaktions_id, vorgangs_id
+                    ) VALUES ('tx_link', 'vorgang_linked')
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaction_splits (
+                        split_id, transaction_id, amount_minor, vorgangs_id
+                    ) VALUES (
+                        'split_linked', 'tx_link', 2500, 'vorgang_linked'
+                    )
+                    """
+                )
+
+                with self.assertRaisesRegex(
+                    sqlite3.IntegrityError,
+                    "nicht mit dieser Transaktion verknuepft",
+                ):
+                    connection.execute(
+                        """
+                        INSERT INTO transaction_splits (
+                            split_id, transaction_id, amount_minor, vorgangs_id
+                        ) VALUES (
+                            'split_invalid', 'tx_link', 2500,
+                            'vorgang_foreign'
+                        )
+                        """
+                    )
+                with self.assertRaisesRegex(
+                    sqlite3.IntegrityError,
+                    "nicht mit dieser Transaktion verknuepft",
+                ):
+                    connection.execute(
+                        """
+                        UPDATE transaction_splits
+                        SET vorgangs_id = 'vorgang_foreign'
+                        WHERE split_id = 'split_linked'
+                        """
+                    )
+
+                self.assertIsNone(
+                    connection.execute(
+                        """
+                        SELECT 1 FROM transaction_splits
+                        WHERE split_id = 'split_invalid'
+                        """
+                    ).fetchone()
+                )
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT vorgangs_id FROM transaction_splits
+                        WHERE split_id = 'split_linked'
+                        """
+                    ).fetchone()[0],
+                    "vorgang_linked",
+                )
+            finally:
+                connection.close()
+
+    def test_deleting_transaction_vorgang_link_clears_split_reference(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                _insert_link_test_transaction(connection, "tx_link")
+                connection.execute(
+                    """
+                    INSERT INTO vorgaenge (
+                        vorgangs_id, status, status_manuell
+                    ) VALUES ('vorgang_linked', 'abgeschlossen', 0)
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaktion_vorgaenge (
+                        transaktions_id, vorgangs_id
+                    ) VALUES ('tx_link', 'vorgang_linked')
+                    """
+                )
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT status FROM vorgaenge
+                        WHERE vorgangs_id = 'vorgang_linked'
+                        """
+                    ).fetchone()[0],
+                    "in_bearbeitung",
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaction_splits (
+                        split_id, transaction_id, amount_minor, vorgangs_id
+                    ) VALUES (
+                        'split_linked', 'tx_link', 2500, 'vorgang_linked'
+                    )
+                    """
+                )
+
+                connection.execute(
+                    """
+                    DELETE FROM transaktion_vorgaenge
+                    WHERE transaktions_id = 'tx_link'
+                      AND vorgangs_id = 'vorgang_linked'
+                    """
+                )
+
+                self.assertEqual(
+                    connection.execute(
+                        "SELECT COUNT(*) FROM transaktion_vorgaenge"
+                    ).fetchone()[0],
+                    0,
+                )
+                self.assertIsNone(
+                    connection.execute(
+                        """
+                        SELECT vorgangs_id FROM transaction_splits
+                        WHERE split_id = 'split_linked'
+                        """
+                    ).fetchone()[0]
+                )
+            finally:
+                connection.close()
+
+    def test_updating_transaction_vorgang_link_clears_old_split_reference(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                _insert_link_test_transaction(connection, "tx_link")
+                connection.executemany(
+                    "INSERT INTO vorgaenge (vorgangs_id) VALUES (?)",
+                    (("vorgang_old",), ("vorgang_new",)),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaktion_vorgaenge (
+                        transaktions_id, vorgangs_id
+                    ) VALUES ('tx_link', 'vorgang_old')
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaction_splits (
+                        split_id, transaction_id, amount_minor, vorgangs_id
+                    ) VALUES (
+                        'split_linked', 'tx_link', 2500, 'vorgang_old'
+                    )
+                    """
+                )
+
+                connection.execute(
+                    """
+                    UPDATE transaktion_vorgaenge
+                    SET vorgangs_id = 'vorgang_new'
+                    WHERE transaktions_id = 'tx_link'
+                      AND vorgangs_id = 'vorgang_old'
+                    """
+                )
+
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT vorgangs_id FROM transaktion_vorgaenge
+                        WHERE transaktions_id = 'tx_link'
+                        """
+                    ).fetchone()[0],
+                    "vorgang_new",
+                )
+                self.assertIsNone(
+                    connection.execute(
+                        """
+                        SELECT vorgangs_id FROM transaction_splits
+                        WHERE split_id = 'split_linked'
+                        """
+                    ).fetchone()[0]
+                )
+            finally:
+                connection.close()
+
 
 def write_csv(path: Path, headers, rows, encoding="utf-8-sig"):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -812,6 +1005,37 @@ def write_csv(path: Path, headers, rows, encoding="utf-8-sig"):
         writer = csv.writer(handle, delimiter=";")
         writer.writerow(headers)
         writer.writerows(rows)
+
+
+def _insert_link_test_transaction(
+    connection: sqlite3.Connection,
+    transaction_id: str,
+) -> None:
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO accounts (
+            account_id, provider, account_name, account_number
+        ) VALUES ('acct_link_test', 'test', 'Testkonto', 'DE001')
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO transactions (
+            transaction_id, fingerprint, occurrence, provider,
+            account_id, account_name, account_number,
+            booking_date, value_date, counterparty, amount,
+            currency, booking_text, purpose, amount_minor,
+            counterparty_account, creditor_id, mandate_reference,
+            source_info, first_seen_at, raw_fields_json
+        ) VALUES (
+            ?, ?, 1, 'test', 'acct_link_test', 'Testkonto', 'DE001',
+            '2026-06-10', '2026-06-10', 'Partner', '25.00', 'EUR',
+            'Ueberweisung', 'Zweck', 2500, '', '', '', 'Testquelle',
+            '2026-06-10T10:00:00+00:00', '{}'
+        )
+        """,
+        (transaction_id, f"fp_{transaction_id}"),
+    )
 
 
 def volksbank_row(iban="DE31384621350101206017"):

@@ -2075,6 +2075,82 @@ def _create_vorgang_triggers(connection: sqlite3.Connection) -> None:
         connection.execute(
             f"DROP TRIGGER IF EXISTS trg_transaction_splits_{action}_vorgang"
         )
+    for trigger_name in (
+        "trg_transaction_splits_validate_vorgang_insert",
+        "trg_transaction_splits_validate_vorgang_update",
+        "trg_transaktion_vorgaenge_clear_split_reference",
+        "trg_transaktion_vorgaenge_update_clear_split_reference",
+    ):
+        connection.execute(f"DROP TRIGGER IF EXISTS {trigger_name}")
+    connection.execute(
+        """
+        UPDATE transaction_splits AS split
+        SET
+            vorgangs_id = NULL,
+            updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+        WHERE vorgangs_id IS NOT NULL
+          AND NOT EXISTS (
+                SELECT 1
+                FROM transaktion_vorgaenge AS linked
+                WHERE linked.transaktions_id = split.transaction_id
+                  AND linked.vorgangs_id = split.vorgangs_id
+          )
+        """
+    )
+    for action in ("INSERT", "UPDATE OF transaction_id, vorgangs_id"):
+        trigger_suffix = "insert" if action == "INSERT" else "update"
+        connection.execute(
+            f"""
+            CREATE TRIGGER
+                trg_transaction_splits_validate_vorgang_{trigger_suffix}
+            BEFORE {action} ON transaction_splits
+            WHEN NEW.vorgangs_id IS NOT NULL
+             AND NOT EXISTS (
+                    SELECT 1
+                    FROM transaktion_vorgaenge AS linked
+                    WHERE linked.transaktions_id = NEW.transaction_id
+                      AND linked.vorgangs_id = NEW.vorgangs_id
+             )
+            BEGIN
+                SELECT RAISE(
+                    ABORT,
+                    'Vorgangs-ID ist nicht mit dieser Transaktion verknuepft.'
+                );
+            END
+            """
+        )
+    connection.execute(
+        """
+        CREATE TRIGGER trg_transaktion_vorgaenge_clear_split_reference
+        AFTER DELETE ON transaktion_vorgaenge
+        BEGIN
+            UPDATE transaction_splits
+            SET
+                vorgangs_id = NULL,
+                updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+            WHERE transaction_id = OLD.transaktions_id
+              AND vorgangs_id = OLD.vorgangs_id;
+        END
+        """
+    )
+    connection.execute(
+        """
+        CREATE TRIGGER trg_transaktion_vorgaenge_update_clear_split_reference
+        AFTER UPDATE OF transaktions_id, vorgangs_id ON transaktion_vorgaenge
+        BEGIN
+            UPDATE transaction_splits
+            SET
+                vorgangs_id = NULL,
+                updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+            WHERE transaction_id = OLD.transaktions_id
+              AND vorgangs_id = OLD.vorgangs_id
+              AND NOT (
+                    transaction_id = NEW.transaktions_id
+                AND vorgangs_id = NEW.vorgangs_id
+              );
+        END
+        """
+    )
     connection.execute(
         f"""
         CREATE TRIGGER trg_transactions_update_vorgang
