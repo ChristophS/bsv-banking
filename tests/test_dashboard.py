@@ -2870,8 +2870,13 @@ class DashboardHTTPTests(unittest.TestCase):
             stylesheet = response.read().decode("utf-8")
 
         self.assertIn('id="dashboard-worklist-title"', html)
+        self.assertIn(
+            'aria-describedby="dashboard-worklist-description"', html
+        )
+        self.assertIn('id="dashboard-worklist-description"', html)
         self.assertIn("Priorisierte Arbeitsliste", html)
-        self.assertIn('<ol class="overview-cards"', html)
+        self.assertIn('class="overview-cards"', html)
+        self.assertIn('aria-live="polite"', html)
         ordered_keys = [
             "open_vorgaenge",
             "unassigned_transactions",
@@ -5844,6 +5849,12 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         expected_worklist
                     ):
                         item = work_items.nth(index)
+                        expect(item.locator("xpath=..")).to_have_attribute(
+                            "data-overview-key", key
+                        )
+                        expect(item.locator("xpath=..")).to_have_attribute(
+                            "data-priority", priority
+                        )
                         expect(item).to_have_attribute("data-overview-key", key)
                         expect(item).to_have_attribute("data-priority", priority)
                         expect(item.locator(".overview-card-label")).to_have_text(

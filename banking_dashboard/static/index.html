@@ -125,15 +125,22 @@
         <section
           class="dashboard-worklist"
           aria-labelledby="dashboard-worklist-title"
+          aria-describedby="dashboard-worklist-description"
         >
           <div class="dashboard-worklist-heading">
             <div>
               <p class="eyebrow">Nach Bearbeitungsdruck sortiert</p>
               <h3 id="dashboard-worklist-title">Priorisierte Arbeitsliste</h3>
             </div>
-            <p>Ein Klick öffnet direkt den passenden Arbeitsbereich.</p>
+            <p id="dashboard-worklist-description">
+              Ein Klick öffnet direkt den passenden Arbeitsbereich.
+            </p>
           </div>
-          <ol class="overview-cards" id="overview-cards"></ol>
+          <ol
+            class="overview-cards"
+            id="overview-cards"
+            aria-live="polite"
+          ></ol>
         </section>
         <div class="dashboard-preview-grid">
           <section class="dashboard-preview">

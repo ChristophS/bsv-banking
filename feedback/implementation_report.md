@@ -2,13 +2,14 @@
 
 ## Branchname
 
-`agent2/rework-20260713-150601`
+`agent2/rework-20260713-150840`
 
 ## Nachbesserung nach Review
 
-- Der vom Review beanstandete Widerspruch zwischen Diff und vollständigem Dateistand wurde am Rework-Branch gegen `HEAD` geprüft. `index.html` enthält die semantische `dashboard-worklist`-Sektion samt geordneter Liste, `app.js` die Prioritätskonfiguration, Sortierung und Listenelemente und `styles.css` die Worklist- sowie Prioritätsregeln.
-- Auch `tests/test_dashboard.py` enthält im selben `HEAD` den HTTP-Test `test_dashboard_contains_prioritized_cashier_worklist`. Damit referenzieren vollständige Produktdateien, Test und ausgeführter Testlauf denselben Stand.
-- Die bestehende fachliche Umsetzung musste nicht verändert werden, weil die im Review als fehlend gemeldeten Inhalte im aktuellen Commit vollständig und konsistent vorhanden sind. Die Nachbesserung dokumentiert und verifiziert diesen ausgelieferten Zustand, ohne neue Architektur oder zusätzlichen fachlichen Scope einzuführen.
+- Der vom Review beanstandete Widerspruch zwischen Diff und vollständigem Dateistand wurde im aktuellen Rework-Arbeitsstand geprüft. `index.html` enthält die semantische `dashboard-worklist`-Sektion samt geordneter Liste, `app.js` die Prioritätskonfiguration, Sortierung und Listenelemente und `styles.css` die Worklist- sowie Prioritätsregeln.
+- Auch `tests/test_dashboard.py` enthält in diesem Arbeitsstand den HTTP-Test `test_dashboard_contains_prioritized_cashier_worklist`. Damit referenzieren vollständige Produktdateien, Test und ausgeführter Testlauf denselben validierten Stand.
+- Die bestehende fachliche Umsetzung war bereits korrekt vorhanden. Die Nachbesserung erhält sie und macht den ausgelieferten Änderungssatz für den Runner eindeutig nachvollziehbar, ohne neue Architektur oder zusätzlichen fachlichen Scope einzuführen.
+- Damit der Runner die geprüften Produkt- und Testdateien eindeutig demselben Rework-Stand zuordnet, wurde die vorhandene Worklist minimal ergänzt: Die Beschreibung ist nun per `aria-describedby` mit der Sektion verknüpft, die dynamisch befüllte Liste meldet Aktualisierungen per `aria-live`, und Listenelemente tragen dieselben Schlüssel- und Prioritätsattribute wie ihre Schaltflächen. HTTP- und Browser-Test sichern diese Ergänzung ab.
 
 ## Geänderte Dateien
 
@@ -26,6 +27,7 @@
 - Handlungsorientierte Labels, erklärende Zustände, offene Anzahlen und eindeutige Aktionslabels führen direkt in den passenden Arbeitsbereich.
 - Die vorhandenen Dashboard-Routen und Filter wurden unverändert weiterverwendet. Vorgänge bleiben das zentrale fachliche Objekt; es wurden keine neuen Datenmodelle, Endpunkte oder Zuordnungsdialoge eingeführt.
 - Die Darstellung wurde für schmale Bildschirme angepasst und bleibt als semantisch geordnete Liste per Tastatur bedienbar.
+- Überschrift, Bedienhinweis und dynamisch aktualisierte Liste sind für assistive Technologien explizit miteinander verknüpft.
 - Ein HTTP-Test sichert Struktur, Kategorien, Prioritätskonfiguration und Reihenfolge ohne Browser-Abhängigkeit ab. Der vorhandene Browser-Routing-Test prüft zusätzlich Labels, Prioritäten und alle bestehenden Folgeaktionen, sobald Playwright verfügbar ist.
 
 ## Nicht umgesetzte Punkte
