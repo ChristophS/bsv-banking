@@ -1,5 +1,7 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
 ## 1. Termin-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
@@ -21,26 +23,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - gesamten Code auf Konsistenz und Funktion prüfen
 - Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
 
-## 2. Persistenz- und Vorgangsverknüpfungen auf Integrität und konsistente Folgeeffekte prüfen
-
-**Epic-ID:** epic-system-consistency
-
-**Epic-Titel:** Systematische Qualitäts- und Konsistenzprüfung des Vereins-Finanztools
-
-**Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
-
-**Teilpaket:** Teil 3
-
-**Priorität:** hoch
-
-**Grund:** Änderungen, Löschungen, Abschlussprüfungen und Split-Speicherung müssen die Datenintegrität sowie die zulässigen N:M-Verknüpfungen zwischen Transaktionen, Vorgängen, Belegen, Mails, To-Dos und Terminen erhalten.
-
-**Feedback:**
-
-- gesamten Code auf Konsistenz und Funktion prüfen
-- Architekturregel: Vorgänge und bestehende Verknüpfungsstrukturen verwenden
-
-## 3. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
+## 2. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -52,14 +35,14 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Banking, Microsoft Graph und DFBnet dürfen keine unkontrollierten produktiven Aktionen ausführen; Fehler-, Abbruch- und Testpfade müssen deshalb getrennt mit Mocks, Fakes oder Fixtures geprüft werden.
+**Grund:** Banking, Microsoft Graph und DFBnet dürfen keine unkontrollierten produktiven Aktionen ausführen; Fehler-, Abbruch- und Testpfade müssen getrennt mit Mocks, Fakes oder Fixtures geprüft werden.
 
 **Feedback:**
 
 - gesamten Code auf Konsistenz und Funktion prüfen
-- Projektregel: externe Dienste nur mit Mocks, Fakes oder Fixtures testen
+- externe Dienste nur mit Mocks, Fakes oder Fixtures testen
 
-## 4. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
+## 3. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
 
 **Epic-ID:** epic-balance-correction
 
@@ -77,7 +60,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen.
 
-## 5. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
+## 4. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
 
 **Epic-ID:** epic-balance-correction
 
@@ -95,7 +78,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen.
 
-## 6. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
+## 5. Kassierer-Workflows und Reibungspunkte im Dashboard strukturiert analysieren
 
 **Epic-ID:** epic-cashier-usability
 
@@ -113,7 +96,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
 
-## 7. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
+## 6. Übersicht als priorisierte Arbeitsliste für offene Kassierer-Aufgaben verbessern
 
 **Epic-ID:** epic-cashier-usability
 
@@ -132,7 +115,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - maximalen Benutzerkomfort ohne Leistungs- und Featureeinbußen erreichen
 - Vorhaben: Kassiererfreundliche Arbeitsabläufe
 
-## 8. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
+## 7. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -149,9 +132,9 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
-- Architekturregel: Vorgänge sind das zentrale fachliche Objekt
+- Vorgänge sind das zentrale fachliche Objekt
 
-## 9. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
+## 8. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -168,9 +151,9 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
-- Bestehender Dashboard-Kontext: Abschlussprüfungen und Klassifikationsstatus
+- Abschlussprüfungen und Klassifikationsstatus
 
-## 10. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
+## 9. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
 
 **Epic-ID:** epic-cashier-usability
 
