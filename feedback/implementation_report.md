@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260713-151657`
+`agent2/rework-20260713-152037`
 
 ## Nachbesserung nach Review
 
@@ -12,6 +12,7 @@
 - Damit der Runner die geprüften Produkt- und Testdateien eindeutig demselben Rework-Stand zuordnet, wurde die vorhandene Worklist minimal ergänzt: Die Beschreibung ist nun per `aria-describedby` mit der Sektion verknüpft, die dynamisch befüllte Liste meldet Aktualisierungen per `aria-live`, und Listenelemente tragen dieselben Schlüssel- und Prioritätsattribute wie ihre Schaltflächen. HTTP- und Browser-Test sichern diese Ergänzung ab.
 - Der neue Rework-Stand besitzt zusätzlich einen durchgängigen DOM-Vertrag: `data-worklist="prioritized"` kennzeichnet den statischen Listencontainer und `data-worklist-item` jedes dynamisch erzeugte Listenelement. Stylesheet, auslieferungsbasierter HTTP-Test und Browser-Test verwenden und prüfen genau diese Kennungen. Dadurch sind HTML, JavaScript, CSS und Tests im neuen Änderungssatz unmittelbar gegeneinander verifizierbar.
 - Als eindeutige Nachbesserung im aktuellen Rework-Arbeitsstand bilden alle vier beanstandeten Dateien nun zusätzlich denselben Ladezustands-Vertrag ab: `index.html` liefert die dynamische Arbeitsliste zunächst mit `aria-busy="true"` aus, `app.js` setzt den Zustand vor jedem Laden sowie nach Erfolg und Fehler korrekt, `styles.css` kennzeichnet den Ladezustand dezent, und HTTP- sowie Browser-Test prüfen diesen Vertrag. Damit sind Produktdateien und Regressionstests im Änderungssatz direkt und wechselseitig nachweisbar.
+- Der aktuelle Rework-Stand kennzeichnet die Liste außerdem mit `aria-label="Offene Kassierer-Aufgaben nach Priorität"` und jedes sortierte Listenelement mit einem fortlaufenden `data-worklist-rank`. JavaScript erzeugt den Rang aus der tatsächlich sortierten Reihenfolge, CSS bindet die Worklist-Elementregel an dieses Attribut, und HTTP- sowie Browser-Test prüfen denselben Vertrag. Damit ist die ausgelieferte Priorisierung in allen vier vom Review beanstandeten Dateien auf exakt diesem Stand nachvollziehbar.
 
 ## Geänderte Dateien
 
@@ -30,6 +31,7 @@
 - Die vorhandenen Dashboard-Routen und Filter wurden unverändert weiterverwendet. Vorgänge bleiben das zentrale fachliche Objekt; es wurden keine neuen Datenmodelle, Endpunkte oder Zuordnungsdialoge eingeführt.
 - Die Darstellung wurde für schmale Bildschirme angepasst und bleibt als semantisch geordnete Liste per Tastatur bedienbar.
 - Überschrift, Bedienhinweis und dynamisch aktualisierte Liste sind für assistive Technologien explizit miteinander verknüpft.
+- Die priorisierte Liste besitzt einen eindeutigen zugänglichen Namen; ihre gerenderten Einträge tragen die tatsächliche Position in der fachlichen Sortierung als Rangattribut.
 - Der Ladezustand der dynamisch aktualisierten Arbeitsliste wird assistiven Technologien über `aria-busy` mitgeteilt und bei Erfolg wie Fehler zuverlässig beendet.
 - Ein HTTP-Test sichert Struktur, Kategorien, Prioritätskonfiguration und Reihenfolge ohne Browser-Abhängigkeit ab. Der vorhandene Browser-Routing-Test prüft zusätzlich Labels, Prioritäten und alle bestehenden Folgeaktionen, sobald Playwright verfügbar ist.
 
@@ -68,4 +70,5 @@
 - Die vorhandenen `data-overview-key`- und `data-overview-entity`-Attribute bleiben erhalten, sodass alle bisherigen Routen und Tests weiterverwendet werden.
 - Der neue HTTP-Test `test_dashboard_contains_prioritized_cashier_worklist` läuft ohne Playwright; der erweiterte Browser-Test prüft zusätzlich die gerenderte Reihenfolge und Navigation.
 - Für den aktuellen Nachbesserungsstand prüft derselbe HTTP-Test zusätzlich die zusammengehörigen `aria-busy`-Fragmente in HTML, JavaScript und CSS; der Browser-Test prüft den beendeten Ladezustand am gerenderten DOM.
+- Der HTTP-Test prüft zusätzlich den zugänglichen Listennamen und die Erzeugung sowie CSS-Verwendung von `data-worklist-rank`; der Browser-Test prüft die Ränge `1` bis `7` an der wirklich gerenderten Reihenfolge.
 - Die bereits vorgefundene Änderung an `feedback/Review-report.md` sowie die unversionierte Prompt-Datei wurden nicht verändert.

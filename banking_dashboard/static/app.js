@@ -662,10 +662,11 @@ function renderOverview() {
     (left, right) =>
       overviewCardPriority(left).order - overviewCardPriority(right).order,
   );
-  for (const card of cards) {
+  for (const [index, card] of cards.entries()) {
     const priority = overviewCardPriority(card);
     const item = mailElement("li", "overview-work-item");
     item.dataset.worklistItem = "";
+    item.dataset.worklistRank = String(index + 1);
     item.dataset.overviewKey = card.key || "";
     item.dataset.priority = priority.level;
     const button = mailElement(

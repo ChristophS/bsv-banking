@@ -2877,6 +2877,9 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn("Priorisierte Arbeitsliste", html)
         self.assertIn('class="overview-cards"', html)
         self.assertIn('data-worklist="prioritized"', html)
+        self.assertIn(
+            'aria-label="Offene Kassierer-Aufgaben nach Priorität"', html
+        )
         self.assertIn('aria-live="polite"', html)
         self.assertIn('aria-busy="true"', html)
         self.assertIn(
@@ -2890,6 +2893,9 @@ class DashboardHTTPTests(unittest.TestCase):
             2,
         )
         self.assertIn('item.dataset.worklistItem = ""', javascript)
+        self.assertIn(
+            "item.dataset.worklistRank = String(index + 1)", javascript
+        )
         ordered_keys = [
             "open_vorgaenge",
             "unassigned_transactions",
@@ -2919,8 +2925,11 @@ class DashboardHTTPTests(unittest.TestCase):
             '.overview-cards[aria-busy="true"]', stylesheet
         )
         self.assertIn(
-            '.overview-cards[data-worklist="prioritized"] '
-            ".overview-work-item[data-worklist-item]",
+            '.overview-cards[data-worklist="prioritized"]',
+            stylesheet,
+        )
+        self.assertIn(
+            ".overview-work-item[data-worklist-item][data-worklist-rank]",
             stylesheet,
         )
 
@@ -5878,6 +5887,9 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         item = work_items.nth(index)
                         expect(item.locator("xpath=..")).to_have_attribute(
                             "data-worklist-item", ""
+                        )
+                        expect(item.locator("xpath=..")).to_have_attribute(
+                            "data-worklist-rank", str(index + 1)
                         )
                         expect(item.locator("xpath=..")).to_have_attribute(
                             "data-overview-key", key

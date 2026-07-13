@@ -283,7 +283,8 @@ button {
   text-align: right;
 }
 
-.overview-cards[data-worklist="prioritized"] .overview-work-item[data-worklist-item] {
+.overview-cards[data-worklist="prioritized"]
+  .overview-work-item[data-worklist-item][data-worklist-rank] {
   min-width: 0;
 }
 
