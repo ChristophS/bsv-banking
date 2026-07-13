@@ -942,6 +942,62 @@ class DatabaseConnectionTests(unittest.TestCase):
             finally:
                 connection.close()
 
+    def test_updating_transaction_vorgang_link_clears_old_split_reference(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "transactions.sqlite3"
+            connection = connect_database(path)
+            try:
+                _insert_link_test_transaction(connection, "tx_link")
+                connection.executemany(
+                    "INSERT INTO vorgaenge (vorgangs_id) VALUES (?)",
+                    (("vorgang_old",), ("vorgang_new",)),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaktion_vorgaenge (
+                        transaktions_id, vorgangs_id
+                    ) VALUES ('tx_link', 'vorgang_old')
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO transaction_splits (
+                        split_id, transaction_id, amount_minor, vorgangs_id
+                    ) VALUES (
+                        'split_linked', 'tx_link', 2500, 'vorgang_old'
+                    )
+                    """
+                )
+
+                connection.execute(
+                    """
+                    UPDATE transaktion_vorgaenge
+                    SET vorgangs_id = 'vorgang_new'
+                    WHERE transaktions_id = 'tx_link'
+                      AND vorgangs_id = 'vorgang_old'
+                    """
+                )
+
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT vorgangs_id FROM transaktion_vorgaenge
+                        WHERE transaktions_id = 'tx_link'
+                        """
+                    ).fetchone()[0],
+                    "vorgang_new",
+                )
+                self.assertIsNone(
+                    connection.execute(
+                        """
+                        SELECT vorgangs_id FROM transaction_splits
+                        WHERE split_id = 'split_linked'
+                        """
+                    ).fetchone()[0]
+                )
+            finally:
+                connection.close()
+
 
 def write_csv(path: Path, headers, rows, encoding="utf-8-sig"):
     path.parent.mkdir(parents=True, exist_ok=True)

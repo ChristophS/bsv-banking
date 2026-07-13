@@ -2079,6 +2079,7 @@ def _create_vorgang_triggers(connection: sqlite3.Connection) -> None:
         "trg_transaction_splits_validate_vorgang_insert",
         "trg_transaction_splits_validate_vorgang_update",
         "trg_transaktion_vorgaenge_clear_split_reference",
+        "trg_transaktion_vorgaenge_update_clear_split_reference",
     ):
         connection.execute(f"DROP TRIGGER IF EXISTS {trigger_name}")
     connection.execute(
@@ -2129,6 +2130,24 @@ def _create_vorgang_triggers(connection: sqlite3.Connection) -> None:
                 updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
             WHERE transaction_id = OLD.transaktions_id
               AND vorgangs_id = OLD.vorgangs_id;
+        END
+        """
+    )
+    connection.execute(
+        """
+        CREATE TRIGGER trg_transaktion_vorgaenge_update_clear_split_reference
+        AFTER UPDATE OF transaktions_id, vorgangs_id ON transaktion_vorgaenge
+        BEGIN
+            UPDATE transaction_splits
+            SET
+                vorgangs_id = NULL,
+                updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')
+            WHERE transaction_id = OLD.transaktions_id
+              AND vorgangs_id = OLD.vorgangs_id
+              AND NOT (
+                    transaction_id = NEW.transaktions_id
+                AND vorgangs_id = NEW.vorgangs_id
+              );
         END
         """
     )
