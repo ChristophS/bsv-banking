@@ -8,35 +8,42 @@
 
 ## Zusammenfassung
 
-Die Änderungen erfüllen die zentralen Anforderungen des Arbeitspakets. Vorgangs- und Beleg-Verknüpfungen validieren Eingaben konsistenter, unterscheiden Validierungsfehler von unbekannten Fachobjekten und verwenden das bestehende JSON-Fehlerformat mit HTTP 400 beziehungsweise 404. Die Änderungen bleiben innerhalb der vorhandenen Architektur; der GitHub-Compare ist vollständig und der gemeldete Testlauf erfolgreich.
+Die Umsetzung erfüllt die wesentlichen Integritätsanforderungen. Split-Vorgangsreferenzen werden gegen die bestehende transaktion_vorgaenge-Struktur validiert, ungültige Schreibvorgänge atomar abgelehnt und Referenzen bei Löschung oder Änderung einer Verknüpfung kontrolliert auf NULL gesetzt. Die relevanten Regressionstests decken gültige Speicherung, ungültige Referenzen sowie DELETE- und UPDATE-Folgeeffekte ab. Der GitHub-Compare ist vollständig und der Branch liegt zwei Commits vor main.
 
-# Review
+## Review-Ergebnis
 
-## Entscheidung
+**Entscheidung: akzeptiert**
 
-**Akzeptiert.**
+### Geprüfte Anforderungen
 
-## Geprüfte Anforderungen
+- Die bestehende Vorgangsarchitektur wird weiterverwendet. Split-Referenzen werden nicht als Ersatz für `transaktion_vorgaenge` behandelt, sondern nur akzeptiert, wenn die passende Transaktion-Vorgang-Verknüpfung existiert.
+- `BEFORE INSERT` und `BEFORE UPDATE`-Trigger verhindern ungültige Split-Vorgangsreferenzen mit einem nachvollziehbaren SQLite-Integritätsfehler.
+- Die Validierung erfolgt vor dem Persistieren der Änderung. Zusammen mit den Savepoint- und SQLite-Abbruchmechanismen bleibt der vorherige gültige Zustand bei fehlerhaften Split-Änderungen erhalten.
+- Beim Löschen einer `transaktion_vorgaenge`-Zeile wird eine zugehörige Split-Referenz kontrolliert auf `NULL` gesetzt.
+- Beim Ändern der Schlüssel einer bestehenden `transaktion_vorgaenge`-Zeile wird die alte Split-Referenz ebenfalls auf `NULL` gesetzt. Ein Update ohne tatsächlichen Schlüsselwechsel lässt gültige Referenzen unverändert.
+- Die bestehenden Fremdschlüssel- und Kaskadenregeln bleiben erhalten. Transaktionslöschungen entfernen abhängige Splits und Links; Vorgangslöschungen führen nicht zu verwaisten Split-Referenzen.
+- Die Abschluss- und Klassifikationslogik bleibt in den vorhandenen Triggern und Vorgangsdaten verankert und wird nicht umgangen.
 
-- Die Vorgangs-Payload validiert Textfelder wie `title`, `description` und `vorgangstyp` jetzt explizit und wandelt fremde Datentypen nicht mehr stillschweigend in Text um.
-- Verknüpfungslisten für Vorgänge akzeptieren nur Text-IDs und lehnen Zahlen, `null` und andere Datentypen mit HTTP 400 ab.
-- Die Beleg-Verknüpfungs-API verlangt eine nichtleere Zeichenkette als `vorgangs_id`.
-- Das Verknüpfen und Aufheben einer Beleg-Verknüpfung prüft sowohl Beleg als auch Vorgang. Unbekannte Fachobjekte führen zu HTTP 404.
-- Das bestehende Fehlerformat `{"error": "..."}` und die vorhandene HTTP-Konvention für Validierungs- und Lookup-Fehler werden beibehalten.
-- Die Änderungen verwenden weiterhin die bestehenden Tabellen, Store-Methoden und N:M-Verknüpfungen.
+### Tests
 
-## Persistenz und Integrität
+Die ergänzten Tests prüfen:
 
-Die Validierungen erfolgen vor den relevanten Schreiboperationen. Bei ungültigen oder unbekannten Verknüpfungen werden keine neuen Zuordnungen angelegt. Die ergänzten Tests prüfen außerdem, dass abgelehnte Erstellungs- und Verknüpfungsanfragen keine teilweise persistierten Daten hinterlassen.
+- gültige Speicherung eines Splits mit einem passend verknüpften Vorgang,
+- Ablehnung einer fremden Vorgangsreferenz beim Anlegen und Ändern,
+- unveränderten vorherigen Split-Zustand nach abgelehnten Änderungen,
+- Bereinigung beim Löschen einer Transaktion-Vorgang-Verknüpfung,
+- Bereinigung der alten Referenz beim Ändern einer Transaktion-Vorgang-Verknüpfung,
+- den bestehenden Abschluss-Folgeeffekt beim initialen Verknüpfen einer unvollständig klassifizierten Transaktion.
 
-## Tests
+Der gemeldete Testlauf umfasst 44 erfolgreiche Transaktionstests sowie einen erfolgreichen Dashboard-Testlauf mit 129 bestandenen und 6 optional übersprungenen Tests. Die übersprungenen Tests betreffen keine für dieses Arbeitspaket erforderliche Persistenzprüfung.
 
-Die ergänzten HTTP-Regressionstests decken ungültige Vorgangseingaben, unbekannte Vorgänge bei Änderung und Löschung sowie ungültige und unbekannte Beleg-Verknüpfungen ab. Laut Implementierungsbericht bestehen 129 Tests; sechs optionale Browser-Tests sind übersprungen. Das ist für dieses lokale API-Arbeitspaket plausibel, da keine externen Dienste benötigt werden.
+### Repository- und Compare-Prüfung
 
-## Scope und Branch-Zustand
+- Der GitHub-Diff entspricht den gemeldeten geänderten Dateien.
+- Es fehlen keine Runner-validierten Dateien im GitHub-Compare und es gibt keine unerwarteten zusätzlichen Dateien.
+- Der Branch ist gegenüber `main` zwei Commits voraus und nicht zurück. Der Compare-Zustand ist damit verwendbar.
+- Es wurden keine UI-, API-, externen Dienst- oder produktiven Datenänderungen eingeführt.
 
-Es wurden nur der API-Store, die zugehörigen Tests und der Implementierungsbericht geändert. Es gibt keine Änderungen am Datenmodell, an externen Integrationen oder an UI-Komponenten. Der Branch ist laut Compare einen Commit vor `main`, nicht hinter `main`, und weist keine fehlenden oder zusätzlichen Compare-Dateien auf.
+### Nicht blockierende Hinweise
 
-## Nicht blockierende Hinweise
-
-Für eine noch vollständigere Vertragsabdeckung wären explizite Tests der erfolgreichen Erstellungs-, Änderungs- und Löschoperationen sowie der ungültigen Beleg-ID bei der POST-Verknüpfung sinnvoll. Diese Ergänzungen sind jedoch kein Blocker, da die bestehenden Tests und die geprüfte Implementierung die zentralen Akzeptanzkriterien abdecken.
+Ein zusätzlicher Test für einen direkten UPDATE-Versuch auf eine nicht existente Vorgangs-ID wäre noch möglich. Die bestehende Fremdschlüsseldefinition und die bereits geprüfte Validierungslogik decken diesen Fehlerfall jedoch ausreichend ab, sodass daraus kein Freigabeblocker entsteht.
