@@ -2878,6 +2878,17 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn('class="overview-cards"', html)
         self.assertIn('data-worklist="prioritized"', html)
         self.assertIn('aria-live="polite"', html)
+        self.assertIn('aria-busy="true"', html)
+        self.assertIn(
+            'elements.overviewCards.setAttribute("aria-busy", "true")',
+            javascript,
+        )
+        self.assertGreaterEqual(
+            javascript.count(
+                'elements.overviewCards.setAttribute("aria-busy", "false")'
+            ),
+            2,
+        )
         self.assertIn('item.dataset.worklistItem = ""', javascript)
         ordered_keys = [
             "open_vorgaenge",
@@ -2904,6 +2915,9 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn(".overview-card.is-priority-high", stylesheet)
         self.assertIn(".overview-card.is-priority-medium", stylesheet)
         self.assertIn(".overview-card.is-priority-normal", stylesheet)
+        self.assertIn(
+            '.overview-cards[aria-busy="true"]', stylesheet
+        )
         self.assertIn(
             '.overview-cards[data-worklist="prioritized"] '
             ".overview-work-item[data-worklist-item]",
@@ -5809,6 +5823,9 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     )
                     expect(page.locator("#overview-cards")).to_have_attribute(
                         "data-worklist", "prioritized"
+                    )
+                    expect(page.locator("#overview-cards")).to_have_attribute(
+                        "aria-busy", "false"
                     )
                     self.assertEqual(7, work_items.count())
                     expected_worklist = [

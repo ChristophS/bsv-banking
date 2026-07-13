@@ -645,11 +645,13 @@ function activateTab(name) {
 }
 
 async function loadOverview() {
+  elements.overviewCards.setAttribute("aria-busy", "true");
   try {
     const response = await fetch("/api/overview");
     state.overview = await readResponse(response);
     renderOverview();
   } catch (error) {
+    elements.overviewCards.setAttribute("aria-busy", "false");
     showError(error.message);
   }
 }
@@ -703,6 +705,7 @@ function renderOverview() {
     item.append(button);
     elements.overviewCards.append(item);
   }
+  elements.overviewCards.setAttribute("aria-busy", "false");
   renderDashboardPreviews();
 }
 
