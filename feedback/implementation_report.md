@@ -2,57 +2,63 @@
 
 ## Branchname
 
-`agent2/rework-20260713-144056`
+`agent2/codex-20260713-144555`
 
 ## Geänderte Dateien
 
-- `transaction_store/database.py`
-- `tests/test_transactions.py`
-- `feedback/implementation_report.md`
+- `feedback/cashier_workflow_analysis.md` (neu)
+- `feedback/implementation_report.md` (für dieses Arbeitspaket aktualisiert)
+
+Bereits vorhandene, nicht zu diesem Arbeitspaket gehörende Änderungen beziehungsweise unversionierte Dateien wurden nicht bearbeitet.
 
 ## Umgesetzte Punkte
 
-- Explizite Vorgangsreferenzen von Transaktions-Splits werden auf Datenbankebene nur akzeptiert, wenn dieselbe Transaktion über `transaktion_vorgaenge` mit diesem Vorgang verknüpft ist.
-- Die Integritätsprüfung greift beim Anlegen und Ändern eines Splits. Ein Verstoß wird als nachvollziehbarer SQLite-Integritätsfehler atomar abgelehnt.
-- Beim Löschen oder Ändern einer Transaktions-Vorgangs-Verknüpfung wird ein Split-Bezug auf die entfernte alte Beziehung kontrolliert auf `NULL` gesetzt. Dadurch bleiben keine verwaisten Split-Vorgangsbeziehungen zurück.
-- Beim Öffnen einer bestehenden Datenbank werden bereits vorhandene explizite Split-Bezüge ohne passende Transaktions-Vorgangs-Verknüpfung als kontrollierte Reparatur bestehender Daten auf `NULL` gesetzt.
-- Regressionstests belegen die gültige Speicherung, die atomare Ablehnung ungültiger Split-Anlagen und -Änderungen sowie die Bereinigung nach `DELETE` und `UPDATE` von `transaktion_vorgaenge`.
-- Der bestehende Abschluss-Folgeeffekt bleibt erhalten: Wird eine unvollständig klassifizierte Transaktion mit einem automatisch abgeschlossenen Vorgang verknüpft, wird dieser weiterhin auf `in_bearbeitung` zurückgesetzt.
-- Bestehende Fremdschlüsselregeln bleiben unverändert: Transaktionslöschungen entfernen abhängige Links und Splits per Kaskade; Vorgangslöschungen entfernen Links und setzen Split-Vorgangsreferenzen kontrolliert zurück.
-
-## Nachbesserung nach Review
-
-- Der blockierende Befund für `UPDATE` auf `transaktion_vorgaenge` wurde mit dem Trigger `trg_transaktion_vorgaenge_update_clear_split_reference` behoben.
-- Wenn sich `transaktions_id` oder `vorgangs_id` einer bestehenden Verknüpfung tatsächlich ändert, setzt der Trigger Split-Referenzen auf die alte Beziehung innerhalb desselben SQLite-Statements auf `NULL`. Ein Update ohne tatsächlichen Schlüsselwechsel lässt gültige Referenzen unverändert.
-- Der Regressionstest `test_updating_transaction_vorgang_link_clears_old_split_reference` ändert eine Verknüpfung von Vorgang A auf Vorgang B und prüft sowohl die neue Verknüpfung als auch die kontrolliert entfernte alte Split-Referenz.
-- Die bereits korrekte Validierung von Split-Schreibvorgängen und die Bereinigung beim Löschen einer Verknüpfung wurden unverändert beibehalten.
+- Die vorhandenen Dashboard-Einstiege und Bearbeitungswege anhand von `index.html`, `app.js`, `server.py` und `tests/test_dashboard.py` nachvollzogen.
+- Ein Arbeitsablaufmodell vom Sichten über Klassifizieren und Zuordnen bis zum Prüfen und Abschließen dokumentiert.
+- Vorgänge ausdrücklich als zentrales fachliches Objekt beibehalten; Anforderungen umgehen keine bestehenden Linktabellen oder Store-Validierungen.
+- Einstiege und Wechsel für Vorgänge, Transaktionen, Mails, To-Dos, Termine und Dokumente verglichen.
+- Zwölf konkrete Reibungspunkte jeweils einem Ablauf und einer fachlichen Entität zugeordnet und nach Nutzerwirkung sowie Dringlichkeit als P0, P1 oder P2 priorisiert.
+- Unklare Statusdarstellungen, fehlende beziehungsweise uneinheitliche Rückmeldungen und unnötige Bearbeitungsschritte gesondert erfasst.
+- Vier klar abgegrenzte Folgepakete mit prüfbaren Anforderungen abgeleitet:
+  - priorisierte Arbeitsliste,
+  - einheitlicher Zuordnungsdialog,
+  - handlungsorientierte Abschlussblocker,
+  - konsistente Aktionsrückmeldungen.
+- Leistungs-, Funktions- und Sicherheitsrisiken möglicher Folgeumsetzungen samt Begrenzungsmaßnahmen dokumentiert.
+- Offene fachliche Fragen und die für die Analyse verwendete minimale Rollenannahme transparent festgehalten.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Änderungen an `transaction_store/models.py` oder `transaction_store/pipeline.py`, da der blockierende Review-Befund zentral in der vorhandenen Datenbank- und Triggerlogik geschlossen werden konnte.
-- Keine nicht-blockierenden Erweiterungen außerhalb der direkt zugehörigen Dokumentation.
-- Keine Änderungen an API, Dashboard, UI, Tabellenstruktur, externen Integrationen oder produktiven Daten.
+- Keine neue Übersicht oder Arbeitsliste implementiert.
+- Keine Zuordnungsdialoge vereinheitlicht.
+- Keine Klassifikations-, Abschluss- oder Persistenzlogik geändert.
+- Keine datenintensiven Listen überarbeitet.
+- Keine externen Dienste, produktiven Aktionen oder echten Laufzeitdaten verwendet.
+
+Diese Punkte sind gemäß Arbeitspaket ausdrücklich nicht Teil der Erstumsetzung und wurden als Folgeanforderungen dokumentiert.
 
 ## Ausgeführte Tests
 
-- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
-- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `git diff --check -- transaction_store/database.py tests/test_transactions.py feedback/implementation_report.md`
+- `git diff --check`
+- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
 
 ## Testergebnis
 
-- Transaktionstests: 44 bestanden, 0 fehlgeschlagen.
-- Dashboard-Tests: 129 bestanden, 6 übersprungen, 0 fehlgeschlagen.
-- Diff-Prüfung: bestanden; lediglich vorhandene Git-Hinweise zur künftigen LF/CRLF-Konvertierung.
+- `git diff --check`: erfolgreich, keine Whitespace-Fehler.
+- Dashboard-Tests: **129 bestanden, 6 übersprungen, 0 fehlgeschlagen** in 43,38 Sekunden.
+- Die sechs übersprungenen Tests sind optionale Browser-Tests und werden von der Testsuite bei fehlender lokaler Playwright-/Chromium-Umgebung kontrolliert übersprungen.
 
 ## Bekannte Einschränkungen
 
-- `vorgangs_id = NULL` bezeichnet im bestehenden Split-Modell einen nicht explizit auf einen einzelnen Vorgang eingeschränkten Split. Diese vorhandene Semantik wird beim kontrollierten Entfernen eines expliziten Bezugs weiterverwendet.
-- Die sechs übersprungenen Dashboard-Tests sind vorhandene optionale Browsertests; es wurden keine Browser-, Login- oder externen Dienstaufrufe ausgeführt.
+- Die Analyse basiert auf Repository-Code und repräsentativen lokalen Tests, nicht auf Beobachtung eines produktiven Kassierers.
+- Primäre Kassiererrolle, Erfahrungsniveau und verbindliche Priorität gleichzeitig offener Kategorien sind fachlich noch zu bestätigen.
+- Für Dokumente existiert im Hauptdashboard keine eigene sichtbare Arbeitsliste; der heutige Wechsel von der Übersichtskarte in die ungefilterte Vorgangsliste wurde deshalb als belegter Reibungspunkt aufgenommen.
+- Es wurden keine manuellen Browser-Abläufe gegen externe Dienste ausgeführt. Die vorhandenen lokalen Browser-Tests waren in dieser Umgebung optional nicht ausführbar.
 
 ## Hinweise für den Review-Agenten
 
-- Für die Nachbesserung sind der neue `AFTER UPDATE`-Trigger in `_create_vorgang_triggers` und der zugehörige Regressionstest maßgeblich.
-- Die Korrektur liegt bewusst auf Datenbankebene, damit direkte Persistenzpfade und bestehende Servicepfade dieselbe Invariante einhalten.
-- Die automatische Bereinigung beim Öffnen einer Datenbank ist eine kontrollierte Reparatur bereits inkonsistenter Bestandsdaten; sie setzt ausschließlich unzulässige explizite Split-Vorgangsreferenzen auf `NULL`.
-- Die vorhandenen Änderungen an Review- und Prompt-Dateien wurden nicht verändert.
+- Zentrales Review-Artefakt ist `feedback/cashier_workflow_analysis.md`.
+- Bitte insbesondere prüfen, ob das Arbeitsablaufmodell alle vier Muss-Bereiche abdeckt und jede Tabellenzeile Ablauf, Entität, Nutzerwirkung und Prioritätsbegründung enthält.
+- Die Folgepakete A, B und C entsprechen den geforderten eigenständigen Paketen für Übersicht, Zuordnungsdialoge und Abschlussblocker; Paket D kapselt die querschnittliche Rückmeldung.
+- Die Anforderungen schreiben keine neue Persistenzarchitektur vor. Vorgangslinks, serverseitige Abschlussvalidierung, Atomarität bei 4xx und unveränderte Originaldaten sind ausdrücklich als Grenzen festgehalten.
+- Produktcode und bestehende Tests wurden nicht geändert, weil das Arbeitspaket eine strukturierte Analyse und ausdrücklich keine konkrete UI- oder Validierungsumsetzung verlangt.
