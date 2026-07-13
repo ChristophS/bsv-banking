@@ -2876,7 +2876,9 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn('id="dashboard-worklist-description"', html)
         self.assertIn("Priorisierte Arbeitsliste", html)
         self.assertIn('class="overview-cards"', html)
+        self.assertIn('data-worklist="prioritized"', html)
         self.assertIn('aria-live="polite"', html)
+        self.assertIn('item.dataset.worklistItem = ""', javascript)
         ordered_keys = [
             "open_vorgaenge",
             "unassigned_transactions",
@@ -2902,6 +2904,11 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn(".overview-card.is-priority-high", stylesheet)
         self.assertIn(".overview-card.is-priority-medium", stylesheet)
         self.assertIn(".overview-card.is-priority-normal", stylesheet)
+        self.assertIn(
+            '.overview-cards[data-worklist="prioritized"] '
+            ".overview-work-item[data-worklist-item]",
+            stylesheet,
+        )
 
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
@@ -5800,6 +5807,9 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     work_items = page.locator(
                         "#overview-cards .overview-card"
                     )
+                    expect(page.locator("#overview-cards")).to_have_attribute(
+                        "data-worklist", "prioritized"
+                    )
                     self.assertEqual(7, work_items.count())
                     expected_worklist = [
                         (
@@ -5849,6 +5859,9 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         expected_worklist
                     ):
                         item = work_items.nth(index)
+                        expect(item.locator("xpath=..")).to_have_attribute(
+                            "data-worklist-item", ""
+                        )
                         expect(item.locator("xpath=..")).to_have_attribute(
                             "data-overview-key", key
                         )

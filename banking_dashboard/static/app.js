@@ -663,6 +663,7 @@ function renderOverview() {
   for (const card of cards) {
     const priority = overviewCardPriority(card);
     const item = mailElement("li", "overview-work-item");
+    item.dataset.worklistItem = "";
     item.dataset.overviewKey = card.key || "";
     item.dataset.priority = priority.level;
     const button = mailElement(

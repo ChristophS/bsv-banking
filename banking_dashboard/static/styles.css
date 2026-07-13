@@ -278,7 +278,7 @@ button {
   text-align: right;
 }
 
-.overview-work-item {
+.overview-cards[data-worklist="prioritized"] .overview-work-item[data-worklist-item] {
   min-width: 0;
 }
 

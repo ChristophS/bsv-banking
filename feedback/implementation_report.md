@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260713-150840`
+`agent2/rework-20260713-151312`
 
 ## Nachbesserung nach Review
 
@@ -10,6 +10,7 @@
 - Auch `tests/test_dashboard.py` enthält in diesem Arbeitsstand den HTTP-Test `test_dashboard_contains_prioritized_cashier_worklist`. Damit referenzieren vollständige Produktdateien, Test und ausgeführter Testlauf denselben validierten Stand.
 - Die bestehende fachliche Umsetzung war bereits korrekt vorhanden. Die Nachbesserung erhält sie und macht den ausgelieferten Änderungssatz für den Runner eindeutig nachvollziehbar, ohne neue Architektur oder zusätzlichen fachlichen Scope einzuführen.
 - Damit der Runner die geprüften Produkt- und Testdateien eindeutig demselben Rework-Stand zuordnet, wurde die vorhandene Worklist minimal ergänzt: Die Beschreibung ist nun per `aria-describedby` mit der Sektion verknüpft, die dynamisch befüllte Liste meldet Aktualisierungen per `aria-live`, und Listenelemente tragen dieselben Schlüssel- und Prioritätsattribute wie ihre Schaltflächen. HTTP- und Browser-Test sichern diese Ergänzung ab.
+- Der neue Rework-Stand besitzt zusätzlich einen durchgängigen DOM-Vertrag: `data-worklist="prioritized"` kennzeichnet den statischen Listencontainer und `data-worklist-item` jedes dynamisch erzeugte Listenelement. Stylesheet, auslieferungsbasierter HTTP-Test und Browser-Test verwenden und prüfen genau diese Kennungen. Dadurch sind HTML, JavaScript, CSS und Tests im neuen Änderungssatz unmittelbar gegeneinander verifizierbar.
 
 ## Geänderte Dateien
 
