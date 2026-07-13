@@ -1,3 +1,2 @@
-## Spätere Verbesserung
-
-Einen kompakten API-Vertragstest für alle Vorgangs- und Beleg-Endpunkte ergänzen, der Erfolgsstatuscodes, Fehlerstatuscodes und das einheitliche `{"error": ...}`-Format tabellarisch absichert.
+- Langfristig könnten die Datenbank-Trigger und die zugehörigen Integritätsregeln in einer kurzen Architektur- oder Persistenzdokumentation zusammengefasst werden.
+- Optional kann ein eigener Test für die Reparatur bereits inkonsistenter Bestandsdaten beim Öffnen einer Datenbank ergänzt werden.
