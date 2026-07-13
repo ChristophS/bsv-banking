@@ -1,2 +1,3 @@
-- Langfristig könnten die Datenbank-Trigger und die zugehörigen Integritätsregeln in einer kurzen Architektur- oder Persistenzdokumentation zusammengefasst werden.
-- Optional kann ein eigener Test für die Reparatur bereits inkonsistenter Bestandsdaten beim Öffnen einer Datenbank ergänzt werden.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
