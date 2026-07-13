@@ -122,7 +122,19 @@
             <span id="dashboard-refresh-status" aria-live="polite"></span>
           </div>
         </div>
-        <div class="overview-cards" id="overview-cards"></div>
+        <section
+          class="dashboard-worklist"
+          aria-labelledby="dashboard-worklist-title"
+        >
+          <div class="dashboard-worklist-heading">
+            <div>
+              <p class="eyebrow">Nach Bearbeitungsdruck sortiert</p>
+              <h3 id="dashboard-worklist-title">Priorisierte Arbeitsliste</h3>
+            </div>
+            <p>Ein Klick öffnet direkt den passenden Arbeitsbereich.</p>
+          </div>
+          <ol class="overview-cards" id="overview-cards"></ol>
+        </section>
         <div class="dashboard-preview-grid">
           <section class="dashboard-preview">
             <div class="dashboard-preview-heading">

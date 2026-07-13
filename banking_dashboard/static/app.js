@@ -656,24 +656,124 @@ async function loadOverview() {
 
 function renderOverview() {
   elements.overviewCards.replaceChildren();
-  const cards = state.overview?.cards || [];
+  const cards = [...(state.overview?.cards || [])].sort(
+    (left, right) =>
+      overviewCardPriority(left).order - overviewCardPriority(right).order,
+  );
   for (const card of cards) {
-    const button = mailElement("button", "overview-card");
+    const priority = overviewCardPriority(card);
+    const item = mailElement("li", "overview-work-item");
+    const button = mailElement(
+      "button",
+      `overview-card is-priority-${priority.level}`,
+    );
     button.type = "button";
     button.dataset.overviewKey = card.key || "";
     button.dataset.overviewEntity = card.entity || "vorgaenge";
-    button.setAttribute("aria-label", `${card.label}: ${card.count || 0}`);
+    button.dataset.priority = priority.level;
+    button.setAttribute(
+      "aria-label",
+      `${priority.label}: ${card.count || 0}. ${priority.action}`,
+    );
     button.append(
-      mailElement("span", "overview-card-label", card.label),
+      mailElement("span", "overview-priority", priority.priorityLabel),
+      mailElement("span", "overview-card-content", ""),
+      mailElement("span", "overview-card-action", priority.action),
+    );
+    button.querySelector(".overview-card-content").append(
+      mailElement("span", "overview-card-label", priority.label),
+      mailElement("span", "overview-card-detail", priority.detail),
+    );
+    button.querySelector(".overview-priority").prepend(
+      mailElement("span", "overview-priority-marker", ""),
+    );
+    const count = mailElement("span", "overview-card-count");
+    count.append(
       mailElement(
         "strong",
         "",
         integerFormatter.format(Number(card.count || 0)),
       ),
+      mailElement("span", "", "offen"),
     );
-    elements.overviewCards.append(button);
+    button.insertBefore(count, button.querySelector(".overview-card-action"));
+    item.append(button);
+    elements.overviewCards.append(item);
   }
   renderDashboardPreviews();
+}
+
+const overviewCardPriorities = {
+  open_vorgaenge: {
+    order: 10,
+    level: "high",
+    priorityLabel: "Sofort prüfen",
+    label: "Vorgänge abschließen",
+    detail: "Nicht abgeschlossene Vorgänge bearbeiten",
+    action: "Vorgänge öffnen",
+  },
+  unassigned_transactions: {
+    order: 20,
+    level: "high",
+    priorityLabel: "Sofort prüfen",
+    label: "Transaktionen zuordnen",
+    detail: "Nicht zugewiesene Transaktionen prüfen",
+    action: "Transaktionen öffnen",
+  },
+  unassigned_documents: {
+    order: 30,
+    level: "high",
+    priorityLabel: "Sofort prüfen",
+    label: "Dokumente zuordnen",
+    detail: "Nicht zugewiesene Dokumente prüfen",
+    action: "Dokumente öffnen",
+  },
+  unread_mails: {
+    order: 40,
+    level: "medium",
+    priorityLabel: "Danach bearbeiten",
+    label: "Mails lesen",
+    detail: "Ungelesene Mails sichten",
+    action: "Mails öffnen",
+  },
+  open_todos: {
+    order: 50,
+    level: "medium",
+    priorityLabel: "Danach bearbeiten",
+    label: "To-Dos erledigen",
+    detail: "Offene To-Dos bearbeiten",
+    action: "To-Dos öffnen",
+  },
+  unassigned_termine: {
+    order: 60,
+    level: "medium",
+    priorityLabel: "Danach bearbeiten",
+    label: "Termine zuordnen",
+    detail: "Nicht zugewiesene anstehende Termine prüfen",
+    action: "Termine öffnen",
+  },
+  upcoming_termine: {
+    order: 70,
+    level: "normal",
+    priorityLabel: "Im Blick behalten",
+    label: "Termine vorbereiten",
+    detail: "Anstehende Termine prüfen",
+    action: "Termine öffnen",
+  },
+};
+
+function overviewCardPriority(card) {
+  if (Object.hasOwn(overviewCardPriorities, card.key)) {
+    return overviewCardPriorities[card.key];
+  }
+  return {
+    order: 1000,
+    level: "normal",
+    priorityLabel: "Im Blick behalten",
+    label: card.label || "Offene Aufgabe",
+    detail: card.label || "Offenen Eintrag prüfen",
+    action: "Arbeitsbereich öffnen",
+  };
 }
 
 function renderDashboardPreviews() {

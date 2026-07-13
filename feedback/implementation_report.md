@@ -2,57 +2,56 @@
 
 ## Branchname
 
-`agent2/rework-20260713-144056`
+`agent2/codex-20260713-145749`
 
 ## Geänderte Dateien
 
-- `transaction_store/database.py`
-- `tests/test_transactions.py`
+- `banking_dashboard/static/index.html`
+- `banking_dashboard/static/app.js`
+- `banking_dashboard/static/styles.css`
+- `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
 
 ## Umgesetzte Punkte
 
-- Explizite Vorgangsreferenzen von Transaktions-Splits werden auf Datenbankebene nur akzeptiert, wenn dieselbe Transaktion über `transaktion_vorgaenge` mit diesem Vorgang verknüpft ist.
-- Die Integritätsprüfung greift beim Anlegen und Ändern eines Splits. Ein Verstoß wird als nachvollziehbarer SQLite-Integritätsfehler atomar abgelehnt.
-- Beim Löschen oder Ändern einer Transaktions-Vorgangs-Verknüpfung wird ein Split-Bezug auf die entfernte alte Beziehung kontrolliert auf `NULL` gesetzt. Dadurch bleiben keine verwaisten Split-Vorgangsbeziehungen zurück.
-- Beim Öffnen einer bestehenden Datenbank werden bereits vorhandene explizite Split-Bezüge ohne passende Transaktions-Vorgangs-Verknüpfung als kontrollierte Reparatur bestehender Daten auf `NULL` gesetzt.
-- Regressionstests belegen die gültige Speicherung, die atomare Ablehnung ungültiger Split-Anlagen und -Änderungen sowie die Bereinigung nach `DELETE` und `UPDATE` von `transaktion_vorgaenge`.
-- Der bestehende Abschluss-Folgeeffekt bleibt erhalten: Wird eine unvollständig klassifizierte Transaktion mit einem automatisch abgeschlossenen Vorgang verknüpft, wird dieser weiterhin auf `in_bearbeitung` zurückgesetzt.
-- Bestehende Fremdschlüsselregeln bleiben unverändert: Transaktionslöschungen entfernen abhängige Links und Splits per Kaskade; Vorgangslöschungen entfernen Links und setzen Split-Vorgangsreferenzen kontrolliert zurück.
-
-## Nachbesserung nach Review
-
-- Der blockierende Befund für `UPDATE` auf `transaktion_vorgaenge` wurde mit dem Trigger `trg_transaktion_vorgaenge_update_clear_split_reference` behoben.
-- Wenn sich `transaktions_id` oder `vorgangs_id` einer bestehenden Verknüpfung tatsächlich ändert, setzt der Trigger Split-Referenzen auf die alte Beziehung innerhalb desselben SQLite-Statements auf `NULL`. Ein Update ohne tatsächlichen Schlüsselwechsel lässt gültige Referenzen unverändert.
-- Der Regressionstest `test_updating_transaction_vorgang_link_clears_old_split_reference` ändert eine Verknüpfung von Vorgang A auf Vorgang B und prüft sowohl die neue Verknüpfung als auch die kontrolliert entfernte alte Split-Referenz.
-- Die bereits korrekte Validierung von Split-Schreibvorgängen und die Bereinigung beim Löschen einer Verknüpfung wurden unverändert beibehalten.
+- Die bisherigen gleichrangigen Kennzahlen-Kacheln wurden innerhalb der vorhandenen Dashboard-Startseite als priorisierte Arbeitsliste strukturiert.
+- Die sieben vorhandenen Übersichtseinträge werden nach festem fachlichem Bearbeitungsdruck sortiert: offene Vorgänge, nicht zugewiesene Transaktionen, nicht zugewiesene Dokumente, ungelesene Mails, offene To-Dos, nicht zugewiesene Termine und weitere anstehende Termine.
+- Drei visuell unterscheidbare Prioritätsstufen (`Sofort prüfen`, `Danach bearbeiten`, `Im Blick behalten`) machen die Reihenfolge nachvollziehbar.
+- Handlungsorientierte Labels, erklärende Zustände, offene Anzahlen und eindeutige Aktionslabels führen direkt in den passenden Arbeitsbereich.
+- Die vorhandenen Dashboard-Routen und Filter wurden unverändert weiterverwendet. Vorgänge bleiben das zentrale fachliche Objekt; es wurden keine neuen Datenmodelle, Endpunkte oder Zuordnungsdialoge eingeführt.
+- Die Darstellung wurde für schmale Bildschirme angepasst und bleibt als semantisch geordnete Liste per Tastatur bedienbar.
+- Ein HTTP-Test sichert Struktur, Kategorien, Prioritätskonfiguration und Reihenfolge ohne Browser-Abhängigkeit ab. Der vorhandene Browser-Routing-Test prüft zusätzlich Labels, Prioritäten und alle bestehenden Folgeaktionen, sobald Playwright verfügbar ist.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Änderungen an `transaction_store/models.py` oder `transaction_store/pipeline.py`, da der blockierende Review-Befund zentral in der vorhandenen Datenbank- und Triggerlogik geschlossen werden konnte.
-- Keine nicht-blockierenden Erweiterungen außerhalb der direkt zugehörigen Dokumentation.
-- Keine Änderungen an API, Dashboard, UI, Tabellenstruktur, externen Integrationen oder produktiven Daten.
+- Keine dynamische Priorisierung nach individueller Fälligkeit, da die Übersicht dafür derzeit keine einheitlichen Fälligkeitsdaten über alle Kategorien liefert.
+- Keine neue Kennzahl für fachlich unklassifizierte Transaktionen. Die vorhandene Übersicht liefert die belastbare Kennzahl `unassigned_transactions`; diese wird deshalb wahrheitsgemäß als „Transaktionen zuordnen“ dargestellt.
+- Keine Änderungen an API, Persistenz, fachlicher Vorgangs-/Transaktions-/Belegarchitektur oder externen Integrationen.
+- Keine Umsetzung späterer Epic-Teilpakete wie Zuordnungsdialoge, Abschlussblocker oder weitere Listenoptimierungen.
 
 ## Ausgeführte Tests
 
-- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_transactions.py`
+- `node --check banking_dashboard/static/app.js`
 - `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `git diff --check -- transaction_store/database.py tests/test_transactions.py feedback/implementation_report.md`
+- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py::DashboardTodoBrowserTests::test_overview_cards_route_to_matching_tabs_and_filters -rs`
+- `git diff --check`
 
 ## Testergebnis
 
-- Transaktionstests: 44 bestanden, 0 fehlgeschlagen.
-- Dashboard-Tests: 129 bestanden, 6 übersprungen, 0 fehlgeschlagen.
+- JavaScript-Syntaxprüfung: bestanden.
+- Dashboard-Testlauf: 130 bestanden, 6 übersprungen, 0 fehlgeschlagen.
+- Gezielter Browser-Test: übersprungen, weil Playwright lokal nicht installiert ist.
 - Diff-Prüfung: bestanden; lediglich vorhandene Git-Hinweise zur künftigen LF/CRLF-Konvertierung.
 
 ## Bekannte Einschränkungen
 
-- `vorgangs_id = NULL` bezeichnet im bestehenden Split-Modell einen nicht explizit auf einen einzelnen Vorgang eingeschränkten Split. Diese vorhandene Semantik wird beim kontrollierten Entfernen eines expliziten Bezugs weiterverwendet.
-- Die sechs übersprungenen Dashboard-Tests sind vorhandene optionale Browsertests; es wurden keine Browser-, Login- oder externen Dienstaufrufe ausgeführt.
+- Die Prioritätsreihenfolge ist bewusst fachlich fest und nicht fälligkeitsabhängig. Sie nutzt ausschließlich Daten, die der bestehende `/api/overview`-Endpunkt bereits bereitstellt.
+- Die sechs optionalen Browser-Tests konnten ohne Playwright nicht ausgeführt werden. Der neue auslieferungsbasierte HTTP-Test deckt die neue Struktur und Konfiguration unabhängig davon ab; die Interaktionsassertions stehen für eine Browser-Testumgebung bereit.
+- Für Dokumente gibt es im bestehenden Dashboard keinen eigenen Tab. Die vorhandene Navigation in den Vorgangsbereich wurde beibehalten.
 
 ## Hinweise für den Review-Agenten
 
-- Für die Nachbesserung sind der neue `AFTER UPDATE`-Trigger in `_create_vorgang_triggers` und der zugehörige Regressionstest maßgeblich.
-- Die Korrektur liegt bewusst auf Datenbankebene, damit direkte Persistenzpfade und bestehende Servicepfade dieselbe Invariante einhalten.
-- Die automatische Bereinigung beim Öffnen einer Datenbank ist eine kontrollierte Reparatur bereits inkonsistenter Bestandsdaten; sie setzt ausschließlich unzulässige explizite Split-Vorgangsreferenzen auf `NULL`.
-- Die vorhandenen Änderungen an Review- und Prompt-Dateien wurden nicht verändert.
+- Die fachliche Reihenfolge und die UI-Texte liegen zentral in `overviewCardPriorities` in `banking_dashboard/static/app.js`.
+- Die vorhandenen `data-overview-key`- und `data-overview-entity`-Attribute bleiben erhalten, sodass alle bisherigen Routen und Tests weiterverwendet werden.
+- Der neue HTTP-Test `test_dashboard_contains_prioritized_cashier_worklist` läuft ohne Playwright; der erweiterte Browser-Test prüft zusätzlich die gerenderte Reihenfolge und Navigation.
+- Die bereits vorgefundene Änderung an `feedback/Review-report.md` sowie die unversionierte Prompt-Datei wurden nicht verändert.

@@ -247,18 +247,51 @@ button {
 
 .overview-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-worklist {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-worklist-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-worklist-heading h3 {
+  font-size: 19px;
+}
+
+.dashboard-worklist-heading > p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.overview-work-item {
+  min-width: 0;
 }
 
 .overview-card {
-  display: flex;
-  min-height: 76px;
+  display: grid;
+  width: 100%;
+  min-height: 78px;
+  grid-template-columns:
+    minmax(126px, 0.7fr) minmax(240px, 2fr) auto minmax(132px, auto);
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  gap: 18px;
   padding: 14px 16px;
   border: 1px solid var(--line);
+  border-left: 5px solid var(--green-300);
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
@@ -267,6 +300,18 @@ button {
   box-shadow: 0 8px 20px rgba(30, 50, 41, 0.04);
   transition: border-color 160ms ease, box-shadow 160ms ease,
     transform 160ms ease;
+}
+
+.overview-card.is-priority-high {
+  border-left-color: #b3542c;
+}
+
+.overview-card.is-priority-medium {
+  border-left-color: #c28a27;
+}
+
+.overview-card.is-priority-normal {
+  border-left-color: var(--green-500);
 }
 
 .overview-card:hover {
@@ -285,18 +330,73 @@ button {
 }
 
 .overview-card-label {
-  color: var(--ink-muted);
-  font-size: 12px;
+  color: var(--ink);
+  font-size: 14px;
   font-weight: 800;
   line-height: 1.35;
+}
+
+.overview-priority {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
   text-transform: uppercase;
 }
 
-.overview-card strong {
+.overview-priority-marker {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--green-500);
+}
+
+.is-priority-high .overview-priority-marker {
+  background: #b3542c;
+}
+
+.is-priority-medium .overview-priority-marker {
+  background: #c28a27;
+}
+
+.overview-card-content,
+.overview-card-count {
+  display: grid;
+  gap: 3px;
+}
+
+.overview-card-detail,
+.overview-card-count span {
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.overview-card-count {
+  min-width: 54px;
+  justify-items: end;
+}
+
+.overview-card-count strong {
   color: var(--green-800);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 600;
+  line-height: 1;
+}
+
+.overview-card-action {
+  color: var(--green-800);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.overview-card-action::after {
+  content: "  →";
 }
 
 .dashboard-preview-grid {
@@ -4853,9 +4953,29 @@ th[aria-sort="descending"] .sort-indicator {
   }
 
   .dashboard-start-heading,
-  .dashboard-sync {
+  .dashboard-sync,
+  .dashboard-worklist-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .dashboard-worklist-heading > p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .overview-card {
+    grid-template-columns: 1fr auto;
+    gap: 8px 16px;
+  }
+
+  .overview-priority,
+  .overview-card-action {
+    grid-column: 1 / -1;
+  }
+
+  .overview-card-action {
+    text-align: left;
   }
 
   .panel-heading {

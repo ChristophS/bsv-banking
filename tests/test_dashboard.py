@@ -2861,6 +2861,43 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn("balance_minor: Number(rawAmount)", javascript)
         self.assertNotIn("delete-balance-correction", html)
 
+    def test_dashboard_contains_prioritized_cashier_worklist(self):
+        with urlopen(self.base_url + "/", timeout=5) as response:
+            html = response.read().decode("utf-8")
+        with urlopen(self.base_url + "/static/app.js", timeout=5) as response:
+            javascript = response.read().decode("utf-8")
+        with urlopen(self.base_url + "/static/styles.css", timeout=5) as response:
+            stylesheet = response.read().decode("utf-8")
+
+        self.assertIn('id="dashboard-worklist-title"', html)
+        self.assertIn("Priorisierte Arbeitsliste", html)
+        self.assertIn('<ol class="overview-cards"', html)
+        ordered_keys = [
+            "open_vorgaenge",
+            "unassigned_transactions",
+            "unassigned_documents",
+            "unread_mails",
+            "open_todos",
+            "unassigned_termine",
+            "upcoming_termine",
+        ]
+        key_positions = [
+            javascript.index(f"  {key}: {{") for key in ordered_keys
+        ]
+        self.assertEqual(sorted(key_positions), key_positions)
+        for label in (
+            "Vorgänge abschließen",
+            "Transaktionen zuordnen",
+            "Dokumente zuordnen",
+            "Mails lesen",
+            "To-Dos erledigen",
+            "Termine vorbereiten",
+        ):
+            self.assertIn(label, javascript)
+        self.assertIn(".overview-card.is-priority-high", stylesheet)
+        self.assertIn(".overview-card.is-priority-medium", stylesheet)
+        self.assertIn(".overview-card.is-priority-normal", stylesheet)
+
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
         with closing(connect_database(database_path)) as connection:
@@ -5752,6 +5789,69 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     page.goto(base_url, wait_until="networkidle")
 
                     expect(page.locator(".dashboard-start")).to_be_visible()
+                    expect(
+                        page.locator("#dashboard-worklist-title")
+                    ).to_have_text("Priorisierte Arbeitsliste")
+                    work_items = page.locator(
+                        "#overview-cards .overview-card"
+                    )
+                    self.assertEqual(7, work_items.count())
+                    expected_worklist = [
+                        (
+                            "open_vorgaenge",
+                            "high",
+                            "Vorgänge abschließen",
+                            "Vorgänge öffnen",
+                        ),
+                        (
+                            "unassigned_transactions",
+                            "high",
+                            "Transaktionen zuordnen",
+                            "Transaktionen öffnen",
+                        ),
+                        (
+                            "unassigned_documents",
+                            "high",
+                            "Dokumente zuordnen",
+                            "Dokumente öffnen",
+                        ),
+                        (
+                            "unread_mails",
+                            "medium",
+                            "Mails lesen",
+                            "Mails öffnen",
+                        ),
+                        (
+                            "open_todos",
+                            "medium",
+                            "To-Dos erledigen",
+                            "To-Dos öffnen",
+                        ),
+                        (
+                            "unassigned_termine",
+                            "medium",
+                            "Termine zuordnen",
+                            "Termine öffnen",
+                        ),
+                        (
+                            "upcoming_termine",
+                            "normal",
+                            "Termine vorbereiten",
+                            "Termine öffnen",
+                        ),
+                    ]
+                    for index, (key, priority, label, action) in enumerate(
+                        expected_worklist
+                    ):
+                        item = work_items.nth(index)
+                        expect(item).to_have_attribute("data-overview-key", key)
+                        expect(item).to_have_attribute("data-priority", priority)
+                        expect(item.locator(".overview-card-label")).to_have_text(
+                            label
+                        )
+                        expect(item.locator(".overview-card-action")).to_have_text(
+                            action
+                        )
                     expect(page.locator("#dashboard-refresh")).to_have_text(
                         "Alles synchronisieren"
                     )
