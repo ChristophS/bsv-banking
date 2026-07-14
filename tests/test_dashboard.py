@@ -3069,9 +3069,6 @@ const controls = () => ({form: {dataset: {}}, submit: {disabled: false}, status:
         javascript = (root / "banking_dashboard/static/app.js").read_text(
             encoding="utf-8"
         )
-        styles = (root / "banking_dashboard/static/styles.css").read_text(
-            encoding="utf-8"
-        )
 
         self.assertRegex(
             html,
@@ -3081,15 +3078,163 @@ const controls = () => ({form: {dataset: {}}, submit: {disabled: false}, status:
             html,
             r'id="termin-empty" role="status" aria-live="polite"',
         )
-        self.assertIn("Noch keine To-Dos vorhanden.", javascript)
-        self.assertIn("Keine To-Dos entsprechen der aktuellen Suche", javascript)
-        self.assertIn("To-Dos konnten nicht geladen werden", javascript)
-        self.assertIn("Noch keine Termine vorhanden.", javascript)
-        self.assertIn("Keine Termine entsprechen der aktuellen Suche", javascript)
-        self.assertIn("Termine konnten nicht geladen werden", javascript)
-        self.assertIn('elements.todoEmpty.classList.toggle("is-error"', javascript)
-        self.assertIn('elements.terminEmpty.classList.toggle("is-error"', javascript)
-        self.assertIn(".todo-empty.is-error", styles)
+
+        def function_source(name):
+            start = javascript.index(f"function {name}")
+            if javascript[max(0, start - 6):start] == "async ":
+                start -= 6
+            opening_brace = javascript.index("{", javascript.index(")", start))
+            depth = 0
+            for index in range(opening_brace, len(javascript)):
+                if javascript[index] == "{":
+                    depth += 1
+                elif javascript[index] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        return javascript[start:index + 1]
+            self.fail(f"JavaScript-Funktion {name} ist nicht vollständig.")
+
+        node_test = "\n".join([
+            function_source("loadTodos"),
+            function_source("renderTodoList"),
+            function_source("loadTermine"),
+            function_source("renderTerminList"),
+            r"""
+const assert = require("node:assert/strict");
+
+function emptyElement() {
+  const classes = new Set();
+  return {
+    hidden: false,
+    textContent: "",
+    classList: {
+      toggle(name, enabled) {
+        if (enabled) classes.add(name); else classes.delete(name);
+      },
+      contains(name) { return classes.has(name); },
+    },
+  };
+}
+
+function listElement() {
+  return {
+    children: [],
+    replaceChildren(...children) { this.children = children; },
+  };
+}
+
+const elements = {
+  todoEmpty: emptyElement(),
+  todoList: listElement(),
+  todoLoading: emptyElement(),
+  todoCount: emptyElement(),
+  todoCountLabel: emptyElement(),
+  terminEmpty: emptyElement(),
+  terminList: listElement(),
+  terminLoading: emptyElement(),
+  terminCount: emptyElement(),
+  terminCountLabel: emptyElement(),
+};
+const state = {
+  todos: [], todoSearch: "", todoHideCompleted: false,
+  todoVorgaenge: [{}], editingTodoId: null, todosLoaded: false,
+  termine: [], terminSearch: "", terminHideCompleted: false,
+  terminUnassignedUpcoming: false,
+  terminVorgaenge: [{}], editingTerminId: null, termineLoaded: false,
+};
+const integerFormatter = new Intl.NumberFormat("de-DE");
+
+async function readResponse(response) { return response.payload; }
+function showError(error) { throw new Error(error); }
+
+const requestedUrls = [];
+async function fetch(url) {
+  requestedUrls.push(url);
+  if (url.startsWith("/api/todos?")) {
+    const parameters = new URL(url, "https://dashboard.test").searchParams;
+    assert.equal(parameters.get("search"), "nicht vorhanden");
+    return {payload: {todos: [], count: 0}};
+  }
+  if (url.startsWith("/api/termine?")) {
+    const parameters = new URL(url, "https://dashboard.test").searchParams;
+    assert.equal(parameters.get("unassigned_upcoming"), "true");
+    return {payload: {termine: [], count: 0}};
+  }
+  throw new Error(`Unerwarteter Request: ${url}`);
+}
+
+function assertListState(render, empty, expectedText, isError = false) {
+  render();
+  assert.equal(empty.hidden, false);
+  assert.equal(empty.textContent, expectedText);
+  assert.equal(empty.classList.contains("is-error"), isError);
+}
+
+assertListState(
+  renderTodoList,
+  elements.todoEmpty,
+  "Noch keine To-Dos vorhanden.",
+);
+
+(async () => {
+  state.todos = [{todo_id: "todo-1", title: "Beitrag prüfen"}];
+  elements.todoList.children = [{dataset: {todoId: "todo-1"}}];
+  state.todoSearch = "nicht vorhanden";
+  await loadTodos();
+  assert.equal(requestedUrls[0].startsWith("/api/todos?"), true);
+  assert.equal(state.todos.length, 0);
+  assert.equal(elements.todoList.children.length, 0);
+  assertListState(
+    renderTodoList,
+    elements.todoEmpty,
+    "Keine To-Dos entsprechen der aktuellen Suche oder Filterung.",
+  );
+  state.todoSearch = "";
+  assertListState(
+    () => renderTodoList("Netzwerkfehler"),
+    elements.todoEmpty,
+    "To-Dos konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    true,
+  );
+
+  assertListState(
+    renderTerminList,
+    elements.terminEmpty,
+    "Noch keine Termine vorhanden.",
+  );
+  state.termine = [{termin_id: "termin-1", title: "Training"}];
+  elements.terminList.children = [{dataset: {terminId: "termin-1"}}];
+  state.terminUnassignedUpcoming = true;
+  await loadTermine();
+  assert.equal(requestedUrls[1].startsWith("/api/termine?"), true);
+  assert.equal(state.termine.length, 0);
+  assert.equal(elements.terminList.children.length, 0);
+  assertListState(
+    renderTerminList,
+    elements.terminEmpty,
+    "Keine Termine entsprechen der aktuellen Suche oder Filterung.",
+  );
+  state.terminUnassignedUpcoming = false;
+  assertListState(
+    () => renderTerminList("Netzwerkfehler"),
+    elements.terminEmpty,
+    "Termine konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    true,
+  );
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+""",
+        ])
+        result = subprocess.run(
+            ["node", "-e", node_test],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
