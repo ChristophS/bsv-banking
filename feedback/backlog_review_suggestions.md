@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+Für ein späteres Folgepaket kann die Fehlerabdeckung um einen explizit zurückgewiesenen Fetch im vollständigen Ladepfad erweitert werden. Zusätzlich wäre eine kleine gemeinsame Testhilfe für die wiederkehrenden DOM-Zustandsprüfungen denkbar, sofern sie die Lesbarkeit gegenüber den aktuellen expliziten Assertions verbessert.
