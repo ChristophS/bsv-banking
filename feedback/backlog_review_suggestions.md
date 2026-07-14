@@ -1,2 +1,5 @@
-- Langfristig könnten die Datenbank-Trigger und die zugehörigen Integritätsregeln in einer kurzen Architektur- oder Persistenzdokumentation zusammengefasst werden.
-- Optional kann ein eigener Test für die Reparatur bereits inkonsistenter Bestandsdaten beim Öffnen einer Datenbank ergänzt werden.
+## Spätere Verbesserungen
+
+- Die Prioritäten mit Kassierern anhand realer, anonymisierter Nutzungsszenarien validieren.
+- Für jedes Folgearbeitspaket eigene Akzeptanzkriterien und Regressionstests gegen die bestehenden Vorgangs- und Abschlussregeln definieren.
+- Vor einer Arbeitslisten-Implementierung die serverseitige Aggregation und Obergrenze der Liste konkret festlegen, um zusätzliche Einzelabfragen pro Zeile zu vermeiden.
