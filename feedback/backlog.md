@@ -1,27 +1,10 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
-
-**Epic-ID:** epic-cashier-usability
-
-**Epic-Titel:** Kassiererfreundliche Arbeitsabläufe im Dashboard verbessern
-
-**Epic-Ziel:** Die tägliche Vereinsverwaltung im Dashboard mit klaren Prioritäten, verständlichen Zuständen und reibungsarmen Zuordnungsabläufen unterstützen, ohne Funktionsumfang oder Leistung zu verschlechtern.
-
-**Teilpaket:** Teil 3
-
-**Priorität:** mittel
-
-**Grund:** Einheitliche Suche, Auswahl, Bestätigung und Fehlerrückmeldungen sollen Fehlzuordnungen reduzieren und wiederkehrende Bearbeitungsschritte beschleunigen.
-
-**Feedback:**
-
-- Nutzerfreundlichkeit aus Sicht der allgemeinen Vereinsverwaltung und Zuordnung prüfen
-- Vorgänge sind das zentrale fachliche Objekt
-
-## 2. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
+## 1. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -40,7 +23,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
 - Abschlussprüfungen und Klassifikationsstatus
 
-## 3. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
+## 2. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
 
 **Epic-ID:** epic-cashier-usability
 
@@ -58,7 +41,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Nutzerkomfort ohne Feature- und Leistungseinbußen
 
-## 4. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
+## 3. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -77,7 +60,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Gesamten Code auf Konsistenz und Funktion prüfen
 - Externe Dienste nur mit Mocks, Fakes oder Fixtures testen
 
-## 5. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
+## 4. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
 
 **Epic-ID:** epic-balance-correction
 
@@ -95,7 +78,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen
 
-## 6. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
+## 5. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
 
 **Epic-ID:** epic-balance-correction
 
