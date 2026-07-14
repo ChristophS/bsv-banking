@@ -3081,6 +3081,8 @@ const controls = () => ({form: {dataset: {}}, submit: {disabled: false}, status:
 
         def function_source(name):
             start = javascript.index(f"function {name}")
+            if javascript[max(0, start - 6):start] == "async ":
+                start -= 6
             opening_brace = javascript.index("{", javascript.index(")", start))
             depth = 0
             for index in range(opening_brace, len(javascript)):
@@ -3093,7 +3095,9 @@ const controls = () => ({form: {dataset: {}}, submit: {disabled: false}, status:
             self.fail(f"JavaScript-Funktion {name} ist nicht vollständig.")
 
         node_test = "\n".join([
+            function_source("loadTodos"),
             function_source("renderTodoList"),
+            function_source("loadTermine"),
             function_source("renderTerminList"),
             r"""
 const assert = require("node:assert/strict");
@@ -3113,20 +3117,51 @@ function emptyElement() {
 }
 
 function listElement() {
-  return {replaceChildren() {}};
+  return {
+    children: [],
+    replaceChildren(...children) { this.children = children; },
+  };
 }
 
 const elements = {
   todoEmpty: emptyElement(),
   todoList: listElement(),
+  todoLoading: emptyElement(),
+  todoCount: emptyElement(),
+  todoCountLabel: emptyElement(),
   terminEmpty: emptyElement(),
   terminList: listElement(),
+  terminLoading: emptyElement(),
+  terminCount: emptyElement(),
+  terminCountLabel: emptyElement(),
 };
 const state = {
   todos: [], todoSearch: "", todoHideCompleted: false,
+  todoVorgaenge: [{}], editingTodoId: null, todosLoaded: false,
   termine: [], terminSearch: "", terminHideCompleted: false,
   terminUnassignedUpcoming: false,
+  terminVorgaenge: [{}], editingTerminId: null, termineLoaded: false,
 };
+const integerFormatter = new Intl.NumberFormat("de-DE");
+
+async function readResponse(response) { return response.payload; }
+function showError(error) { throw new Error(error); }
+
+const requestedUrls = [];
+async function fetch(url) {
+  requestedUrls.push(url);
+  if (url.startsWith("/api/todos?")) {
+    const parameters = new URL(url, "https://dashboard.test").searchParams;
+    assert.equal(parameters.get("search"), "nicht vorhanden");
+    return {payload: {todos: [], count: 0}};
+  }
+  if (url.startsWith("/api/termine?")) {
+    const parameters = new URL(url, "https://dashboard.test").searchParams;
+    assert.equal(parameters.get("unassigned_upcoming"), "true");
+    return {payload: {termine: [], count: 0}};
+  }
+  throw new Error(`Unerwarteter Request: ${url}`);
+}
 
 function assertListState(render, empty, expectedText, isError = false) {
   render();
@@ -3140,38 +3175,56 @@ assertListState(
   elements.todoEmpty,
   "Noch keine To-Dos vorhanden.",
 );
-state.todoSearch = "ohne Treffer";
-assertListState(
-  renderTodoList,
-  elements.todoEmpty,
-  "Keine To-Dos entsprechen der aktuellen Suche oder Filterung.",
-);
-state.todoSearch = "";
-assertListState(
-  () => renderTodoList("Netzwerkfehler"),
-  elements.todoEmpty,
-  "To-Dos konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
-  true,
-);
 
-assertListState(
-  renderTerminList,
-  elements.terminEmpty,
-  "Noch keine Termine vorhanden.",
-);
-state.terminUnassignedUpcoming = true;
-assertListState(
-  renderTerminList,
-  elements.terminEmpty,
-  "Keine Termine entsprechen der aktuellen Suche oder Filterung.",
-);
-state.terminUnassignedUpcoming = false;
-assertListState(
-  () => renderTerminList("Netzwerkfehler"),
-  elements.terminEmpty,
-  "Termine konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
-  true,
-);
+(async () => {
+  state.todos = [{todo_id: "todo-1", title: "Beitrag prüfen"}];
+  elements.todoList.children = [{dataset: {todoId: "todo-1"}}];
+  state.todoSearch = "nicht vorhanden";
+  await loadTodos();
+  assert.equal(requestedUrls[0].startsWith("/api/todos?"), true);
+  assert.equal(state.todos.length, 0);
+  assert.equal(elements.todoList.children.length, 0);
+  assertListState(
+    renderTodoList,
+    elements.todoEmpty,
+    "Keine To-Dos entsprechen der aktuellen Suche oder Filterung.",
+  );
+  state.todoSearch = "";
+  assertListState(
+    () => renderTodoList("Netzwerkfehler"),
+    elements.todoEmpty,
+    "To-Dos konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    true,
+  );
+
+  assertListState(
+    renderTerminList,
+    elements.terminEmpty,
+    "Noch keine Termine vorhanden.",
+  );
+  state.termine = [{termin_id: "termin-1", title: "Training"}];
+  elements.terminList.children = [{dataset: {terminId: "termin-1"}}];
+  state.terminUnassignedUpcoming = true;
+  await loadTermine();
+  assert.equal(requestedUrls[1].startsWith("/api/termine?"), true);
+  assert.equal(state.termine.length, 0);
+  assert.equal(elements.terminList.children.length, 0);
+  assertListState(
+    renderTerminList,
+    elements.terminEmpty,
+    "Keine Termine entsprechen der aktuellen Suche oder Filterung.",
+  );
+  state.terminUnassignedUpcoming = false;
+  assertListState(
+    () => renderTerminList("Netzwerkfehler"),
+    elements.terminEmpty,
+    "Termine konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    true,
+  );
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
 """,
         ])
         result = subprocess.run(

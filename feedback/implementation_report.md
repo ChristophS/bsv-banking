@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260714-113727`
+`agent2/rework-20260714-114151`
 
 ## Geänderte Dateien
 
@@ -20,6 +20,12 @@ Die bereits vor Arbeitsbeginn vorhandene Änderung an
   Renderingfunktionen ersetzt.
 - Für beide Listen werden ein leerer Bestand, eine Suche beziehungsweise
   Filterung ohne Treffer sowie ein Ladefehler geprüft.
+- Die Nulltreffer-Prüfungen starten jeweils mit einem vorhandenen Listeneintrag
+  und führen anschließend den produktiven Ladepfad `loadTodos` beziehungsweise
+  `loadTermine` mit gemockten API-Antworten aus.
+- Der Test prüft die tatsächlich erzeugten Such- und Filterparameter, den
+  Wechsel auf einen leeren Ergebnisbestand und das Entfernen des zuvor
+  dargestellten Eintrags.
 - Der Test beobachtet die sichtbare Zustandsmeldung, deren Einblendung und die
   Fehlerklasse statt nur das Vorhandensein von Texten im JavaScript-Quellcode.
 - Gemeinsame Testhilfen bilden die DOM-Zustände beider Listen reproduzierbar
@@ -60,5 +66,23 @@ Die bereits vor Arbeitsbeginn vorhandene Änderung an
   `test_todo_and_termin_lists_distinguish_empty_filtered_and_error_states`.
 - Er prüft für jede Liste drei fachlich verschiedene sichtbare Zustände und
   stellt bei Ladefehlern zusätzlich die Klasse `is-error` fest.
+- Für den Zustand „keine Treffer“ werden nicht mehr nur State-Flags vor einem
+  direkten Renderer-Aufruf gesetzt. Der Test durchläuft nun die produktive
+  Anfrageerzeugung und Verarbeitung einer leeren gefilterten API-Antwort.
 - Vorhandene Änderungen an `feedback/Review-report.md` gehören nicht zu dieser
   Umsetzung.
+
+## Nachbesserung nach Review
+
+- Der blockierende Review-Hinweis wurde für beide Listen behoben: To-dos
+  beginnen mit einem vorhandenen Eintrag und werden durch die echte Suche
+  `nicht vorhanden` über `loadTodos` auf null Ergebnisse reduziert.
+- Termine beginnen ebenfalls mit einem vorhandenen Eintrag und werden durch
+  den produktiven Filter `unassigned_upcoming=true` über `loadTermine` auf
+  null Ergebnisse reduziert.
+- Das Fetch-Mock wertet die vom Produktivcode erzeugten URLs aus. Dadurch
+  scheitert der Test nun auch bei Fehlern in der Weitergabe der Suche oder des
+  Filters.
+- Nach dem jeweiligen Ladepfad werden die sichtbare Nulltreffer-Meldung, der
+  leere State und die entfernte vorherige Listendarstellung geprüft.
+- Es waren keine Änderungen an `banking_dashboard/static/app.js` erforderlich.
