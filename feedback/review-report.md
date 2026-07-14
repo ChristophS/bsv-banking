@@ -8,52 +8,43 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Abschlussblocker werden aus den bestehenden Prüfungen abgeleitet, fehlende Klassifikationsfelder und Belege werden konkret benannt, mehrere Blocker gemeinsam dargestellt und die serverseitige Abschlussvalidierung bleibt unverändert. Die ergänzten Tests decken offene Klassifikation, fehlenden Beleg, mehrere Blocker sowie einen abschließbaren Vorgang ab.
+Die Umsetzung erfüllt das Arbeitspaket mit einer kleinen, klar abgegrenzten Verbesserung für To-Dos und Termine. Leere Bestände, ergebnislose Suche beziehungsweise Filterung und Ladefehler werden verständlich unterschieden, Fehler bleiben inline sichtbar und die Zustände sind per ARIA ausgezeichnet. Der GitHub-Compare ist sauber und vollständig; bestehende APIs, Verknüpfungen und Vorgangsstrukturen wurden nicht verändert.
 
 # Technischer Review
 
 ## Ergebnis
 
-**Akzeptiert.**
+**Freigegeben.**
 
-## Geprüfte Anforderungen
+Der Branch `agent2/codex-20260714-113249` steht im GitHub-Compare sauber auf `main` aufbauend und enthält genau einen Commit. Runner-Validierung und GitHub-Compare stimmen bei den geänderten Pfaden überein; es fehlen keine Änderungen und es gibt keine zusätzlichen Compare-Dateien.
 
-- Die Vorgangsdetailantwort enthält eine strukturierte `abschluss_pruefung`.
-- Fehlende Klassifikationsfelder werden je betroffener Transaktion konkret ermittelt und benannt.
-- Für Rechnungsvorgänge werden die bestehenden Voraussetzungen für Transaktion und Beleg verständlich als offen oder erfüllt dargestellt.
-- Mehrere offene Abschlussblocker werden gemeinsam angezeigt.
-- Jeder offene Prüfpunkt enthält eine konkrete nächste Aktion.
-- Erfüllte Prüfpunkte sind im offenen Vorgang visuell von offenen Prüfpunkten unterscheidbar.
-- Die bestehende Abschlusslogik in `_vorgang_completion_requirements()` und die serverseitige Statusvalidierung wurden nicht abgeschwächt oder umgangen.
-- Die bestehende Vorgangs-, Transaktions-, Beleg- und Verknüpfungsarchitektur wird weiterverwendet.
+## Prüfung der Anforderungen
 
-## Implementierungsprüfung
+- Die bestehenden Dashboard-Bereiche für Transaktionen, Vorgänge, Belege, Mails, To-Dos und Termine wurden laut Umsetzung geprüft.
+- Als kleiner, priorisierter Umfang wurden To-Dos und Termine ausgewählt.
+- Die Leerzustände unterscheiden nun zwischen:
+  - tatsächlich leerem Bestand,
+  - keiner Übereinstimmung durch Suche oder Filterung,
+  - fehlgeschlagenem Laden.
+- Ladefehler werden zusätzlich dauerhaft inline hervorgehoben und nicht nur über den kurzlebigen Toast gemeldet.
+- `role="status"` und `aria-live="polite"` sind für beide Inline-Zustände vorhanden.
+- Vorgangszuordnungen, API-Verträge, Services, Persistenz und bestehende fachliche Strukturen bleiben unverändert.
+- Es wurden keine externen Dienste, produktiven Daten oder echten Banking-, Mail- oder Login-Aktionen eingeführt.
 
-Die neue Funktion `_vorgang_completion_checklist()` bereitet die bereits vorhandenen Abschlusszustände für die Darstellung auf. Die fachliche Sperrlogik bleibt separat bestehen. Dadurch wird die Anzeige nicht zur Ersatzvalidierung und ein Vorgang kann weiterhin nur über die bestehenden Prüfungen abgeschlossen werden.
+## Technische Prüfung
 
-Die Darstellung in `createVorgangStatusEditor()` verwendet sichere DOM-Erzeugung und `textContent`. Offene und erfüllte Zustände werden über Statuslabel, CSS-Klassen, Meldung und nächste Aktion dargestellt. Die bestehende Fallback-Darstellung für ältere oder nicht strukturierte Blocker bleibt erhalten.
+`renderTodoList(loadError)` und `renderTerminList(loadError)` setzen den sichtbaren Leertext abhängig vom aktuellen Such- beziehungsweise Filterzustand. Die Fehlerklasse wird mit `classList.toggle()` gesetzt und bei erfolgreichen Folgeladevorgängen wieder entfernt. Die Ladepfade rufen die Renderfunktionen im Fehlerfall mit einer Fehlermeldung auf und zeigen weiterhin den vorhandenen Fehler-Toast.
 
-Die Änderungen an den Vorgangsstrukturen sind auf ein zusätzliches abgeleitetes Antwortfeld begrenzt. Es wurde keine direkte Ersatzbeziehung zwischen Entitäten eingeführt und es wurden keine neuen Abschlussregeln oder Pflichtfelder ergänzt.
+Die Änderungen führen keine zusätzlichen Vollabfragen ein. Die vorhandenen Requests und Filterparameter bleiben erhalten. Die Styling-Erweiterung ist auf den Inline-Fehlerzustand begrenzt.
 
 ## Tests
 
-Die ergänzten Tests decken ab:
+Die Dashboard-Suite wurde laut Report erfolgreich mit 135 bestandenen und 6 übersprungenen Tests ausgeführt. Zusätzlich wurden JavaScript-Syntaxprüfung und `git diff --check` erfolgreich ausgeführt. Der neue Test prüft Markup, relevante Texte, Fehlerklassen und Zustandslogik statisch. Das ist für den kleinen, risikoarmen Umfang ausreichend für die Freigabe; ausführbare Browser-Assertions wären jedoch noch robuster.
 
-- fehlende einzelne Klassifikationsfelder einschließlich konkreter Feldnamen,
-- einen fehlenden erforderlichen Beleg bei einem Rechnungsvorgang,
-- mehrere gleichzeitige Blocker aus Klassifikation und Beleg,
-- einen vollständig vorbereiteten und abschließbaren Rechnungsvorgang.
+## Scope und Architektur
 
-Der Implementation Report nennt außerdem eine erfolgreiche Dashboard-Test-Suite mit 134 bestandenen und 6 übersprungenen optionalen Browser-Tests sowie bestandene JavaScript-Syntax- und Diff-Prüfungen. Die übersprungenen Browser-Tests sind angesichts der Vorgabe gegen Browser-Automation nicht blockierend.
-
-## Repository- und Compare-Prüfung
-
-- GitHub Compare ist `ahead` mit genau einem Commit.
-- `ahead_by=1`, `behind_by=0`, `total_commits=1`.
-- Es fehlen keine Runner-Änderungen im GitHub-Compare.
-- Es wurden keine zusätzlichen, nicht vom Runner validierten Dateien festgestellt.
-- Die Änderungen bleiben im fachlichen Scope des Arbeitspakets.
+Es gibt keinen relevanten Scope Creep. Die Änderung bleibt innerhalb der vorgesehenen Dashboard-Dateien und Tests sowie des technischen Implementierungsreports. Bestehende Tabellen, Services, Verknüpfungen und das zentrale fachliche Objekt Vorgang werden nicht umgangen oder neu aufgebaut.
 
 ## Nicht blockierende Hinweise
 
-UI-nahe Tests für die konkrete DOM-Ausgabe wären eine sinnvolle zusätzliche Absicherung. Außerdem könnte eine spätere UX-Iteration die erfüllten Prüfpunkte auch bei bereits abgeschlossenen Vorgängen als Historie anzeigen. Beides ist für die aktuelle Freigabe nicht erforderlich.
+Die Ergebniszähler werden bei einem Ladefehler nicht explizit zurückgesetzt und können daher kurzfristig den vorherigen Wert zeigen, während die Liste bereits die Fehlerrückmeldung darstellt. Außerdem sind die neuen Tests statisch statt verhaltensbasiert. Beides sind sinnvolle Folgeverbesserungen, verhindern aber keine Freigabe.
