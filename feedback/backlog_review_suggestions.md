@@ -1,1 +1,3 @@
-Für ein späteres Folgepaket könnten je Liste kurze, fachlich abgesicherte Beispiele für die vier Anzeigezustände ergänzt werden. Dies ist für das aktuelle Arbeitspaket nicht erforderlich.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
