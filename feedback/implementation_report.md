@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/rework-20260714-104846`
+`agent2/rework-20260714-105406`
 
 ## Geänderte Dateien
 
@@ -80,6 +80,25 @@ Tool-Zeitlimits nach zwei Tests beendet und anschließend vollständig wiederhol
   für Transaktion, Mail, To-Do und Beleg ab.
 
 ## Nachbesserung nach Review
+
+- Das aktuelle blockierende Review-Problem in `renderTodoEntityForm()` und
+  `renderTerminEntityForm()` ist behoben: Beide Submit-Pfade verwenden nun
+  `submitVorgangAssignment()`. Bei leerer Auswahl erscheint
+  `Bitte zuerst einen Vorgang auswählen.`; `persistTodo()` beziehungsweise der
+  Termin-PATCH werden nicht aufgerufen. Bestehende Zuordnungen können daher
+  nicht mehr durch eine leere Bestätigung entfernt werden.
+- Die gemeinsame Request-Sperre gilt damit ebenfalls für To-Dos und Termine.
+  Nach erfolgreichem Speichern wird die Detailansicht aktualisiert und zeigt am
+  neu gerenderten Formular weiterhin `Zuordnung gespeichert`.
+- Der Test prüft explizit für beide betroffenen Formularfunktionen die Nutzung
+  der gemeinsamen Auswahlvalidierung. Der ausgeführte Node-Test weist nach,
+  dass eine leere Auswahl keinen Request auslöst.
+- Für die aktuelle Nachbesserung wurden `node --check
+  banking_dashboard/static/app.js`, der gezielte Test (**1 bestanden, 138
+  abgewählt**) und die vollständige Dashboard-Suite (**133 bestanden, 6
+  übersprungen**, 0 fehlgeschlagen; 43,92 s) ausgeführt.
+- Eine separate Entfernen-Aktion wurde nicht eingeführt, da sie für die
+  blockierende Korrektur nicht erforderlich ist.
 
 - Die zuvor nur statische String-Prüfung wurde durch einen ausführbaren
   JavaScript-Interaktionstest mit lokalen Mocks ersetzt. Er prüft fehlende

@@ -7541,7 +7541,7 @@ async function renderMailEntityPreview(entryId) {
   applyMailZoom();
 }
 
-async function renderTodoEntityPreview(todoId) {
+async function renderTodoEntityPreview(todoId, assignmentStatus = "") {
   const [todoResponse, vorgangResponse] = await Promise.all([
     fetch(`/api/todos/${encodeURIComponent(todoId)}`),
     fetch("/api/vorgaenge"),
@@ -7560,6 +7560,13 @@ async function renderTodoEntityPreview(todoId) {
   elements.entityPreviewContent.replaceChildren(
     renderTodoEntityForm(todo, vorgangPayload.vorgaenge || []),
   );
+  if (assignmentStatus) {
+    setAssignmentStatus(
+      elements.entityPreviewContent.querySelector(".save-state"),
+      "saved",
+      assignmentStatus,
+    );
+  }
 }
 
 function renderTodoEntityForm(todo, vorgaenge) {
@@ -7585,33 +7592,33 @@ function renderTodoEntityForm(todo, vorgaenge) {
   form.append(actions.container);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    actions.submit.disabled = true;
-    actions.status.className = "save-state is-saving";
-    actions.status.textContent = "Wird gespeichert";
-    try {
-      await persistTodo({
+    const selectedIds = [...form.elements.vorgangs_ids.selectedOptions]
+      .map((option) => option.value);
+    await submitVorgangAssignment({
+      form,
+      submit: actions.submit,
+      status: actions.status,
+      selectedId: selectedIds[0] || "",
+      request: () => persistTodo({
         title: form.elements.title.value,
         description: form.elements.description.value,
         due_date: form.elements.due_date.value,
         priority: form.elements.priority.value,
         completed: form.elements.completed.checked,
-        vorgangs_ids: [...form.elements.vorgangs_ids.selectedOptions]
-          .map((option) => option.value),
-      }, todo.todo_id);
-      state.todosLoaded = false;
-      state.vorgaengeLoaded = false;
-      await Promise.all([loadOverview(), loadTodos().catch(() => null)]);
-      await renderTodoEntityPreview(todo.todo_id);
-    } catch (error) {
-      actions.submit.disabled = false;
-      actions.status.className = "save-state is-error";
-      actions.status.textContent = `Speichern fehlgeschlagen: ${error.message}`;
-    }
+        vorgangs_ids: selectedIds,
+      }, todo.todo_id),
+      onSaved: async () => {
+        state.todosLoaded = false;
+        state.vorgaengeLoaded = false;
+        await Promise.all([loadOverview(), loadTodos().catch(() => null)]);
+        await renderTodoEntityPreview(todo.todo_id, "Zuordnung gespeichert");
+      },
+    });
   });
   return form;
 }
 
-async function renderTerminEntityPreview(terminId) {
+async function renderTerminEntityPreview(terminId, assignmentStatus = "") {
   const [terminResponse, vorgangResponse] = await Promise.all([
     fetch(`/api/termine/${encodeURIComponent(terminId)}`),
     fetch("/api/vorgaenge"),
@@ -7630,6 +7637,13 @@ async function renderTerminEntityPreview(terminId) {
   elements.entityPreviewContent.replaceChildren(
     renderTerminEntityForm(termin, vorgangPayload.vorgaenge || []),
   );
+  if (assignmentStatus) {
+    setAssignmentStatus(
+      elements.entityPreviewContent.querySelector(".save-state"),
+      "saved",
+      assignmentStatus,
+    );
+  }
 }
 
 function renderTerminEntityForm(termin, vorgaenge) {
@@ -7661,11 +7675,15 @@ function renderTerminEntityForm(termin, vorgaenge) {
   form.append(actions.container);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    actions.submit.disabled = true;
-    actions.status.className = "save-state is-saving";
-    actions.status.textContent = "Wird gespeichert";
-    try {
-      const response = await fetch(
+    const selectedIds = [...form.elements.vorgangs_ids.selectedOptions]
+      .map((option) => option.value);
+    await submitVorgangAssignment({
+      form,
+      submit: actions.submit,
+      status: actions.status,
+      selectedId: selectedIds[0] || "",
+      request: async () => {
+        const response = await fetch(
         `/api/termine/${encodeURIComponent(termin.termin_id)}`,
         {
           method: "PATCH",
@@ -7677,21 +7695,19 @@ function renderTerminEntityForm(termin, vorgaenge) {
             ends_at: localDateTimeToApiValue(form.elements.ends_at.value),
             location: form.elements.location.value,
             status: form.elements.status.value,
-            vorgangs_ids: [...form.elements.vorgangs_ids.selectedOptions]
-              .map((option) => option.value),
+            vorgangs_ids: selectedIds,
           }),
         },
-      );
-      await readResponse(response);
-      state.termineLoaded = false;
-      state.vorgaengeLoaded = false;
-      await Promise.all([loadOverview(), loadTermine().catch(() => null)]);
-      await renderTerminEntityPreview(termin.termin_id);
-    } catch (error) {
-      actions.submit.disabled = false;
-      actions.status.className = "save-state is-error";
-      actions.status.textContent = `Speichern fehlgeschlagen: ${error.message}`;
-    }
+        );
+        await readResponse(response);
+      },
+      onSaved: async () => {
+        state.termineLoaded = false;
+        state.vorgaengeLoaded = false;
+        await Promise.all([loadOverview(), loadTermine().catch(() => null)]);
+        await renderTerminEntityPreview(termin.termin_id, "Zuordnung gespeichert");
+      },
+    });
   });
   return form;
 }

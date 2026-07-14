@@ -3003,6 +3003,11 @@ const controls = () => ({form: {dataset: {}}, submit: {disabled: false}, status:
         self.assertEqual(result.returncode, 0, result.stderr)
 
         self.assertGreaterEqual(javascript.count("submitVorgangAssignment({"), 4)
+        for form_name in ("renderTodoEntityForm", "renderTerminEntityForm"):
+            form_source = function_source(form_name)
+            self.assertIn("await submitVorgangAssignment({", form_source)
+            self.assertIn('selectedId: selectedIds[0] || ""', form_source)
+            self.assertNotIn("actions.submit.disabled = true", form_source)
         self.assertIn("renderBelegEntityPreview(beleg.beleg_id, \"Zuordnung gespeichert\")", javascript)
         self.assertIn('elements.detailDialogStatus.textContent = "Zuordnung gespeichert"', javascript)
 
