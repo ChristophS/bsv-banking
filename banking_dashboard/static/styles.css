@@ -3300,6 +3300,57 @@ th[aria-sort="descending"] .sort-indicator {
   line-height: 1.45;
 }
 
+.vorgang-completion-checklist {
+  flex: 1 1 100%;
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vorgang-completion-checklist li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 8px;
+  padding: 10px 12px;
+  border: 1px solid #e0b8a9;
+  border-radius: 8px;
+  background: #fff7f3;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.vorgang-completion-checklist li.is-erfuellt {
+  border-color: #b8d5c2;
+  background: #f3faf5;
+}
+
+.completion-check-state {
+  grid-row: 1 / span 3;
+  align-self: start;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #8a3c25;
+  background: #f7d9ce;
+  font-weight: 700;
+}
+
+.is-erfuellt .completion-check-state {
+  color: var(--green-700);
+  background: #dceee2;
+}
+
+.completion-check-message,
+.completion-check-action {
+  grid-column: 2;
+  color: var(--ink-muted);
+}
+
+.completion-check-action {
+  color: var(--ink);
+}
+
 .vorgang-status-editor .vorgang-form-actions {
   margin-top: 14px;
 }

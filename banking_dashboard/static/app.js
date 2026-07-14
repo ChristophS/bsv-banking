@@ -8499,6 +8499,7 @@ function createVorgangStatusEditor(vorgang) {
   const isCompleted = vorgang.status === "abgeschlossen";
   const canComplete = Boolean(vorgang.abschluss_moeglich);
   const blockers = vorgang.abschluss_blocker || [];
+  const completionChecks = vorgang.abschluss_pruefung || [];
   const description = document.createElement("p");
   description.className = "vorgang-status-description";
   description.textContent = isCompleted
@@ -8506,7 +8507,9 @@ function createVorgangStatusEditor(vorgang) {
     : canComplete
       ? "Alle Abschlussbedingungen sind erfüllt."
       : (
-        blockers.join(" ") ||
+        (completionChecks.length
+          ? "Folgende Abschlussbedingungen sind noch offen."
+          : blockers.join(" ")) ||
         "Vor dem Abschluss müssen bei allen Transaktionen Transaktionstyp, " +
         "Oberkategorie, Unterkategorie und Sphäre ausgefüllt sein."
       );
@@ -8521,7 +8524,25 @@ function createVorgangStatusEditor(vorgang) {
   statusButton.disabled = !isCompleted && !canComplete;
   actions.append(statusButton);
 
-  if (!isCompleted && !canComplete && blockers.length) {
+  if (!isCompleted && completionChecks.length) {
+    const checklist = document.createElement("ul");
+    checklist.className = "vorgang-completion-checklist";
+    for (const check of completionChecks) {
+      const item = document.createElement("li");
+      item.className = `is-${check.status || "offen"}`;
+      const stateLabel = check.status === "erfuellt" ? "Erfüllt" : "Offen";
+      item.append(
+        mailElement("span", "completion-check-state", stateLabel),
+        mailElement("strong", "", check.title || "Abschlussbedingung"),
+        mailElement("span", "completion-check-message", check.message || ""),
+      );
+      if (check.action) {
+        item.append(mailElement("span", "completion-check-action", check.action));
+      }
+      checklist.append(item);
+    }
+    actions.append(checklist);
+  } else if (!isCompleted && !canComplete && blockers.length) {
     const blockerList = document.createElement("ul");
     blockerList.className = "vorgang-status-blockers";
     for (const blocker of blockers) {
