@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260714-104326`
+`agent2/rework-20260714-104846`
 
 ## Geänderte Dateien
 
@@ -12,7 +12,8 @@
 - `feedback/implementation_report.md`
 
 Die bereits vor Arbeitsbeginn vorhandene Änderung an `feedback/Review-report.md`
-und die unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
+und die unversionierten Dateien `feedback/agent2_prompt.md` sowie
+`feedback/agent2_review_request.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
@@ -73,7 +74,30 @@ Tool-Zeitlimits nach zwei Tests beendet und anschließend vollständig wiederhol
 - Zentral sind `entityVorgangSelect()`,
   `createStandaloneVorgangAssignment()`, `submitMailVorgangLink()` und
   `appendTransactionVorgangLinkSection()` in `static/app.js`.
-- Der neue Test prüft die gemeinsamen UI-Zustände sowie die Verwendung des
-  bestehenden Beleg-Vorgangs-Endpunkts.
+- Der neue Test führt die gemeinsame produktive Submit-Logik mit lokalen Mocks
+  aus und prüft Auswahlpflicht, Erfolg, Fehler sowie Mehrfachklick-Sperre.
 - Bereits vorhandene HTTP-Tests decken erfolgreiche Zuordnungen und API-Fehler
   für Transaktion, Mail, To-Do und Beleg ab.
+
+## Nachbesserung nach Review
+
+- Die zuvor nur statische String-Prüfung wurde durch einen ausführbaren
+  JavaScript-Interaktionstest mit lokalen Mocks ersetzt. Er prüft fehlende
+  Auswahl ohne Request, erfolgreiche Speicherung, die Sperre eines parallelen
+  zweiten Speicherversuchs sowie einen fachlichen Request-Fehler einschließlich
+  erneuter Bedienbarkeit des Formulars.
+- Mail-, Beleg- und Transaktionszuordnung verwenden nun den gemeinsamen
+  `submitVorgangAssignment()`-Ablauf für Auswahlvalidierung, Lade-, Erfolgs- und
+  Fehlerzustand sowie die Request-Sperre.
+- Nach dem Neuaufbau der Mail- und Belegansicht wird der Erfolgsstatus am neu
+  gerenderten Formular erneut gesetzt. Die Transaktionsansicht zeigt
+  `Zuordnung gespeichert` nach dem Workspace-Reload im persistenten
+  Dialogstatus.
+- Für die Nachbesserung wurden zusätzlich ausgeführt:
+  `node --check banking_dashboard/static/app.js`, der gezielte neue Test
+  (**1 bestanden, 138 abgewählt**) und die vollständige Dashboard-Suite
+  (**133 bestanden, 6 übersprungen**, 0 fehlgeschlagen; 45,79 s).
+- Nicht umgesetzt wurden die nicht-blockierenden weitergehenden Vorschläge für
+  eine neue Browser-/DOM-Testinfrastruktur. Der neue Test benötigt keine
+  Browserinstallation und führt die produktiv verwendete Submit-Logik direkt
+  unter Node.js aus.
