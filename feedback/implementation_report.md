@@ -2,12 +2,12 @@
 
 ## Branchname
 
-`agent2/codex-20260714-111901`
+`agent2/codex-20260714-113249`
 
 ## Geänderte Dateien
 
-- `banking_dashboard/server.py`
 - `banking_dashboard/static/app.js`
+- `banking_dashboard/static/index.html`
 - `banking_dashboard/static/styles.css`
 - `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
@@ -18,27 +18,32 @@ Die bereits vor Arbeitsbeginn vorhandene Änderung an
 
 ## Umgesetzte Punkte
 
-- Das bestehende Vorgangsdetail liefert zusätzlich eine strukturierte
-  `abschluss_pruefung`, die ausschließlich aus den vorhandenen
-  Abschlussanforderungen abgeleitet wird.
-- Unvollständige Klassifikationen werden je Transaktion ausgewiesen und nennen
-  nur die tatsächlich fehlenden Pflichtfelder (Transaktionstyp,
-  Oberkategorie, Unterkategorie und/oder Sphäre).
-- Für Rechnungen werden die bereits bestehenden Voraussetzungen
-  „Transaktion vorhanden“ und „Beleg vorhanden“ jeweils als offen oder erfüllt
-  dargestellt.
-- Jeder offene Prüfpunkt enthält eine konkrete nächste Aktion. Erfüllte Punkte
-  sind in der Vorgangsansicht visuell von offenen Punkten unterscheidbar.
-- Mehrere offene Abschlussblocker werden gemeinsam in der Abschlussprüfung
-  angezeigt.
-- Die bestehende serverseitige Abschlussvalidierung, einschließlich der
-  Fehlbuchungsausnahme, wurde nicht verändert oder abgeschwächt.
+- Die datenintensiven Listen für Transaktionen, Vorgänge, Belege, Mails,
+  To-Dos und Termine wurden hinsichtlich Suche, Filterung, Lade-, Leer- und
+  Fehlerzuständen im vorhandenen Dashboard-Code und in den Tests geprüft.
+- Als kleinster priorisierter Verbesserungsumfang wurden die vorgangsnahen
+  Arbeitslisten für To-Dos und Termine gewählt: Ihr bisher einheitlicher
+  Leerzustand unterschied weder einen leeren Datenbestand von einer
+  ergebnislosen Suche/Filterung noch von einem Ladefehler.
+- To-Dos und Termine zeigen nun unterschiedliche, kassiererfreundliche Texte
+  für einen tatsächlich leeren Bestand, eine Suche/Filterung ohne Treffer und
+  einen fehlgeschlagenen Ladevorgang.
+- Ladefehler bleiben nach dem Ausblenden des kurzlebigen Fehler-Toasts als
+  farblich hervorgehobene Inline-Rückmeldung sichtbar.
+- Die Rückmeldungen sind als `role="status"` mit `aria-live="polite"`
+  ausgezeichnet.
+- Die bestehende Suche, Filterung, API-Nutzung und fachliche Zentralität der
+  Vorgänge bleiben unverändert. Es wurden keine zusätzlichen Vollabfragen
+  eingeführt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neuen Abschlussregeln oder Pflichtfelder.
-- Kein Umbau von Vorgangs-, Transaktions-, Beleg- oder Verknüpfungsstrukturen.
-- Keine externen Dienste oder Browser-Automationen.
+- Keine Pagination oder allgemeine Performance-Optimierung: Für dieses kleine
+  Bedienpaket wurde kein belastbarer konkreter Leistungsfehler festgestellt.
+- Keine Neugestaltung weiterer Listen; deren vorhandene Such-, Filter-, Lade-
+  und Leerzustände bleiben bestehen.
+- Keine Änderungen an Services, Persistenz, Tabellen oder Verknüpfungen.
+- Keine externen Dienste, echten Logins oder produktiven Daten.
 
 ## Ausgeführte Tests
 
@@ -49,25 +54,25 @@ Die bereits vor Arbeitsbeginn vorhandene Änderung an
 ## Testergebnis
 
 - JavaScript-Syntaxcheck: bestanden.
-- Dashboard-Suite: **134 bestanden, 6 übersprungen**, 0 fehlgeschlagen
-  (44,17 s).
-- `git diff --check`: bestanden; lediglich bestehende LF/CRLF-Hinweise.
+- Dashboard-Suite: **135 bestanden, 6 übersprungen**, 0 fehlgeschlagen
+  (46,73 s).
+- `git diff --check`: bestanden; nur Hinweise zur vorhandenen
+  LF/CRLF-Konvertierung.
 
 ## Bekannte Einschränkungen
 
-- Die sechs übersprungenen Tests sind optionale Browser-/Playwright-Tests;
-  gemäß Sicherheitsvorgabe wurde keine Browser-Automation gestartet.
-- Die neue Checkliste wird im geöffneten Vorgang angezeigt. Andere
-  Dashboard-Listen wurden entsprechend der Abgrenzung des Arbeitspakets nicht
-  umfassend überarbeitet.
+- Die sechs übersprungenen Tests sind optionale Browser-/Playwright-Tests.
+- Die neue Regressionprüfung kontrolliert Markup, Zustandslogik und Styling
+  statisch; die bestehende Suite prüft die API-Such- und Filterlogik mit
+  mehreren typischen Datensätzen.
+- Eine reale manuelle Prüfung mit produktiven Vereinsdaten war ausdrücklich
+  nicht Teil der sicheren lokalen Umsetzung.
 
 ## Hinweise für den Review-Agenten
 
-- `_vorgang_completion_requirements()` bleibt die unveränderte fachliche
-  Sperrlogik. `_vorgang_completion_checklist()` bereitet dieselben Zustände nur
-  für die Anzeige auf.
-- Die Tests decken fehlende Klassifikationsfelder, einen fehlenden Beleg,
-  mehrere gleichzeitige Blocker und einen vollständig abschließbaren Vorgang
-  ab.
+- Besonders zu prüfen sind `renderTodoList(loadError)` und
+  `renderTerminList(loadError)`: Bei erfolgreichen Folgeladevorgängen wird die
+  Fehlerklasse wieder entfernt und der passende Leertext neu bestimmt.
+- Die API-Verträge und Requests wurden nicht verändert.
 - Vorhandene Änderungen an `feedback/Review-report.md` gehören nicht zu dieser
   Umsetzung.

@@ -3061,6 +3061,36 @@ const controls = () => ({form: {dataset: {}}, submit: {disabled: false}, status:
         self.assertIn("renderBelegEntityPreview(beleg.beleg_id, \"Zuordnung gespeichert\")", javascript)
         self.assertIn('elements.detailDialogStatus.textContent = "Zuordnung gespeichert"', javascript)
 
+    def test_todo_and_termin_lists_distinguish_empty_filtered_and_error_states(self):
+        root = Path(__file__).parents[1]
+        html = (root / "banking_dashboard/static/index.html").read_text(
+            encoding="utf-8"
+        )
+        javascript = (root / "banking_dashboard/static/app.js").read_text(
+            encoding="utf-8"
+        )
+        styles = (root / "banking_dashboard/static/styles.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertRegex(
+            html,
+            r'id="todo-empty" role="status" aria-live="polite"',
+        )
+        self.assertRegex(
+            html,
+            r'id="termin-empty" role="status" aria-live="polite"',
+        )
+        self.assertIn("Noch keine To-Dos vorhanden.", javascript)
+        self.assertIn("Keine To-Dos entsprechen der aktuellen Suche", javascript)
+        self.assertIn("To-Dos konnten nicht geladen werden", javascript)
+        self.assertIn("Noch keine Termine vorhanden.", javascript)
+        self.assertIn("Keine Termine entsprechen der aktuellen Suche", javascript)
+        self.assertIn("Termine konnten nicht geladen werden", javascript)
+        self.assertIn('elements.todoEmpty.classList.toggle("is-error"', javascript)
+        self.assertIn('elements.terminEmpty.classList.toggle("is-error"', javascript)
+        self.assertIn(".todo-empty.is-error", styles)
+
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
         with closing(connect_database(database_path)) as connection:

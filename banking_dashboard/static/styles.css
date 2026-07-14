@@ -3886,6 +3886,11 @@ th[aria-sort="descending"] .sort-indicator {
   gap: 10px;
 }
 
+.todo-empty.is-error {
+  color: var(--negative);
+  background: var(--negative-bg);
+}
+
 .mail-toolbar {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) auto auto auto auto;
