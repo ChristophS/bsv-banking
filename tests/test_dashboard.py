@@ -555,6 +555,24 @@ class DashboardDataStoreTests(unittest.TestCase):
             ["tx_newer"],
         )
 
+    def test_transactions_can_be_filtered_to_unclassified_rows(self):
+        with closing(connect_database(self.database_path)) as connection:
+            connection.execute(
+                """
+                UPDATE transactions
+                SET sub_category = ''
+                WHERE transaction_id = 'tx_older'
+                """
+            )
+            connection.commit()
+
+        rows = self.store.list_transactions(unclassified_only=True)
+
+        self.assertEqual(
+            [row["transaktions_id"] for row in rows],
+            ["tx_older"],
+        )
+
     def test_transactions_can_hide_only_completed_vorgang_links(self):
         connection = connect_database(self.database_path)
         try:
@@ -2406,6 +2424,7 @@ class DashboardDataStoreTests(unittest.TestCase):
 
         self.assertEqual(2, overview["counts"]["open_vorgaenge"])
         self.assertEqual(1, overview["counts"]["unread_mails"])
+        self.assertEqual(0, overview["counts"]["unclassified_transactions"])
         self.assertNotIn("unassigned_mails", overview["counts"])
         self.assertNotIn(
             "unassigned_mails",
@@ -2429,6 +2448,16 @@ class DashboardDataStoreTests(unittest.TestCase):
             overview["previews"]["upcoming_termine"][0]["title"],
         )
         self.assertLessEqual(len(overview["previews"]["open_vorgaenge"]), 5)
+        self.assertEqual(
+            list(range(1, 8)),
+            [card["priority"] for card in overview["cards"]],
+        )
+        self.assertEqual(
+            "unclassified_transactions",
+            overview["cards"][0]["key"],
+        )
+        self.assertEqual("empty", overview["cards"][0]["state"])
+        self.assertEqual("open", overview["cards"][1]["state"])
         document_card = next(
             card
             for card in overview["cards"]
@@ -2436,6 +2465,34 @@ class DashboardDataStoreTests(unittest.TestCase):
         )
         self.assertEqual("documents", document_card["entity"])
         self.assertEqual(todo["todo_id"], self.store.list_todos()[0]["todo_id"])
+
+    def test_overview_counts_incomplete_transactions_as_unclassified(self):
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            cursor = connection.execute(
+                """
+                UPDATE transaction_splits
+                SET sub_category = ''
+                WHERE transaction_id = 'tx_newer'
+                """
+            )
+            if cursor.rowcount == 0:
+                connection.execute(
+                    """
+                    UPDATE transactions
+                    SET sub_category = ''
+                    WHERE transaction_id = 'tx_newer'
+                    """
+                )
+            connection.commit()
+
+        overview = self.store.overview_counts()
+
+        self.assertEqual(1, overview["counts"]["unclassified_transactions"])
+        transaction_card = overview["cards"][0]
+        self.assertEqual("unclassified_transactions", transaction_card["key"])
+        self.assertEqual(1, transaction_card["count"])
+        self.assertEqual("open", transaction_card["state"])
+        self.assertEqual("1 offen", transaction_card["state_label"])
 
     def test_overview_counts_only_relevant_open_upcoming_termine(self):
         self.store.create_termin(
@@ -3146,6 +3203,26 @@ class DashboardHTTPTests(unittest.TestCase):
                 "has_completed_vorgaenge",
                 payload["transactions"][0],
             )
+
+        with closing(connect_database(self.server.data_store.database_path)) as connection:
+            connection.execute(
+                """
+                UPDATE transactions
+                SET sphere = ''
+                WHERE transaction_id = 'tx_older'
+                """
+            )
+            connection.commit()
+        with urlopen(
+            self.base_url + "/api/transactions?unclassified_only=true",
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+        self.assertTrue(payload["unclassified_only"])
+        self.assertEqual(
+            [item["transaktions_id"] for item in payload["transactions"]],
+            ["tx_older"],
+        )
 
         with urlopen(
             self.base_url + "/api/transactions/tx_newer",
@@ -4867,6 +4944,11 @@ class DashboardHTTPTests(unittest.TestCase):
         beleg = payload["belege"][0]
         self.assertEqual("beleg_1", beleg["beleg_id"])
         self.assertEqual(["vorgang_tx_newer"], beleg["vorgangs_ids"])
+        with urlopen(
+            self.base_url + "/api/belege?unassigned_only=true",
+            timeout=5,
+        ) as response:
+            self.assertEqual(0, json.load(response)["count"])
 
         unlink_request = Request(
             self.base_url
@@ -4878,6 +4960,13 @@ class DashboardHTTPTests(unittest.TestCase):
                 [],
                 json.load(response)["beleg"]["vorgangs_ids"],
             )
+        with urlopen(
+            self.base_url + "/api/belege?unassigned_only=true",
+            timeout=5,
+        ) as response:
+            filtered = json.load(response)
+        self.assertEqual(1, filtered["count"])
+        self.assertEqual("beleg_1", filtered["belege"][0]["beleg_id"])
 
         link_request = Request(
             self.base_url + "/api/belege/beleg_1/vorgaenge",
@@ -5688,16 +5777,20 @@ class DashboardTodoBrowserTests(unittest.TestCase):
 
                     card.click()
 
-                    expect(page.locator("#vorgaenge-tab")).to_have_class(
-                        re.compile("is-active")
+                    expect(page.locator("#transaction-dialog")).to_be_visible()
+                    expect(page.locator("#detail-title")).to_have_text(
+                        "nicht-zugewiesen.pdf"
                     )
-                    expect(page.locator("#vorgaenge-panel")).to_be_visible()
-                    expect(page.locator("#transactions-panel")).to_be_hidden()
-                    expect(page.locator("#mail-panel")).to_be_hidden()
-                    expect(page.locator("#vorgang-search")).to_have_value("")
                     expect(
-                        page.locator("#vorgang-hide-completed")
-                    ).not_to_be_checked()
+                        page.locator(
+                            "[data-suggestion-field='beleg_ids'] input[type='checkbox']:checked"
+                        )
+                    ).to_have_count(1)
+                    expect(
+                        page.locator(
+                            "[data-suggestion-field='beleg_ids'] .suggestion-row"
+                        ).first
+                    ).to_contain_text("nicht-zugewiesen.pdf")
                     browser.close()
             finally:
                 server.shutdown()

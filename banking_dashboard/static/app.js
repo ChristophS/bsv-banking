@@ -7,6 +7,7 @@ const state = {
   dateFrom: "",
   dateTo: "",
   hideCompletedVorgaengeTransactions: false,
+  unclassifiedTransactionsOnly: false,
   linkCandidatesLoaded: false,
   linkCandidates: null,
   transactionRequest: null,
@@ -326,6 +327,10 @@ elements.tabs.forEach((tab) => {
     if (tab.dataset.tab === "termine") {
       setTerminUnassignedUpcoming(false);
       state.termineLoaded = false;
+    }
+    if (tab.dataset.tab === "transactions") {
+      state.unclassifiedTransactionsOnly = false;
+      loadTransactions();
     }
     activateTab(tab.dataset.tab);
   });
@@ -662,14 +667,21 @@ function renderOverview() {
     button.type = "button";
     button.dataset.overviewKey = card.key || "";
     button.dataset.overviewEntity = card.entity || "vorgaenge";
-    button.setAttribute("aria-label", `${card.label}: ${card.count || 0}`);
+    const isOpen = card.state === "open" && Number(card.count || 0) > 0;
+    button.classList.toggle("is-empty", !isOpen);
+    button.setAttribute(
+      "aria-label",
+      `Priorität ${card.priority}: ${card.label}, ${card.state_label}`,
+    );
     button.append(
-      mailElement("span", "overview-card-label", card.label),
       mailElement(
-        "strong",
-        "",
-        integerFormatter.format(Number(card.count || 0)),
+        "span",
+        "overview-card-priority",
+        `${card.priority}. ${card.priority_label}`,
       ),
+      mailElement("strong", "overview-card-label", card.label),
+      mailElement("span", "overview-card-reason", card.reason || ""),
+      mailElement("span", "overview-card-state", card.state_label),
     );
     elements.overviewCards.append(button);
   }
@@ -745,6 +757,11 @@ function renderDashboardPreviewList(target, items, entity, mapItem) {
 
 const overviewCardRoutes = {
   byKey: {
+    unclassified_transactions: () => {
+      state.unclassifiedTransactionsOnly = true;
+      activateTab("transactions");
+      loadTransactions();
+    },
     open_vorgaenge: () => {
       setVorgangHideCompleted(true);
       state.vorgaengeLoaded = false;
@@ -756,6 +773,7 @@ const overviewCardRoutes = {
       activateTab("todos");
     },
     unassigned_transactions: () => {
+      state.unclassifiedTransactionsOnly = false;
       setTransactionHideCompletedVorgaenge(true);
       activateTab("transactions");
       loadTransactions();
@@ -773,10 +791,7 @@ const overviewCardRoutes = {
       state.termineLoaded = false;
       activateTab("termine");
     },
-    unassigned_documents: () => {
-      state.vorgaengeLoaded = false;
-      activateTab("vorgaenge");
-    },
+    unassigned_documents: openFirstUnassignedDocument,
   },
   byEntity: {
     documents: () => {
@@ -797,6 +812,7 @@ const overviewCardRoutes = {
       activateTab("todos");
     },
     transactions: () => {
+      state.unclassifiedTransactionsOnly = false;
       activateTab("transactions");
       loadTransactions();
     },
@@ -810,6 +826,26 @@ const overviewCardRoutes = {
     activateTab("vorgaenge");
   },
 };
+
+async function openFirstUnassignedDocument() {
+  try {
+    const response = await fetch("/api/belege?unassigned_only=true");
+    const payload = await readResponse(response);
+    const beleg = payload.belege?.[0];
+    if (!beleg) {
+      await loadOverview();
+      return;
+    }
+    await openVorgangCreateDialog({
+      type: "beleg",
+      id: beleg.beleg_id,
+      title: beleg.dateiname || beleg.beleg_id,
+      description: "Nicht zugewiesenes Dokument einem Vorgang zuordnen.",
+    });
+  } catch (error) {
+    showError(error.message);
+  }
+}
 
 function navigateFromOverviewCard(key, entity) {
   const route =
@@ -6678,6 +6714,7 @@ async function loadTransactions() {
     hide_completed_vorgaenge: String(
       state.hideCompletedVorgaengeTransactions,
     ),
+    unclassified_only: String(state.unclassifiedTransactionsOnly),
   });
   try {
     const response = await fetch(`/api/transactions?${parameters}`, {
@@ -6687,6 +6724,7 @@ async function loadTransactions() {
     state.hideCompletedVorgaengeTransactions = Boolean(
       payload.hide_completed_vorgaenge,
     );
+    state.unclassifiedTransactionsOnly = Boolean(payload.unclassified_only);
     elements.transactionHideCompletedVorgaenge.checked =
       state.hideCompletedVorgaengeTransactions;
     renderTransactions(payload.transactions);
