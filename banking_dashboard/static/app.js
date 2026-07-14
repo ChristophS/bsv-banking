@@ -2546,9 +2546,8 @@ function renderMailVorgangSection(detail) {
   form.append(controls, results);
   renderMailVorgangCandidateResults(form);
   const formActions = mailElement("div", "mail-vorgang-form-actions");
-  const submit = mailElement("button", "primary-action", "Zuordnen");
+  const submit = mailElement("button", "primary-action", "Zuordnung bestätigen");
   submit.type = "submit";
-  submit.disabled = true;
   formActions.append(submit, mailElement("span", "save-state"));
   form.append(formActions);
   section.append(form);
@@ -2612,7 +2611,7 @@ function setMailVorgangSubmitState(form) {
   if (!submit) {
     return;
   }
-  submit.disabled = !form.querySelector('input[name="vorgangs_id"]:checked');
+  submit.disabled = form.dataset.assignmentSaving === "true";
 }
 
 async function loadMailVorgangCandidates() {
@@ -3663,12 +3662,16 @@ async function submitMailVorgangLink(event) {
   const status = form.querySelector(".save-state");
   if (!vorgangsId) {
     status.className = "save-state is-error";
-    status.textContent = "Bitte Vorgang auswählen";
+    status.textContent = "Bitte zuerst einen Vorgang auswählen.";
     return;
   }
+  if (form.dataset.assignmentSaving === "true") {
+    return;
+  }
+  form.dataset.assignmentSaving = "true";
   submit.disabled = true;
   status.className = "save-state is-saving";
-  status.textContent = "Zuordnung läuft";
+  status.textContent = "Zuordnung wird gespeichert";
   try {
     const response = await fetch(
       `/api/mail/${encodeURIComponent(form.dataset.linkMailVorgang)}/vorgaenge`,
@@ -3682,14 +3685,14 @@ async function submitMailVorgangLink(event) {
     updateSelectedMailVorgaenge(payload);
     state.vorgaengeLoaded = false;
     status.className = "save-state is-saved";
-    status.textContent = "Zugeordnet";
+    status.textContent = "Zuordnung gespeichert";
     await loadOverview();
     renderMailDetail();
   } catch (error) {
+    delete form.dataset.assignmentSaving;
     submit.disabled = false;
     status.className = "save-state is-error";
-    status.textContent = "Zuordnung fehlgeschlagen";
-    showError(error.message);
+    status.textContent = `Zuordnung fehlgeschlagen: ${error.message}`;
   }
 }
 
@@ -7555,7 +7558,7 @@ function renderTodoEntityForm(todo, vorgaenge) {
   completedInput.checked = Boolean(todo.completed);
   completed.append(completedInput, mailElement("span", "", "Abgeschlossen"));
   form.append(completed, entityVorgangSelect(vorgaenge, todo.vorgangs_ids || []));
-  const actions = entityFormActions("To-Do speichern");
+  const actions = entityFormActions("Änderungen und Zuordnung bestätigen");
   form.append(actions.container);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -7579,8 +7582,7 @@ function renderTodoEntityForm(todo, vorgaenge) {
     } catch (error) {
       actions.submit.disabled = false;
       actions.status.className = "save-state is-error";
-      actions.status.textContent = "Speichern fehlgeschlagen";
-      showError(error.message);
+      actions.status.textContent = `Speichern fehlgeschlagen: ${error.message}`;
     }
   });
   return form;
@@ -7632,7 +7634,7 @@ function renderTerminEntityForm(termin, vorgaenge) {
     }, termin.status || "geplant"),
     entityVorgangSelect(vorgaenge, termin.vorgangs_ids || []),
   );
-  const actions = entityFormActions("Termin speichern");
+  const actions = entityFormActions("Änderungen und Zuordnung bestätigen");
   form.append(actions.container);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -7665,16 +7667,21 @@ function renderTerminEntityForm(termin, vorgaenge) {
     } catch (error) {
       actions.submit.disabled = false;
       actions.status.className = "save-state is-error";
-      actions.status.textContent = "Speichern fehlgeschlagen";
-      showError(error.message);
+      actions.status.textContent = `Speichern fehlgeschlagen: ${error.message}`;
     }
   });
   return form;
 }
 
 async function renderBelegEntityPreview(belegId) {
-  const response = await fetch(`/api/belege/${encodeURIComponent(belegId)}`);
-  const payload = await readResponse(response);
+  const [response, vorgangResponse] = await Promise.all([
+    fetch(`/api/belege/${encodeURIComponent(belegId)}`),
+    fetch("/api/vorgaenge"),
+  ]);
+  const [payload, vorgangPayload] = await Promise.all([
+    readResponse(response),
+    readResponse(vorgangResponse),
+  ]);
   const beleg = payload.beleg;
   elements.entityPreviewTitle.textContent = beleg.filename || beleg.dateiname || beleg.beleg_id;
   elements.entityPreviewSubtitle.textContent = [
@@ -7696,6 +7703,61 @@ async function renderBelegEntityPreview(belegId) {
     detailField("Vorgangs-IDs", joinValues(beleg.vorgangs_ids), true, true),
     belegActionField(beleg),
   ], elements.entityPreviewContent);
+  elements.entityPreviewContent.append(createStandaloneVorgangAssignment({
+    entityLabel: "Dokument",
+    entityId: beleg.beleg_id,
+    endpoint: `/api/belege/${encodeURIComponent(beleg.beleg_id)}/vorgaenge`,
+    vorgaenge: (vorgangPayload.vorgaenge || []).filter(
+      (vorgang) => !(beleg.vorgangs_ids || []).includes(vorgang.vorgangs_id),
+    ),
+    selectedIds: beleg.vorgangs_ids || [],
+    onSaved: () => renderBelegEntityPreview(beleg.beleg_id),
+  }));
+}
+
+function createStandaloneVorgangAssignment({
+  entityLabel, entityId, endpoint, vorgaenge, selectedIds, onSaved,
+}) {
+  const section = mailElement("section", "detail-section assignment-panel");
+  section.dataset.assignmentEntity = entityId;
+  section.append(mailElement("h3", "", `${entityLabel} einem Vorgang zuordnen`));
+  const form = mailElement("form", "mail-vorgang-form");
+  form.append(entityVorgangSelect(vorgaenge, selectedIds, true));
+  const actions = entityFormActions("Zuordnung bestätigen");
+  form.append(actions.container);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const selected = form.elements.vorgangs_ids.value;
+    if (!selected) {
+      actions.status.className = "save-state is-error";
+      actions.status.textContent = "Bitte zuerst einen Vorgang auswählen.";
+      return;
+    }
+    if (form.dataset.assignmentSaving === "true") return;
+    form.dataset.assignmentSaving = "true";
+    actions.submit.disabled = true;
+    actions.status.className = "save-state is-saving";
+    actions.status.textContent = "Zuordnung wird gespeichert";
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({vorgangs_id: selected}),
+      });
+      await readResponse(response);
+      state.vorgaengeLoaded = false;
+      actions.status.className = "save-state is-saved";
+      actions.status.textContent = "Zuordnung gespeichert";
+      await Promise.all([loadOverview(), onSaved()]);
+    } catch (error) {
+      delete form.dataset.assignmentSaving;
+      actions.submit.disabled = false;
+      actions.status.className = "save-state is-error";
+      actions.status.textContent = `Zuordnung fehlgeschlagen: ${error.message}`;
+    }
+  });
+  section.append(form);
+  return section;
 }
 
 function belegActionField(beleg) {
@@ -7727,23 +7789,40 @@ function originalDocumentLink(belegId, enabled = true) {
   return link;
 }
 
-function entityVorgangSelect(vorgaenge, selectedIds = []) {
-  const label = mailElement("label", "is-wide");
-  label.append(mailElement("span", "detail-label", "Verknüpfte Vorgänge"));
+function entityVorgangSelect(vorgaenge, selectedIds = [], single = false) {
+  const container = mailElement("div", "is-wide assignment-picker");
+  const label = mailElement("label", "assignment-search");
+  label.append(mailElement("span", "detail-label", "Vorgänge suchen und auswählen"));
+  const search = document.createElement("input");
+  search.type = "search";
+  search.placeholder = "Titel, Typ oder Status durchsuchen";
+  label.append(search);
   const select = document.createElement("select");
   select.name = "vorgangs_ids";
-  select.multiple = true;
+  select.multiple = !single;
   select.size = 7;
   const selected = new Set(selectedIds || []);
   for (const vorgang of vorgaenge) {
     const option = document.createElement("option");
     option.value = vorgang.vorgangs_id;
     option.textContent = vorgangOptionLabel(vorgang);
+    option.dataset.searchText = option.textContent.toLocaleLowerCase("de-DE");
     option.selected = selected.has(vorgang.vorgangs_id);
     select.append(option);
   }
-  label.append(select);
-  return label;
+  const empty = mailElement("p", "assignment-empty-hint");
+  if (!vorgaenge.length) empty.textContent = "Keine Vorgänge verfügbar.";
+  search.addEventListener("input", () => {
+    const query = search.value.trim().toLocaleLowerCase("de-DE");
+    let visible = 0;
+    for (const option of select.options) {
+      option.hidden = Boolean(query) && !option.dataset.searchText.includes(query);
+      if (!option.hidden) visible += 1;
+    }
+    empty.textContent = visible ? "" : "Keine Vorgänge zur Suche gefunden.";
+  });
+  container.append(label, select, empty);
+  return container;
 }
 
 function entityFormActions(label) {
@@ -9184,28 +9263,34 @@ function appendTransactionVorgangLinkSection(
   }
   search.addEventListener("input", () => {
     const query = search.value.trim().toLocaleLowerCase("de-DE");
+    let visible = 0;
     for (const row of list.querySelectorAll(".suggestion-row")) {
       row.hidden = Boolean(query) && !row.dataset.searchText.includes(query);
+      if (!row.hidden) visible += 1;
     }
+    queryEmpty.textContent = visible ? "" : "Keine Vorgänge zur Suche gefunden.";
   });
+  const queryEmpty = mailElement("p", "suggestion-empty");
   const submit = mailElement(
     "button",
     "primary-action",
-    "Zuordnen",
+    "Zuordnung bestätigen",
   );
   submit.type = "submit";
   submit.disabled = !candidates.length;
-  form.addEventListener("change", () => {
-    submit.disabled = !form.querySelector('input[name="vorgangs_id"]:checked');
-  });
+  const status = mailElement("span", "save-state");
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const selected = form.querySelector('input[name="vorgangs_id"]:checked');
     if (!selected) {
+      status.className = "save-state is-error";
+      status.textContent = "Bitte zuerst einen Vorgang auswählen.";
       return;
     }
+    if (form.dataset.assignmentSaving === "true") return;
+    form.dataset.assignmentSaving = "true";
     submit.disabled = true;
-    submit.textContent = "Wird zugeordnet";
+    submit.textContent = "Zuordnung wird gespeichert";
     try {
       const response = await fetch(
         `/api/transactions/${encodeURIComponent(
@@ -9227,12 +9312,14 @@ function appendTransactionVorgangLinkSection(
         ),
       ]);
     } catch (error) {
-      showError(error.message);
+      delete form.dataset.assignmentSaving;
+      status.className = "save-state is-error";
+      status.textContent = `Zuordnung fehlgeschlagen: ${error.message}`;
       submit.disabled = false;
-      submit.textContent = "Zuordnen";
+      submit.textContent = "Zuordnung bestätigen";
     }
   });
-  form.append(searchLabel, list, submit);
+  form.append(searchLabel, list, queryEmpty, submit, status);
   section.append(form);
   target.append(section);
 }

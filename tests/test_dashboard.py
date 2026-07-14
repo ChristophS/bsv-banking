@@ -2918,6 +2918,20 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn("balance_minor: Number(rawAmount)", javascript)
         self.assertNotIn("delete-balance-correction", html)
 
+    def test_assignment_dialogs_share_confirmation_and_feedback_states(self):
+        with urlopen(self.base_url + "/static/app.js", timeout=5) as response:
+            javascript = response.read().decode("utf-8")
+
+        self.assertIn("function createStandaloneVorgangAssignment", javascript)
+        self.assertIn("Vorgänge suchen und auswählen", javascript)
+        self.assertIn("Keine Vorgänge zur Suche gefunden.", javascript)
+        self.assertIn("Bitte zuerst einen Vorgang auswählen.", javascript)
+        self.assertIn("Zuordnung wird gespeichert", javascript)
+        self.assertIn("Zuordnung gespeichert", javascript)
+        self.assertIn("Zuordnung fehlgeschlagen:", javascript)
+        self.assertIn('form.dataset.assignmentSaving === "true"', javascript)
+        self.assertIn("/api/belege/${encodeURIComponent(beleg.beleg_id)}/vorgaenge", javascript)
+
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
         with closing(connect_database(database_path)) as connection:
