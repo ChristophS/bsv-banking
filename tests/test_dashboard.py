@@ -3236,6 +3236,98 @@ assertListState(
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_todo_load_error_invalidates_count_and_previous_filter_results(self):
+        javascript = (
+            Path(__file__).parents[1] / "banking_dashboard/static/app.js"
+        ).read_text(encoding="utf-8")
+
+        def function_source(name):
+            start = javascript.index(f"function {name}")
+            if javascript[max(0, start - 6):start] == "async ":
+                start -= 6
+            opening_brace = javascript.index("{", javascript.index(")", start))
+            depth = 0
+            for index in range(opening_brace, len(javascript)):
+                if javascript[index] == "{":
+                    depth += 1
+                elif javascript[index] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        return javascript[start:index + 1]
+            self.fail(f"JavaScript-Funktion {name} ist nicht vollständig.")
+
+        node_test = "\n".join([
+            function_source("loadTodos"),
+            function_source("renderTodoList"),
+            r"""
+const assert = require("node:assert/strict");
+function element() {
+  const classes = new Set();
+  return {
+    hidden: false, textContent: "", children: [],
+    replaceChildren(...children) { this.children = children; },
+    classList: {
+      toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); },
+      contains(name) { return classes.has(name); },
+    },
+  };
+}
+const elements = {
+  todoLoading: element(), todoEmpty: element(), todoList: element(),
+  todoCount: element(), todoCountLabel: element(),
+};
+const state = {
+  todos: [{todo_id: "alt", title: "Altes Filterresultat", completed: false}],
+  todoSearch: "offen", todoHideCompleted: false,
+  todoVorgaenge: [{}], editingTodoId: null, todosLoaded: true,
+};
+const integerFormatter = new Intl.NumberFormat("de-DE");
+let fail = true;
+async function fetch() {
+  if (fail) throw new Error("Netzwerkfehler");
+  return {payload: {todos: [], count: 0}};
+}
+async function readResponse(response) { return response.payload; }
+const shownErrors = [];
+function showError(message) { shownErrors.push(message); }
+function mailElement() { throw new Error("Bei leeren Resultaten nicht erwartet"); }
+
+(async () => {
+  elements.todoCount.textContent = "1";
+  elements.todoCountLabel.textContent = "To-Do";
+  elements.todoList.children = [{dataset: {todoId: "alt"}}];
+  await loadTodos();
+  assert.deepEqual(state.todos, []);
+  assert.deepEqual(elements.todoList.children, []);
+  assert.equal(elements.todoCount.textContent, "–");
+  assert.equal(elements.todoCountLabel.textContent, "Nicht verfügbar");
+  assert.equal(elements.todoEmpty.classList.contains("is-error"), true);
+  assert.match(elements.todoEmpty.textContent, /konnten nicht geladen werden/);
+
+  fail = false;
+  await loadTodos();
+  assert.equal(elements.todoCount.textContent, "0");
+  assert.equal(elements.todoCountLabel.textContent, "To-Dos");
+  assert.equal(elements.todoEmpty.classList.contains("is-error"), false);
+  assert.match(elements.todoEmpty.textContent, /Keine To-Dos entsprechen/);
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+""",
+        ])
+        result = subprocess.run(
+            ["node", "-e", node_test],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        for list_name in ("transaction", "vorgang", "todo", "termin"):
+            self.assertIn(
+                f'elements.{list_name}Count.textContent = "–";', javascript
+            )
+        self.assertIn('elements.budgetCount.textContent = loadError', javascript)
+
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
         with closing(connect_database(database_path)) as connection:
