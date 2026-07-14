@@ -3337,6 +3337,25 @@ th[aria-sort="descending"] .sort-indicator {
   line-height: 1.4;
 }
 
+.assignment-picker {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.assignment-search {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.assignment-search input,
+.assignment-picker select {
+  width: 100%;
+}
+
+.assignment-empty-hint:empty {
+  display: none;
+}
+
 .mail-document-assignment-row select {
   min-width: 0;
   width: 100%;

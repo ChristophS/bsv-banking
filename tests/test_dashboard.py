@@ -1,6 +1,7 @@
 import json
 import re
 import sqlite3
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -2917,6 +2918,98 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn('fetch("/api/balance-corrections"', javascript)
         self.assertIn("balance_minor: Number(rawAmount)", javascript)
         self.assertNotIn("delete-balance-correction", html)
+
+    def test_assignment_dialog_submit_flow_handles_validation_success_and_error(self):
+        javascript_path = Path(__file__).parents[1] / "banking_dashboard/static/app.js"
+        javascript = javascript_path.read_text(encoding="utf-8")
+
+        def function_source(name):
+            start = javascript.index(f"function {name}")
+            if javascript[max(0, start - 6):start] == "async ":
+                start -= 6
+            opening_brace = javascript.index("{", javascript.index(")", start))
+            depth = 0
+            for index in range(opening_brace, len(javascript)):
+                if javascript[index] == "{":
+                    depth += 1
+                elif javascript[index] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        return javascript[start:index + 1]
+            self.fail(f"JavaScript-Funktion {name} ist nicht vollständig.")
+
+        node_test = "\n".join([
+            function_source("setAssignmentStatus"),
+            function_source("submitVorgangAssignment"),
+            r"""
+const assert = require("node:assert/strict");
+const controls = () => ({form: {dataset: {}}, submit: {disabled: false}, status: {}});
+
+(async () => {
+  const missing = controls();
+  let requests = 0;
+  const missingResult = await submitVorgangAssignment({
+    ...missing, selectedId: "", request: async () => { requests += 1; }, onSaved: async () => {},
+  });
+  assert.equal(missingResult, false);
+  assert.equal(requests, 0);
+  assert.equal(missing.status.textContent, "Bitte zuerst einen Vorgang auswählen.");
+  assert.equal(missing.status.className, "save-state is-error");
+
+  const success = controls();
+  let releaseRequest;
+  const pendingRequest = new Promise((resolve) => { releaseRequest = resolve; });
+  let saved = 0;
+  const first = submitVorgangAssignment({
+    ...success, selectedId: "vorgang-1",
+    request: async () => { requests += 1; await pendingRequest; },
+    onSaved: async () => { saved += 1; },
+  });
+  const duplicate = await submitVorgangAssignment({
+    ...success, selectedId: "vorgang-1",
+    request: async () => { requests += 1; }, onSaved: async () => { saved += 1; },
+  });
+  assert.equal(duplicate, false);
+  assert.equal(requests, 1);
+  assert.equal(success.submit.disabled, true);
+  assert.equal(success.status.textContent, "Zuordnung wird gespeichert");
+  releaseRequest();
+  assert.equal(await first, true);
+  assert.equal(saved, 1);
+  assert.equal(success.status.textContent, "Zuordnung gespeichert");
+  assert.equal(success.status.className, "save-state is-saved");
+
+  const failed = controls();
+  const failedResult = await submitVorgangAssignment({
+    ...failed, selectedId: "vorgang-2",
+    request: async () => { throw new Error("Vorgang ist abgeschlossen"); },
+    onSaved: async () => { throw new Error("darf nicht laufen"); },
+  });
+  assert.equal(failedResult, false);
+  assert.equal(failed.form.dataset.assignmentSaving, undefined);
+  assert.equal(failed.submit.disabled, false);
+  assert.equal(failed.status.className, "save-state is-error");
+  assert.equal(failed.status.textContent, "Zuordnung fehlgeschlagen: Vorgang ist abgeschlossen");
+})().catch((error) => { console.error(error); process.exit(1); });
+""",
+        ])
+        result = subprocess.run(
+            ["node", "-e", node_test],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        self.assertGreaterEqual(javascript.count("submitVorgangAssignment({"), 4)
+        for form_name in ("renderTodoEntityForm", "renderTerminEntityForm"):
+            form_source = function_source(form_name)
+            self.assertIn("await submitVorgangAssignment({", form_source)
+            self.assertIn('selectedId: selectedIds[0] || ""', form_source)
+            self.assertNotIn("actions.submit.disabled = true", form_source)
+        self.assertIn("renderBelegEntityPreview(beleg.beleg_id, \"Zuordnung gespeichert\")", javascript)
+        self.assertIn('elements.detailDialogStatus.textContent = "Zuordnung gespeichert"', javascript)
 
     def test_donation_certificate_api_creates_cent_exact_linked_html(self):
         database_path = self.server.data_store.database_path
