@@ -12,6 +12,36 @@ Die Prioritäten bedeuten:
 - **P1 – danach:** ein häufiger Ablauf braucht vermeidbare Wechsel oder sein Zustand beziehungsweise nächster Schritt ist unklar.
 - **P2 – später:** merkliche Verbesserung, aber kein wesentlicher Blocker im täglichen Kernablauf.
 
+## Zustandsmatrix für datenintensive Dashboard-Listen
+
+Die Matrix gilt listenübergreifend für Vorgänge, Transaktionen, Mails, To-Dos,
+Termine und Dokumentbestände, soweit der jeweilige Bereich eine Liste anzeigt.
+Sie beschreibt Anzeigezustände, keine neuen fachlichen Status oder
+Datenstrukturen. Fachliche Zustände einzelner Einträge, etwa „abgeschlossen“,
+„ungelesen“ oder „klassifiziert“, bleiben davon unberührt.
+
+| Zustandsbegriff | Bedeutung | Nutzerorientierung oder nächste Handlung |
+|---|---|---|
+| **Geladener Bestand** | Das Laden war erfolgreich und für den aktuellen Listen- und Filterkontext liegen Einträge vor. Die Anzeige entspricht dem derzeit gewählten Ausschnitt, nicht zwingend dem gesamten fachlichen Bestand. | Einträge sichten oder bearbeiten. Eine aktive Suche oder Filterung und deren Rücksetzmöglichkeit bleiben erkennbar. |
+| **Leerer Bestand** | Das Laden war erfolgreich, es ist jedoch auch ohne einschränkende Suche oder Filterung kein Eintrag im betreffenden Bestand vorhanden. Dies ist ein gültiges Ergebnis und kein Fehler. | Kurz erläutern, wofür die Liste vorgesehen ist. Nur wenn im jeweiligen Arbeitsablauf passend, zur Anlage beziehungsweise zum Import des ersten Eintrags oder zu einem anderen bestehenden Einstieg führen. |
+| **Keine Such- oder Filtertreffer** | Das Laden war erfolgreich und eine aktive Suche oder Filterung liefert keinen Eintrag. Daraus folgt nicht, dass der zugrunde liegende Bestand leer ist. | Aktive Such- und Filterkriterien benennen und das Ändern oder Zurücksetzen anbieten. Keine Aufforderung zur Neuanlage allein aus diesem Zustand ableiten. |
+| **Ladefehler** | Der Bestand konnte nicht verlässlich geladen werden. Über vorhandene oder fehlende Einträge ist deshalb keine Aussage möglich; zuvor angezeigte Ergebnisse gelten nicht als aktuelles Ergebnis. | Fehler verständlich benennen und erneutes Laden ermöglichen. Suche oder Filter dürfen nicht als Ursache eines vermeintlich leeren Ergebnisses dargestellt werden. |
+
+Für alle Listen gelten dieselben gemeinsamen Merkmale:
+
+- Eine Ergebniszahl oder Leeranzeige bezieht sich immer auf den sichtbaren
+  Listen- und Filterkontext.
+- **Leerer Bestand** und **keine Such- oder Filtertreffer** setzen ein
+  erfolgreiches Laden voraus; **Ladefehler** bedeutet dagegen, dass kein
+  verlässliches Ergebnis vorliegt.
+- Eine aktive Suche oder Filterung bleibt beim geladenen Bestand und bei null
+  Treffern sichtbar und zurücksetzbar.
+- Während des initialen Ladens darf noch keiner der vier Ergebniszustände
+  behauptet werden. Erst nach erfolgreichem Laden oder einem Fehler wird der
+  passende Zustand bestimmt.
+- Ein erneuter Ladeversuch ersetzt den Fehlerzustand erst, wenn wieder ein
+  verlässliches Ergebnis vorliegt.
+
 ## Heutiger Arbeitsablauf
 
 ### 1. Sichten und priorisieren
