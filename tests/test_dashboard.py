@@ -4107,6 +4107,104 @@ class DashboardHTTPTests(unittest.TestCase):
             period = json.load(response)
         self.assertTrue(period["available"])
 
+    def test_termin_api_rejects_invalid_data_without_partial_changes(self):
+        def request_error(method, path, payload=None):
+            request = Request(
+                self.base_url + path,
+                data=(
+                    json.dumps(payload).encode("utf-8")
+                    if payload is not None
+                    else None
+                ),
+                headers={"Content-Type": "application/json"},
+                method=method,
+            )
+            with self.assertRaises(HTTPError) as raised:
+                urlopen(request, timeout=5)
+            return raised.exception.code, json.load(raised.exception)
+
+        invalid_creations = (
+            ({"starts_at": "2026-07-05"}, "Titel"),
+            ({"title": "Ohne Beginn"}, "Beginn"),
+            (
+                {"title": "Defektes Datum", "starts_at": "2026-07-05xyz"},
+                "ISO-Datum",
+            ),
+            (
+                {
+                    "title": "Falscher Status",
+                    "starts_at": "2026-07-05",
+                    "status": "verschoben",
+                },
+                "Terminstatus",
+            ),
+            (
+                {
+                    "title": "Leerer Status",
+                    "starts_at": "2026-07-05",
+                    "status": "",
+                },
+                "Terminstatus",
+            ),
+            (
+                {
+                    "title": "Unbekannter Vorgang",
+                    "starts_at": "2026-07-05",
+                    "vorgangs_ids": ["vorgang_unbekannt"],
+                },
+                "Vorgang wurde nicht gefunden",
+            ),
+        )
+        for payload, expected_error in invalid_creations:
+            with self.subTest(payload=payload):
+                status, response = request_error("POST", "/api/termine", payload)
+                self.assertIn(status, (400, 404))
+                self.assertIn(expected_error, response["error"])
+                self.assertEqual([], self.server.data_store.list_termine())
+
+        create_request = Request(
+            self.base_url + "/api/termine",
+            data=json.dumps(
+                {
+                    "title": "Unveraenderter Termin",
+                    "starts_at": "2026-07-05T18:00:00+02:00",
+                    "ends_at": "2026-07-05T19:00:00+02:00",
+                    "vorgangs_ids": ["vorgang_tx_newer"],
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(create_request, timeout=5) as response:
+            termin = json.load(response)["termin"]
+
+        invalid_updates = (
+            ({"ends_at": "2026-07-05T17:00:00+02:00"}, 400),
+            ({"status": "unbekannt"}, 400),
+            ({"vorgangs_ids": ["vorgang_unbekannt"]}, 404),
+        )
+        for payload, expected_status in invalid_updates:
+            with self.subTest(payload=payload):
+                status, response = request_error(
+                    "PATCH", f"/api/termine/{termin['termin_id']}", payload
+                )
+                self.assertEqual(expected_status, status)
+                self.assertIn("error", response)
+                persisted = self.server.data_store.termin_detail(
+                    termin["termin_id"]
+                )
+                self.assertEqual(termin, persisted)
+
+        status, response = request_error(
+            "DELETE", "/api/termine/termin_unbekannt"
+        )
+        self.assertEqual(404, status)
+        self.assertEqual({"error": "Termin wurde nicht gefunden."}, response)
+        self.assertEqual(
+            termin,
+            self.server.data_store.termin_detail(termin["termin_id"]),
+        )
+
     def test_link_candidates_endpoint_reflects_new_transactions(self):
         with urlopen(
             self.base_url + "/api/vorgaenge/link-candidates",

@@ -4266,6 +4266,18 @@ class DashboardDataStore:
         *,
         require_title: bool,
     ) -> dict[str, Any]:
+        text_fields = (
+            "title",
+            "description",
+            "starts_at",
+            "ends_at",
+            "location",
+        )
+        for field in text_fields:
+            if field in payload and not isinstance(payload[field], str):
+                raise ValueError(f"Das Feld {field} muss Text enthalten.")
+        if "status" in payload and not isinstance(payload["status"], str):
+            raise ValueError("Das Feld status muss Text enthalten.")
         title = str(payload.get("title") or "").strip()
         if require_title and not title:
             raise ValueError("Ein Titel fuer den Termin ist erforderlich.")
@@ -4290,10 +4302,10 @@ class DashboardDataStore:
             "Ende",
             required=False,
         )
-        if ends_at and starts_at and ends_at < starts_at:
+        if ends_at and _datetime_like_is_before(ends_at, starts_at):
             raise ValueError("Das Terminende darf nicht vor dem Beginn liegen.")
         status = str(
-            payload.get("status") or TERMIN_STATUS_PLANNED
+            payload.get("status", TERMIN_STATUS_PLANNED)
         ).strip().casefold()
         if status not in TERMIN_STATUSES:
             raise ValueError("Terminstatus ist ungueltig.")
@@ -8199,17 +8211,47 @@ def _parse_datetime_like(
         if required:
             raise ValueError(f"{label} ist erforderlich.")
         return ""
-    normalized = cleaned.replace("Z", "+00:00")
+    normalized = (
+        cleaned[:-1] + "+00:00" if cleaned.endswith("Z") else cleaned
+    )
     try:
         datetime.fromisoformat(normalized)
     except ValueError as exc:
         try:
-            _parse_iso_date(cleaned[:10], label)
+            parsed_date = _parse_iso_date(cleaned, label)
         except ValueError:
             raise ValueError(
                 f"{label} muss ein ISO-Datum oder ISO-Zeitpunkt sein."
             ) from exc
+        if parsed_date.isoformat() != cleaned:
+            raise ValueError(
+                f"{label} muss ein ISO-Datum oder ISO-Zeitpunkt sein."
+            ) from exc
     return cleaned
+
+
+def _datetime_like_is_before(left: str, right: str) -> bool:
+    def parsed(value: str) -> datetime:
+        normalized = (
+            value[:-1] + "+00:00" if value.endswith("Z") else value
+        )
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return datetime.combine(
+                _parse_iso_date(value, "Datum"),
+                datetime.min.time(),
+            )
+
+    left_value = parsed(left)
+    right_value = parsed(right)
+    left_aware = left_value.utcoffset() is not None
+    right_aware = right_value.utcoffset() is not None
+    if left_aware != right_aware:
+        raise ValueError(
+            "Beginn und Ende muessen Zeitzonen einheitlich verwenden."
+        )
+    return left_value < right_value
 
 
 def _escape_like(value: str) -> str:
