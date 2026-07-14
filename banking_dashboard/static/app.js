@@ -662,14 +662,21 @@ function renderOverview() {
     button.type = "button";
     button.dataset.overviewKey = card.key || "";
     button.dataset.overviewEntity = card.entity || "vorgaenge";
-    button.setAttribute("aria-label", `${card.label}: ${card.count || 0}`);
+    const isOpen = card.state === "open" && Number(card.count || 0) > 0;
+    button.classList.toggle("is-empty", !isOpen);
+    button.setAttribute(
+      "aria-label",
+      `Priorität ${card.priority}: ${card.label}, ${card.state_label}`,
+    );
     button.append(
-      mailElement("span", "overview-card-label", card.label),
       mailElement(
-        "strong",
-        "",
-        integerFormatter.format(Number(card.count || 0)),
+        "span",
+        "overview-card-priority",
+        `${card.priority}. ${card.priority_label}`,
       ),
+      mailElement("strong", "overview-card-label", card.label),
+      mailElement("span", "overview-card-reason", card.reason || ""),
+      mailElement("span", "overview-card-state", card.state_label),
     );
     elements.overviewCards.append(button);
   }
@@ -745,6 +752,10 @@ function renderDashboardPreviewList(target, items, entity, mapItem) {
 
 const overviewCardRoutes = {
   byKey: {
+    unclassified_transactions: () => {
+      activateTab("transactions");
+      loadTransactions();
+    },
     open_vorgaenge: () => {
       setVorgangHideCompleted(true);
       state.vorgaengeLoaded = false;

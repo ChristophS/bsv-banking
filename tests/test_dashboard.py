@@ -2406,6 +2406,7 @@ class DashboardDataStoreTests(unittest.TestCase):
 
         self.assertEqual(2, overview["counts"]["open_vorgaenge"])
         self.assertEqual(1, overview["counts"]["unread_mails"])
+        self.assertEqual(0, overview["counts"]["unclassified_transactions"])
         self.assertNotIn("unassigned_mails", overview["counts"])
         self.assertNotIn(
             "unassigned_mails",
@@ -2429,6 +2430,16 @@ class DashboardDataStoreTests(unittest.TestCase):
             overview["previews"]["upcoming_termine"][0]["title"],
         )
         self.assertLessEqual(len(overview["previews"]["open_vorgaenge"]), 5)
+        self.assertEqual(
+            list(range(1, 8)),
+            [card["priority"] for card in overview["cards"]],
+        )
+        self.assertEqual(
+            "unclassified_transactions",
+            overview["cards"][0]["key"],
+        )
+        self.assertEqual("empty", overview["cards"][0]["state"])
+        self.assertEqual("open", overview["cards"][1]["state"])
         document_card = next(
             card
             for card in overview["cards"]
@@ -2436,6 +2447,34 @@ class DashboardDataStoreTests(unittest.TestCase):
         )
         self.assertEqual("documents", document_card["entity"])
         self.assertEqual(todo["todo_id"], self.store.list_todos()[0]["todo_id"])
+
+    def test_overview_counts_incomplete_transactions_as_unclassified(self):
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            cursor = connection.execute(
+                """
+                UPDATE transaction_splits
+                SET sub_category = ''
+                WHERE transaction_id = 'tx_newer'
+                """
+            )
+            if cursor.rowcount == 0:
+                connection.execute(
+                    """
+                    UPDATE transactions
+                    SET sub_category = ''
+                    WHERE transaction_id = 'tx_newer'
+                    """
+                )
+            connection.commit()
+
+        overview = self.store.overview_counts()
+
+        self.assertEqual(1, overview["counts"]["unclassified_transactions"])
+        transaction_card = overview["cards"][0]
+        self.assertEqual("unclassified_transactions", transaction_card["key"])
+        self.assertEqual(1, transaction_card["count"])
+        self.assertEqual("open", transaction_card["state"])
+        self.assertEqual("1 offen", transaction_card["state_label"])
 
     def test_overview_counts_only_relevant_open_upcoming_termine(self):
         self.store.create_termin(

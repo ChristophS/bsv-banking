@@ -791,6 +791,38 @@ class DashboardDataStore:
                     ).fetchone()[0]
                 ),
                 "unread_mails": unread_mail_count,
+                "unclassified_transactions": int(
+                    connection.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM transactions AS t
+                        WHERE (
+                            NOT EXISTS (
+                                SELECT 1
+                                FROM transaction_splits AS split
+                                WHERE split.transaction_id = t.transaction_id
+                            )
+                            AND (
+                                TRIM(COALESCE(t.transaction_type, '')) = ''
+                                OR TRIM(COALESCE(t.top_category, '')) = ''
+                                OR TRIM(COALESCE(t.sub_category, '')) = ''
+                                OR TRIM(COALESCE(t.sphere, '')) = ''
+                            )
+                        ) OR EXISTS (
+                            SELECT 1
+                            FROM transaction_splits AS split
+                            WHERE split.transaction_id = t.transaction_id
+                              AND (
+                                TRIM(COALESCE(split.transaction_type, '')) = ''
+                                OR TRIM(COALESCE(split.top_category, '')) = ''
+                                OR TRIM(COALESCE(split.sub_category, '')) = ''
+                                OR TRIM(COALESCE(split.sphere, '')) = ''
+                              )
+                        )
+                        """
+                    ).fetchone()[0]
+                ),
+                # Kept as an API compatibility count for existing consumers.
                 "unassigned_transactions": int(
                     connection.execute(
                         """
@@ -856,48 +888,74 @@ class DashboardDataStore:
             }
         cards = [
             {
+                "key": "unclassified_transactions",
+                "label": "Unklassifizierte Transaktionen",
+                "count": counts["unclassified_transactions"],
+                "entity": "transactions",
+                "priority": 1,
+                "priority_label": "Zuerst bearbeiten",
+                "reason": "Für eine verlässliche Buchungszuordnung klassifizieren.",
+            },
+            {
                 "key": "open_vorgaenge",
-                "label": "Nicht abgeschlossene Vorgänge",
+                "label": "Offene Vorgänge",
                 "count": counts["open_vorgaenge"],
                 "entity": "vorgaenge",
-            },
-            {
-                "key": "unread_mails",
-                "label": "Ungelesene Mails",
-                "count": counts["unread_mails"],
-                "entity": "mails",
-            },
-            {
-                "key": "unassigned_transactions",
-                "label": "Nicht zugewiesene Transaktionen",
-                "count": counts["unassigned_transactions"],
-                "entity": "transactions",
+                "priority": 2,
+                "priority_label": "Danach bearbeiten",
+                "reason": "Offene Vorgänge bündeln die weitere Bearbeitung.",
             },
             {
                 "key": "open_todos",
                 "label": "Offene To-Dos",
                 "count": counts["open_todos"],
                 "entity": "todos",
+                "priority": 3,
+                "priority_label": "Einplanen",
+                "reason": "Fällige und priorisierte Aufgaben prüfen.",
+            },
+            {
+                "key": "unread_mails",
+                "label": "Ungelesene Mails",
+                "count": counts["unread_mails"],
+                "entity": "mails",
+                "priority": 4,
+                "priority_label": "Sichten",
+                "reason": "Neue Informationen sichten und bei Bedarf zuordnen.",
             },
             {
                 "key": "unassigned_documents",
                 "label": "Nicht zugewiesene Dokumente",
                 "count": counts["unassigned_documents"],
                 "entity": "documents",
+                "priority": 5,
+                "priority_label": "Zuordnen",
+                "reason": "Dokumente über den passenden Vorgang zuordnen.",
             },
             {
                 "key": "upcoming_termine",
                 "label": "Anstehende Termine",
                 "count": counts["upcoming_termine"],
                 "entity": "termine",
+                "priority": 6,
+                "priority_label": "Im Blick behalten",
+                "reason": "Anstehende Fristen und Vereinstermine prüfen.",
             },
             {
                 "key": "unassigned_termine",
                 "label": "Nicht zugewiesene anstehende Termine",
                 "count": counts["unassigned_termine"],
                 "entity": "termine",
+                "priority": 7,
+                "priority_label": "Bei Bedarf zuordnen",
+                "reason": "Anstehende Termine über einen Vorgang einordnen.",
             },
         ]
+        for card in cards:
+            card["state"] = "open" if card["count"] else "empty"
+            card["state_label"] = (
+                f"{card['count']} offen" if card["count"] else "Nichts offen"
+            )
         previews = {
             "open_vorgaenge": self.list_vorgaenge(
                 hide_completed=True,

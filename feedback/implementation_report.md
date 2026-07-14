@@ -2,51 +2,58 @@
 
 ## Branchname
 
-`agent2/codex-20260713-161116`
+`agent2/codex-20260714-101753`
 
 ## Geänderte Dateien
 
-- `feedback/cashier_workflow_analysis.md`
+- `banking_dashboard/server.py`
+- `banking_dashboard/static/app.js`
+- `banking_dashboard/static/index.html`
+- `banking_dashboard/static/styles.css`
+- `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
 
 ## Umgesetzte Punkte
 
-- Die bestehenden Abläufe zum Sichten, Klassifizieren, Zuordnen, Validieren und Abschließen wurden aus Kassierersicht dokumentiert.
-- Transaktionen, Vorgänge, Dokumente, Mails, To-Dos und Termine sind einschließlich ihrer Übergänge und getrennten Zustände erfasst.
-- Reibungspunkte sind nach fehlender Sichtbarkeit, unklaren Zuständen, unnötigen Schritten und fehlender Rückmeldung unterschieden.
-- Zehn Verbesserungsbedarfe wurden nach täglicher Auswirkung und Dringlichkeit als P0, P1 und P2 priorisiert.
-- Für jeden Punkt ist ein kleines, abgegrenztes Folgevorhaben formuliert. Vorgänge bleiben dabei das zentrale fachliche Objekt; keine Empfehlung führt direkte Ersatzbeziehungen ein.
-- Eine Reihenfolge für sieben nachfolgende, eigenständig umsetzbare Usability-Pakete wurde abgeleitet.
-- Auswirkungen auf vorhandene Fachregeln, Funktionen und Leistungsanforderungen wurden ausdrücklich festgehalten.
-- Offene fachliche Fragen wurden von den aus dem Code belegbaren Beobachtungen getrennt dokumentiert.
+- Die vorhandene Dashboard-Übersicht wurde zu einer sichtbar nummerierten Arbeitsliste mit einer festen fachlichen Reihenfolge erweitert.
+- Offene Vorgänge, unklassifizierte Transaktionen, ungelesene Mails, offene To-Dos, nicht zugewiesene Dokumente und anstehende Termine werden mit serverseitig ermittelten Kennzahlen berücksichtigt.
+- Die vorhandene Zusatzaufgabe für nicht zugewiesene anstehende Termine bleibt als nachrangiger siebter Einstieg erhalten.
+- Jede Karte enthält eine kurze Begründung der Bearbeitungsrelevanz sowie den eindeutigen Zustand `n offen` oder `Nichts offen`.
+- Die Zählung unklassifizierter Transaktionen verwendet dieselben Pflichtfelder wie die bestehende Abschlussvalidierung. Bei Transaktionssplits werden die Split-Klassifikationen berücksichtigt.
+- Alle Karten führen über die vorhandene Navigation in den jeweiligen Bearbeitungs- oder Zuordnungsbereich. Die bestehenden Vorschauen für Vorgänge, To-Dos und Termine bleiben erhalten.
+- Leere Bereiche werden zurückhaltend und ohne Warnfarbe dargestellt.
+- Der bestehende API-Wert `unassigned_transactions` bleibt aus Kompatibilitätsgründen erhalten, wird aber nicht mehr fälschlich als Klassifikationsaufgabe angezeigt.
 
 ## Nicht umgesetzte Punkte
 
-- Keine UI-Implementierung, da sie ausdrücklich nicht Teil dieses Analysepakets ist.
-- Keine Änderungen an Datenmodell, API, Verknüpfungstabellen, Services, Styles oder Tests.
-- Keine externen Integrationen, Browser-Automationen, Logins oder produktiven Datenzugriffe.
-- Die offenen Fragen zum realen Arbeitsaufkommen und zur fachlichen Wirkung offener To-Dos beziehungsweise Termine können nicht allein aus dem Repository beantwortet werden und sind im Analysedokument als Entscheidungsbedarf markiert.
+- Keine neuen Zuordnungsdialoge oder Entitätstabellen.
+- Keine Änderungen an Klassifikations- oder Abschlussregeln.
+- Keine externen Banking-, Mail-, Microsoft-Graph- oder DFBnet-Aktionen.
+- Keine dynamische Neupriorisierung nach Anzahl; die Reihenfolge ist bewusst fachlich stabil, damit hohe Mengen in einem nachrangigen Bereich die Bedeutung der Aufgaben nicht verfälschen.
 
 ## Ausgeführte Tests
 
 - `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `git diff --check -- feedback/cashier_workflow_analysis.md feedback/implementation_report.md`
+- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k "overview"`
+- `node --check banking_dashboard/static/app.js`
+- `git diff --check -- banking_dashboard/server.py banking_dashboard/static/app.js banking_dashboard/static/index.html banking_dashboard/static/styles.css tests/test_dashboard.py feedback/implementation_report.md`
 
 ## Testergebnis
 
-- Dashboard-Tests: 129 bestanden, 6 übersprungen, 0 fehlgeschlagen.
-- Diff-Prüfung: bestanden; lediglich vorhandener Git-Hinweis zur künftigen LF/CRLF-Konvertierung.
+- Vollständige Dashboard-Suite: 130 bestanden, 6 übersprungen, 0 fehlgeschlagen.
+- Gezielte Übersichtstests nach der abschließenden Split-Korrektur: 4 bestanden, 2 optionale Browsertests übersprungen, 0 fehlgeschlagen.
+- JavaScript-Syntaxprüfung: bestanden.
+- Diff-Prüfung: bestanden; nur vorhandene Hinweise zur künftigen LF/CRLF-Konvertierung.
 
 ## Bekannte Einschränkungen
 
-- Die Analyse beruht auf Code, README und Tests, nicht auf Beobachtungen mit echten Vereins- oder Bankdaten.
-- Häufigkeiten und die tatsächliche Prioritätsreihenfolge im Vereinsalltag müssen mit den Kassierern validiert werden.
-- Die Analyse beschreibt Zielrichtungen und Paketgrenzen; konkrete UI-Entwürfe und technische Änderungsstellen gehören in die jeweiligen Folgepakete.
-- Die sechs übersprungenen Tests sind vorhandene optionale Browsertests; es wurden keine Browser-, Login- oder externen Dienstaufrufe ausgeführt.
+- Die sechs übersprungenen Tests benötigen Playwright beziehungsweise einen lokal installierten Chromium-Browser. Es wurden keine Browser-Automationen gegen externe Dienste gestartet.
+- Dokumente besitzen keinen eigenen Haupt-Tab. Der Einstieg verwendet daher repo-konform den bestehenden dokumentbezogenen Vorgangsfluss.
+- Die feste Prioritätsreihenfolge ist die kleinste sichere Annahme mangels einer im Repository hinterlegten abweichenden Fachentscheidung: zuerst Buchungsklassifikation, dann zentrale Vorgänge, anschließend To-Dos, Mails, Dokumente und Termine.
 
 ## Hinweise für den Review-Agenten
 
-- Maßgebliches Ergebnis ist `feedback/cashier_workflow_analysis.md`.
-- Besonders zu prüfen sind die P0-Punkte: fokussierte Dokumentzuordnung, sichtbare Abschlussblocker und die Abgrenzung einer vorgangsbasierten Arbeitsliste.
-- Die vorgeschlagene Reihenfolge beginnt bewusst mit vorhandenen Arbeitsgründen und Navigation, bevor eine übergreifende Arbeitsliste gebaut wird.
-- Bestehende unzugehörige Änderungen an Review-/Prompt-Dateien wurden nicht verändert.
+- Besonders zu prüfen sind die Prioritätsmetadaten und Zustände in `overview_counts()` sowie deren Darstellung in `renderOverview()`.
+- Die neue Transaktionskennzahl unterscheidet bewusst zwischen unklassifiziert und lediglich noch keinem Vorgang zugewiesen.
+- Bei gesplitteten Transaktionen zählt eine Buchung als offen, sobald mindestens ein Split unvollständig klassifiziert ist; die Felder der Ursprungstransaktion werden dann nicht zusätzlich bewertet.
+- Vorhandene, nicht zu diesem Paket gehörende Änderungen an `feedback/Review-report.md` sowie die unversionierte Prompt-Datei wurden nicht verändert.
