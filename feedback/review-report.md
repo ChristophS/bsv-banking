@@ -8,39 +8,52 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen des Arbeitspakets. Die sechs Zuordnungsfälle verwenden den gemeinsamen Bestätigungs-, Validierungs-, Lade-, Erfolgs- und Fehlerablauf. Vorgangsbasierte Verknüpfungen und bestehende Endpunkte bleiben erhalten; Mehrfachspeicherungen werden gesperrt. Der Diff ist mit dem Compare-Zustand konsistent und die vorhandenen sowie ergänzten Tests decken zentrale Fälle ab.
+Die Umsetzung erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Abschlussblocker werden aus den bestehenden Prüfungen abgeleitet, fehlende Klassifikationsfelder und Belege werden konkret benannt, mehrere Blocker gemeinsam dargestellt und die serverseitige Abschlussvalidierung bleibt unverändert. Die ergänzten Tests decken offene Klassifikation, fehlenden Beleg, mehrere Blocker sowie einen abschließbaren Vorgang ab.
 
-## Review-Ergebnis
+# Technischer Review
 
-Die Umsetzung ist akzeptiert.
+## Ergebnis
 
-### Erfüllte Anforderungen
+**Akzeptiert.**
 
-- Transaktionen, Mails, To-Dos, Termine und Belege verwenden den gemeinsamen `submitVorgangAssignment()`-Ablauf.
-- Die Auswahl eines Vorgangs wird vor jedem Speichervorgang validiert.
-- Eine explizite Bestätigung ist durch die einheitlichen Beschriftungen wie „Zuordnung bestätigen“ und „Zuordnung bestätigen“ beziehungsweise „Änderungen und Zuordnung bestätigen“ vorhanden.
-- Lade-, Erfolgs- und Fehlerzustände werden am jeweiligen Formular dargestellt.
-- Fachliche API-Fehler werden verständlich weitergegeben.
-- Während eines laufenden Requests verhindert `data-assignment-saving` weitere Speicherversuche.
-- Erfolgreiche Zuordnungen werden nach dem Neuaufbau der jeweiligen Ansicht erneut sichtbar gemacht.
-- Die bestehenden vorgangsbasierten Endpunkte und Verknüpfungstabellen werden weiterverwendet. Es wurde keine direkte Ersatzbeziehung als neues Zuordnungsmodell eingeführt.
-- Suche, Filterung und Hinweise für keine verfügbaren Vorgänge beziehungsweise keine Suchtreffer sind vorhanden.
+## Geprüfte Anforderungen
 
-### Tests und Qualität
+- Die Vorgangsdetailantwort enthält eine strukturierte `abschluss_pruefung`.
+- Fehlende Klassifikationsfelder werden je betroffener Transaktion konkret ermittelt und benannt.
+- Für Rechnungsvorgänge werden die bestehenden Voraussetzungen für Transaktion und Beleg verständlich als offen oder erfüllt dargestellt.
+- Mehrere offene Abschlussblocker werden gemeinsam angezeigt.
+- Jeder offene Prüfpunkt enthält eine konkrete nächste Aktion.
+- Erfüllte Prüfpunkte sind im offenen Vorgang visuell von offenen Prüfpunkten unterscheidbar.
+- Die bestehende Abschlusslogik in `_vorgang_completion_requirements()` und die serverseitige Statusvalidierung wurden nicht abgeschwächt oder umgangen.
+- Die bestehende Vorgangs-, Transaktions-, Beleg- und Verknüpfungsarchitektur wird weiterverwendet.
 
-Der ergänzte Test führt die gemeinsame Submit-Logik mit lokalen Mocks aus und prüft:
+## Implementierungsprüfung
 
-- fehlende Auswahl ohne Request,
-- erfolgreichen Speichervorgang,
-- Sperre eines parallelen zweiten Speicherversuchs,
-- Fehlerfall mit Wiederfreigabe des Formulars.
+Die neue Funktion `_vorgang_completion_checklist()` bereitet die bereits vorhandenen Abschlusszustände für die Darstellung auf. Die fachliche Sperrlogik bleibt separat bestehen. Dadurch wird die Anzeige nicht zur Ersatzvalidierung und ein Vorgang kann weiterhin nur über die bestehenden Prüfungen abgeschlossen werden.
 
-Zusätzlich werden die Submit-Pfade für To-Dos und Termine sowie die Erfolgsdarstellung für Belege und Transaktionen geprüft. Der gemeldete JavaScript-Syntaxcheck, die Dashboard-Test-Suite und `git diff --check` sind erfolgreich.
+Die Darstellung in `createVorgangStatusEditor()` verwendet sichere DOM-Erzeugung und `textContent`. Offene und erfüllte Zustände werden über Statuslabel, CSS-Klassen, Meldung und nächste Aktion dargestellt. Die bestehende Fallback-Darstellung für ältere oder nicht strukturierte Blocker bleibt erhalten.
 
-### Diff- und Scope-Prüfung
+Die Änderungen an den Vorgangsstrukturen sind auf ein zusätzliches abgeleitetes Antwortfeld begrenzt. Es wurde keine direkte Ersatzbeziehung zwischen Entitäten eingeführt und es wurden keine neuen Abschlussregeln oder Pflichtfelder ergänzt.
 
-Der GitHub-Compare ist drei Commits vor `main`, nicht hinterher und enthält keine fehlenden Dateien. Die zusätzliche Änderung an `styles.css` ist für die neue gemeinsame Auswahl- und Statusdarstellung fachlich relevant. Die Änderungen bleiben auf Zuordnungsdialoge, Styles, Tests und den Implementierungsbericht begrenzt.
+## Tests
 
-### Hinweise ohne Blocker
+Die ergänzten Tests decken ab:
 
-Die vorhandenen Browser-/Playwright-Tests sind weiterhin übersprungen. Das ist wegen der dokumentierten lokalen Umgebung kein Blocker, da passende Mock-basierte Tests ergänzt wurden. Die Behandlung bereits verknüpfter Belege sowie die explizitere Dokumentation der Mehrfachauswahl bei To-Dos und Terminen können später verbessert werden.
+- fehlende einzelne Klassifikationsfelder einschließlich konkreter Feldnamen,
+- einen fehlenden erforderlichen Beleg bei einem Rechnungsvorgang,
+- mehrere gleichzeitige Blocker aus Klassifikation und Beleg,
+- einen vollständig vorbereiteten und abschließbaren Rechnungsvorgang.
+
+Der Implementation Report nennt außerdem eine erfolgreiche Dashboard-Test-Suite mit 134 bestandenen und 6 übersprungenen optionalen Browser-Tests sowie bestandene JavaScript-Syntax- und Diff-Prüfungen. Die übersprungenen Browser-Tests sind angesichts der Vorgabe gegen Browser-Automation nicht blockierend.
+
+## Repository- und Compare-Prüfung
+
+- GitHub Compare ist `ahead` mit genau einem Commit.
+- `ahead_by=1`, `behind_by=0`, `total_commits=1`.
+- Es fehlen keine Runner-Änderungen im GitHub-Compare.
+- Es wurden keine zusätzlichen, nicht vom Runner validierten Dateien festgestellt.
+- Die Änderungen bleiben im fachlichen Scope des Arbeitspakets.
+
+## Nicht blockierende Hinweise
+
+UI-nahe Tests für die konkrete DOM-Ausgabe wären eine sinnvolle zusätzliche Absicherung. Außerdem könnte eine spätere UX-Iteration die erfüllten Prüfpunkte auch bei bereits abgeschlossenen Vorgängen als Historie anzeigen. Beides ist für die aktuelle Freigabe nicht erforderlich.
