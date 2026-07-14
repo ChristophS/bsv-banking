@@ -926,16 +926,22 @@ async function loadTodos() {
     renderTodoList();
   } catch (error) {
     state.todos = [];
-    renderTodoList();
+    renderTodoList(error.message);
     showError(error.message);
   } finally {
     elements.todoLoading.hidden = true;
   }
 }
 
-function renderTodoList() {
+function renderTodoList(loadError = "") {
   elements.todoList.replaceChildren();
   elements.todoEmpty.hidden = state.todos.length > 0;
+  elements.todoEmpty.classList.toggle("is-error", Boolean(loadError));
+  elements.todoEmpty.textContent = loadError
+    ? "To-Dos konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    : state.todoSearch.trim() || state.todoHideCompleted
+      ? "Keine To-Dos entsprechen der aktuellen Suche oder Filterung."
+      : "Noch keine To-Dos vorhanden.";
   for (const todo of state.todos) {
     const card = mailElement(
       "article",
@@ -1302,16 +1308,24 @@ async function loadTermine() {
     renderTerminList();
   } catch (error) {
     state.termine = [];
-    renderTerminList();
+    renderTerminList(error.message);
     showError(error.message);
   } finally {
     elements.terminLoading.hidden = true;
   }
 }
 
-function renderTerminList() {
+function renderTerminList(loadError = "") {
   elements.terminList.replaceChildren();
   elements.terminEmpty.hidden = state.termine.length > 0;
+  elements.terminEmpty.classList.toggle("is-error", Boolean(loadError));
+  elements.terminEmpty.textContent = loadError
+    ? "Termine konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    : state.terminSearch.trim()
+        || state.terminHideCompleted
+        || state.terminUnassignedUpcoming
+      ? "Keine Termine entsprechen der aktuellen Suche oder Filterung."
+      : "Noch keine Termine vorhanden.";
   for (const termin of state.termine) {
     const card = mailElement(
       "article",
