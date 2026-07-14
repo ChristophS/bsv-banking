@@ -1,3 +1,3 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- HTTP-Test für erfolgreiche Termin-Löschung ergänzen.
+- Zusätzliche Testfälle für Grenzwerte bei Datum/Zeit und gemischte Zeitzonen ergänzen.
+- Erlaubte Terminstatuswerte und Datumssemantik als zentrale Konstante oder API-Dokumentation festhalten.
