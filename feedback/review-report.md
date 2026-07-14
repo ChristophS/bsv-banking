@@ -6,53 +6,57 @@
 
 **Needs more context:** false
 
-## Begründung
-
-Die Analyse erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Der GitHub-Compare ist sauber und enthält ausschließlich die erwartete Analyse sowie die aktualisierte Implementierungsdokumentation.
-
 ## Zusammenfassung
 
-Die Kassierer-Workflows sind nachvollziehbar für Sichten, Klassifikation, Zuordnung, Validierung und Abschluss dokumentiert. Reibungspunkte sind nach Problemart sowie P0/P1/P2 priorisiert, mit konkreten Folgepaketen und Rücksicht auf bestehende Vorgangsbeziehungen, Fachregeln und Leistungsanforderungen. Es werden keine UI-, Datenmodell- oder API-Änderungen vorweggenommen.
+Die Umsetzung erfüllt die Muss-Anforderungen des Arbeitspakets. Die Übersicht berücksichtigt alle geforderten Arbeitsbereiche, verwendet serverseitige Kennzahlen, zeigt eine nachvollziehbare Priorisierung und führt über bestehende Bearbeitungs- beziehungsweise Zuordnungsflüsse. Die Nachbesserungen für unklassifizierte Transaktionen und nicht zugewiesene Dokumente sind konsistent umgesetzt und durch Store-, HTTP- sowie Browser-Tests abgedeckt.
 
 # Technischer Review
 
-## Ergebnis
+## Entscheidung
 
 **Akzeptiert.**
 
-## Geprüfte Änderungen
+## Geprüfte Anforderungen
 
-Der Branch ist gegenüber `main` um einen Commit voraus, nicht hinterher, und der GitHub-Compare enthält genau die erwarteten Dateien:
+- Die Übersicht enthält offene Vorgänge, unklassifizierte Transaktionen, ungelesene Mails, offene To-Dos, nicht zugewiesene Dokumente und anstehende Termine.
+- Jeder Arbeitsbereich verfügt über eine serverseitig ermittelte Kennzahl sowie einen expliziten Zustand `n offen` oder `Nichts offen`.
+- Die Karten sind durch `priority`, `priority_label` und `reason` sichtbar priorisiert und fachlich erläutert.
+- Die bestehenden Datenquellen, Tabellen, Verknüpfungen und Vorgangsflüsse werden weiterverwendet.
+- Unklassifizierte Transaktionen werden anhand der vorhandenen vier Klassifikationsfelder ermittelt. Bei vorhandenen Splits werden die Split-Felder berücksichtigt.
+- Der Einstieg in unklassifizierte Transaktionen verwendet den serverseitigen Filter `unclassified_only=true`.
+- Der Einstieg in nicht zugewiesene Dokumente verwendet `unassigned_only=true` und öffnet das erste passende Dokument im bestehenden Vorgang-Erstell- und Zuordnungsdialog.
+- Leere Zustände werden ohne irreführende Warnfarbe dargestellt.
+- Die bestehende Zusatzkarte für nicht zugewiesene anstehende Termine bleibt erhalten.
+- Es wurden keine externen Banking-, Mail-, Microsoft-Graph- oder DFBnet-Aktionen eingeführt.
 
-- `feedback/cashier_workflow_analysis.md`
-- `feedback/implementation_report.md`
+## Technische Bewertung
 
-Es gibt keine fehlenden oder zusätzlichen Änderungen im Compare. Die Änderung bleibt im vorgesehenen Dokumentationsumfang; bestehende UI-, Datenmodell-, API-, Service- und Verknüpfungstabellen wurden nicht verändert.
+Die Zählungen in `overview_counts()` basieren auf den vorhandenen SQLite-Tabellen und Verknüpfungen. Die neue Transaktionszählung unterscheidet korrekt zwischen normalen Transaktionen und Transaktionen mit Splits. Die Filterlogik in `list_transactions()` verwendet dieselbe fachliche Klassifikationsregel wie die Kennzahl. Die Dokumentfilterung nutzt die bestehende Tabelle `vorgang_belege` und umgeht die Vorgangsarchitektur nicht.
 
-## Erfüllung der Anforderungen
+Die UI-Darstellung in `renderOverview()` macht Priorität, Bezeichnung, Bearbeitungsgrund und offenen beziehungsweise leeren Zustand unmittelbar sichtbar. Die Karten bleiben echte Buttons und führen über die bestehende Navigation oder den vorhandenen Dialogfluss weiter.
 
-Die Analyse beschreibt den bestehenden Ablauf aus Kassierersicht für:
+Die Änderungen an HTML und CSS sind auf die Übersicht beschränkt. Bestehende Vorschauen für Vorgänge, To-Dos und Termine bleiben erhalten. Die neue Dokumentnavigation verwendet den vorhandenen Vorgangsdialog statt eines parallelen Zuordnungsmodells.
 
-- offene Arbeit und Priorisierung,
-- Vorgänge und Transaktionen,
-- Dokumente und Mails,
-- To-Dos und Termine,
-- Klassifikation,
-- Zuordnung,
-- Validierung und Abschluss.
+## Tests
 
-Die Reibungspunkte sind fachlich nach fehlender Sichtbarkeit, unklaren Zuständen, unnötigen Schritten und fehlender Rückmeldung unterschieden. Zehn konkrete Punkte wurden als P0, P1 oder P2 priorisiert. Für jeden Punkt gibt es einen abgegrenzten Verbesserungsvorschlag und eine ableitbare nächste Handlung.
+Die ergänzten Tests decken ab:
 
-Die vorgeschlagene vorgangsbasiere Arbeitsliste, der Dokument-Zuordnungsmodus und die Anzeige von Abschlussblockern umgehen die bestehende Vorgangsarchitektur nicht. Die Analyse stellt ausdrücklich klar, dass bestehende Verknüpfungen wie `vorgang_belege` weiterverwendet werden sollen und keine direkten Ersatzbeziehungen zwischen Entitäten eingeführt werden.
+- Filterung von Transaktionen auf unklassifizierte Datensätze
+- Split-basierte Klassifikationszählung
+- Prioritätsreihenfolge und Kartenstatus
+- HTTP-Weitergabe des Transaktionsfilters
+- HTTP-Weitergabe des Dokumentfilters
+- Browser-Einstieg in den Dokument-Zuordnungsdialog
+- Navigation der Übersichtskarten zu den passenden Tabs und Filtern
 
-Die sieben Folgearbeitspakete sind ausreichend klar abgegrenzt, um daraus eigenständige spätere UI-Arbeitspakete zu erstellen. Auswirkungen auf bestehende Abschlussregeln, manuelle Status, Vorschlagsbestätigung, Mail-Lesestatus, getrennte To-Do-/Termin-Zustände und Performance sind ausdrücklich dokumentiert.
+Der gemeldete Testlauf mit 131 bestandenen Tests, sechs übersprungenen optionalen Browser-Tests und null Fehlern ist plausibel. Die übersprungenen Tests benötigen Playwright beziehungsweise Chromium und stellen unter den dokumentierten lokalen Umgebungsbedingungen keinen Blocker dar. `node --check` und `git diff --check` wurden ebenfalls erfolgreich ausgeführt.
 
-## Tests und Qualität
+## Compare- und Scope-Prüfung
 
-Für ein reines Analysepaket ist es plausibel, keine neuen automatisierten Tests zu ergänzen. Die vorhandenen Dashboard-Tests wurden laut Bericht erfolgreich ausgeführt: 129 bestanden, 6 übersprungen, 0 fehlgeschlagen. Zusätzlich wurde die Diff-Syntax geprüft.
+Der Branch ist gegenüber `main` drei Commits voraus und nicht hinterher. Der tatsächliche GitHub-Diff enthält die erwarteten Quelldateien, Tests und den Implementierungsbericht. Die Abweichung zwischen `runner_validated_changed_paths` beziehungsweise `runner_staged_files` und `extra_in_github_compare` ist für die Review-Nachvollziehbarkeit auffällig, macht den Branch-Zustand aber nicht unbrauchbar, da der fachliche GitHub-Diff vollständig vorliegt.
 
-Die Analyse trennt belegbare Beobachtungen von offenen fachlichen Fragen und weist darauf hin, dass Prioritäten und Häufigkeiten mit realen Kassierern validiert werden müssen. Es werden keine externen Aktionen oder produktiven Datenzugriffe vorgeschlagen.
+Es wurden keine geschützten oder fachfremden Dateien geändert. Die Änderung bleibt innerhalb der im Arbeitspaket genannten Dashboard-, API- und Testdateien.
 
-## Festgestellte Restpunkte
+## Nicht blockierende Hinweise
 
-Es bestehen keine blockierenden Mängel. Die Prioritätsreihenfolge und einzelne fachliche Annahmen müssen vor der Umsetzung der Folgepakete noch mit der Vereinsverwaltung validiert werden; diese Einschränkung ist im Dokument bereits transparent festgehalten.
+Die feste Prioritätsreihenfolge ist nachvollziehbar, aber im Repository nicht durch eine explizite Fachentscheidung belegt. Außerdem zählt die Kennzahl unklassifizierte Transaktionen über den gesamten Datenbestand, während der normale Transaktions-Tab standardmäßig einen Zeitraumfilter verwendet. Beide Punkte sind für eine spätere fachliche Abstimmung sinnvoll, verhindern jedoch keine Freigabe dieses Arbeitspakets.
