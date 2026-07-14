@@ -926,6 +926,8 @@ async function loadTodos() {
     renderTodoList();
   } catch (error) {
     state.todos = [];
+    elements.todoCount.textContent = "–";
+    elements.todoCountLabel.textContent = "Nicht verfügbar";
     renderTodoList(error.message);
     showError(error.message);
   } finally {
@@ -1308,6 +1310,8 @@ async function loadTermine() {
     renderTerminList();
   } catch (error) {
     state.termine = [];
+    elements.terminCount.textContent = "–";
+    elements.terminCountLabel.textContent = "Nicht verfügbar";
     renderTerminList(error.message);
     showError(error.message);
   } finally {
@@ -6775,14 +6779,16 @@ async function loadTransactions() {
   } catch (error) {
     if (error.name !== "AbortError") {
       showError(error.message);
-      renderTransactions([]);
+      elements.transactionCount.textContent = "–";
+      elements.transactionCountLabel.textContent = "Nicht verfügbar";
+      renderTransactions([], error.message);
     }
   } finally {
     setTransactionLoading(false);
   }
 }
 
-function renderTransactions(transactions) {
+function renderTransactions(transactions, loadError = "") {
   elements.transactionRows.replaceChildren();
   for (const transaction of transactions) {
     const row = document.createElement("tr");
@@ -6817,6 +6823,31 @@ function renderTransactions(transactions) {
   const empty = transactions.length === 0;
   elements.transactionEmpty.hidden = !empty;
   elements.transactionTable.hidden = empty;
+  renderTableListState(
+    elements.transactionEmpty,
+    loadError,
+    "Transaktionen konnten nicht geladen werden",
+    "Bitte versuchen Sie es erneut.",
+    "Keine Transaktionen gefunden",
+    "Passen Sie den Suchbegriff oder Filter an.",
+  );
+}
+
+function renderTableListState(
+  emptyElement,
+  loadError,
+  errorTitle,
+  errorText,
+  emptyTitle,
+  emptyText,
+) {
+  emptyElement.classList.toggle("is-error", Boolean(loadError));
+  emptyElement.querySelector("h3").textContent = loadError
+    ? errorTitle
+    : emptyTitle;
+  emptyElement.querySelector("p").textContent = loadError
+    ? errorText
+    : emptyText;
 }
 
 function tableCell(value, className = "") {
@@ -6933,7 +6964,9 @@ async function loadVorgaenge() {
   } catch (error) {
     if (error.name !== "AbortError") {
       showError(error.message);
-      renderVorgaenge([]);
+      elements.vorgangCount.textContent = "–";
+      elements.vorgangCountLabel.textContent = "Nicht verfügbar";
+      renderVorgaenge([], error.message);
     }
   } finally {
     setVorgangLoading(false);
@@ -6962,7 +6995,7 @@ async function loadLinkCandidates(force = false) {
   return state.linkCandidates;
 }
 
-function renderVorgaenge(vorgaenge) {
+function renderVorgaenge(vorgaenge, loadError = "") {
   const listedTypes = vorgaenge
     .map((vorgang) => String(vorgang.vorgangstyp || "").trim())
     .filter(Boolean);
@@ -7009,6 +7042,14 @@ function renderVorgaenge(vorgaenge) {
   const empty = vorgaenge.length === 0;
   elements.vorgangEmpty.hidden = !empty;
   elements.vorgangTable.hidden = empty;
+  renderTableListState(
+    elements.vorgangEmpty,
+    loadError,
+    "Vorgänge konnten nicht geladen werden",
+    "Bitte versuchen Sie es erneut.",
+    "Keine Vorgänge gefunden",
+    "Passen Sie den Suchbegriff oder Filter an.",
+  );
 }
 
 function vorgangActionCell(vorgang) {
@@ -10218,13 +10259,14 @@ async function loadBudgets() {
     renderBudgets(payload.budgets);
     state.budgetsLoaded = true;
   } catch (error) {
+    renderBudgets([], error.message);
     showError(error.message);
   } finally {
     elements.budgetLoading.hidden = true;
   }
 }
 
-function renderBudgets(budgets) {
+function renderBudgets(budgets, loadError = "") {
   elements.budgetRows.replaceChildren();
   for (const budget of budgets) {
     const row = document.createElement("tr");
@@ -10238,9 +10280,19 @@ function renderBudgets(budgets) {
     );
     elements.budgetRows.append(row);
   }
-  elements.budgetCount.textContent = integerFormatter.format(budgets.length);
+  elements.budgetCount.textContent = loadError
+    ? "–"
+    : integerFormatter.format(budgets.length);
   elements.budgetEmpty.hidden = budgets.length > 0;
   elements.budgetTable.hidden = budgets.length === 0;
+  renderTableListState(
+    elements.budgetEmpty,
+    loadError,
+    "Budget konnte nicht geladen werden",
+    "Bitte versuchen Sie es erneut.",
+    "Noch keine Budgetpositionen",
+    "Einträge aus der Budgettabelle erscheinen automatisch hier.",
+  );
 }
 
 function budgetAmountCell(value) {

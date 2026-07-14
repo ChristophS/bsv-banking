@@ -1449,6 +1449,11 @@ th[aria-sort="descending"] .sort-indicator {
   font-size: 21px;
 }
 
+.empty-state.is-error,
+.todo-empty.is-error {
+  color: var(--negative);
+}
+
 .empty-state p {
   margin: 0;
   font-size: 13px;
