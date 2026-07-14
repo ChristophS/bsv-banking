@@ -8,59 +8,39 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen. Ladefehler leeren betroffene Listen, invalidieren Ergebniszähler und zeigen getrennte, verständliche Fehlerzustände. Vorherige Filterresultate werden nicht als gültige Daten fortgeführt; erfolgreiche Reloads stellen die reguläre Anzeige wieder her. Die angeforderte index.html bestätigt die erforderlichen DOM-Strukturen. GitHub Compare ist sauber und der Branch enthält genau einen nutzbaren Commit.
+Die Zustandsmatrix erfüllt die Muss-Anforderungen vollständig. Sie unterscheidet geladenen Bestand, leeren Bestand, erfolglose Such- oder Filtertreffer und Ladefehler klar, beschreibt jeweils Bedeutung und Nutzerorientierung und grenzt initiales Laden sowie erneute Ladeversuche ab. Es wurden keine Laufzeitfunktionen oder Datenstrukturen verändert; der GitHub-Compare ist sauber und enthält genau einen neuen Commit.
 
-# Technischer Review
+## Review-Ergebnis
 
-## Ergebnis
+**Akzeptiert:** Ja
 
-**Accepted: Ja**
+### Geprüfte Anforderungen
 
-## Geprüfter Umfang
+- Die Dokumentation enthält eine kompakte und leicht auffindbare Zustandsmatrix direkt im bestehenden Dokument `feedback/cashier_workflow_analysis.md`.
+- Die vier geforderten Zustände sind separat beschrieben:
+  - Geladener Bestand
+  - Leerer Bestand
+  - Keine Such- oder Filtertreffer
+  - Ladefehler
+- Für jeden Zustand werden fachliche Bedeutung sowie Nutzerorientierung beziehungsweise nächste Handlung angegeben.
+- Leerer Bestand wird ausdrücklich von null Treffern bei aktiver Suche oder Filterung abgegrenzt.
+- Ladefehler werden eindeutig von beiden erfolgreichen, aber leeren Ergebniszuständen abgegrenzt. Es wird klargestellt, dass bei einem Ladefehler keine Aussage über vorhandene oder fehlende Einträge möglich ist.
+- Initiales Laden wird als eigener Übergangszustand berücksichtigt, in dem noch keiner der vier Ergebniszustände behauptet werden darf.
+- Die Begriffe werden als Anzeigezustände und nicht als neue fachliche Status oder Datenstrukturen festgelegt.
+- Listenübergreifende Merkmale wie Ergebniszahlen, Filterkontext, Zurücksetzen und erneutes Laden werden konsistent dokumentiert.
 
-- `banking_dashboard/static/app.js`
-- `banking_dashboard/static/styles.css`
-- `banking_dashboard/static/index.html`
-- `tests/test_dashboard.py`
-- GitHub-Diff und Compare-Status
+### Zusammenspiel mit dem vorhandenen Kontext
 
-## Bewertung der Muss-Anforderungen
+Die Matrix passt zur bestehenden Analyse: Vorgänge bleiben das zentrale fachliche Objekt, und es werden keine neuen Beziehungen, Datenmodelle oder Laufzeitmechanismen eingeführt. Die Formulierungen vermeiden konkrete UI- oder Implementierungsdetails, die aus dem Kontext nicht abgesichert wären.
 
-### Fehlerzustand sichtbar und eindeutig
+### Diff- und Scope-Prüfung
 
-Erfolgs- und Fehlerzustände werden getrennt behandelt. Für Transaktionen, Vorgänge und Budgets verwendet die gemeinsame Funktion `renderTableListState` unterschiedliche Überschriften und Texte für Ladefehler und leere beziehungsweise gefilterte Ergebnisse. To-Dos und Termine behalten ihre vorhandene separate Fehlerdarstellung und setzen zusätzlich die Fehlerklasse `is-error`.
+Der relevante Inhalt wurde ausschließlich in der vorgesehenen Analyse ergänzt. Die zusätzliche Änderung an `feedback/implementation_report.md` aktualisiert den Umsetzungsbericht und dokumentiert den tatsächlichen Arbeitsstand. Es wurden keine Dashboard-, API-, Persistenz- oder Datenmodelländerungen vorgenommen. Der GitHub-Compare ist `ahead` mit einem Commit, ohne fehlende oder zusätzliche Compare-Dateien.
 
-### Ergebniszähler nicht als gültige Ergebnisse anzeigen
+### Tests und Prüfbarkeit
 
-Bei Fehlern werden die Zähler für Transaktionen, Vorgänge, To-Dos und Termine auf `–` und das vorhandene Label auf `Nicht verfügbar` gesetzt. Der Budgetzähler verwendet ebenfalls `–` statt einer numerischen Anzahl. Damit wird kein veralteter oder scheinbar aktueller Ergebniswert präsentiert.
+Automatisierte Tests sind für die reine Dokumentationsänderung nicht erforderlich. Der dokumentierte manuelle Check sowie `git diff --check` sind für diesen Scope angemessen. Die Matrix ist ohne Kenntnis interner Implementierungsdetails verständlich und erfüllt die angegebenen manuellen Testhinweise.
 
-### Vorherige Filterresultate invalidieren
+### Fazit
 
-Die Fehlerpfade setzen die jeweiligen Listenstates auf leere Arrays und rendern die Listen anschließend neu. Dadurch werden zuvor sichtbare Ergebnisse entfernt. Dies gilt für Transaktionen, Vorgänge, To-Dos, Termine und Budgets.
-
-### Erfolgreicher Reload
-
-Die erfolgreichen Ladepfade schreiben State, Zähler und Label wieder regulär und rufen anschließend die normalen Renderer ohne Fehlerargument auf. Dadurch wird auch die Fehlerklasse entfernt und der leere Bestand beziehungsweise ein leerer Such- oder Filtertreffer wieder korrekt dargestellt.
-
-### Architektur und Scope
-
-Die bestehende State- und Renderer-Struktur wird weiterverwendet. Es wurden keine Backend-, Datenbank-, Mail-, DFBnet- oder externen Login-Funktionen geändert. Die gemeinsame Tabellen-Zustandsdarstellung ist eine kleine, passende Ergänzung und kein Ersatz für bestehende fachliche Datenstrukturen.
-
-## Tests
-
-Der neue Node-basierte Regressionstest deckt einen Ladefehler nach zuvor sichtbaren To-Do-Filterresultaten, das Entfernen der alten Darstellung, den ungültigen Zählerzustand sowie die erfolgreiche Wiederherstellung ab. Zusätzlich sichern statische Prüfungen die Zähler-Invalidierung der betroffenen Listen ab. Die vorhandene Dashboard-Suite wurde laut Implementation Report erfolgreich ausgeführt; außerdem bestanden JavaScript-Syntax- und Diff-Prüfung.
-
-Die Testabdeckung könnte optional noch um direkte Verhaltenstests für alle übrigen Listen erweitert werden, ist für die vorliegende Umsetzung jedoch ausreichend plausibel und enthält keine erkennbare funktionale Lücke.
-
-## Repository- und Compare-Prüfung
-
-- GitHub Compare: `ahead`
-- `ahead_by`: 1
-- `behind_by`: 0
-- Missing beziehungsweise zusätzliche Compare-Dateien: keine
-- Geänderte produktive Dateien entsprechen dem Arbeitspaket
-- Änderung an `feedback/implementation_report.md` ist als Umsetzungsbericht zulässig
-
-## Fazit
-
-Die Akzeptanzkriterien sind erfüllt. Ladefehler werden klar von leerem Bestand und erfolgloser Suche beziehungsweise Filterung unterschieden, veraltete Ergebnisse werden entfernt und Zähler werden als nicht verfügbar gekennzeichnet. Es gibt keine blockierenden technischen oder fachlichen Probleme.
+Keine blockierenden Abweichungen festgestellt. Das Arbeitspaket ist vollständig und kann akzeptiert werden.
