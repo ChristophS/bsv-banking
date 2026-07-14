@@ -1,3 +1,3 @@
-- Echte DOM-/Browser-Tests für alle sechs Zuordnungsdialoge ergänzen.
-- Für bereits verknüpfte Belege einen expliziten Umhänge- oder Entfernen-Ablauf prüfen.
-- Mehrfachauswahl bei To-Dos und Terminen im Dialog deutlicher erklären und mit einem gezielten Test absichern.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
