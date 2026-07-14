@@ -1,5 +1,7 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
 ## 1. Zuordnungsdialoge für Vorgänge, Transaktionen, Belege, Mails, To-Dos und Termine vereinheitlichen
@@ -14,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** mittel
 
-**Grund:** Einheitliche Suche, Auswahl, Bestätigung und Fehlerrückmeldungen sollen Fehlzuordnungen reduzieren und wiederkehrende Bearbeitungsschritte beschleunigen, ohne die Vorgangsarchitektur zu umgehen.
+**Grund:** Einheitliche Suche, Auswahl, Bestätigung und Fehlerrückmeldungen sollen Fehlzuordnungen reduzieren und wiederkehrende Bearbeitungsschritte beschleunigen.
 
 **Feedback:**
 
@@ -37,7 +39,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
+- Maximalen Benutzerkomfort ohne Feature- und Leistungseinbußen
 - Abschlussprüfungen und Klassifikationsstatus
 
 ## 3. Bedienbarkeit und Rückmeldungen in datenintensiven Dashboard-Listen prüfen
@@ -52,32 +54,13 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** niedrig
 
-**Grund:** Transaktions-, Vorgangs-, Mail-, Beleg-, To-Do- und Terminlisten sollen bei typischen Vereinsdaten verständlich filterbar, suchbar und performant bleiben.
+**Grund:** Transaktions-, Vorgangs-, Mail-, Beleg-, To-do- und Terminlisten sollen bei typischen Vereinsdaten verständlich filterbar, suchbar und performant bleiben.
 
 **Feedback:**
 
 - Nutzerkomfort ohne Feature- und Leistungseinbußen
 
-## 4. Termin-API-Flows auf konsistente Eingabevalidierung und Fehlerantworten prüfen
-
-**Epic-ID:** epic-system-consistency
-
-**Epic-Titel:** Systematische Qualitäts- und Konsistenzprüfung des Vereins-Finanztools
-
-**Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
-
-**Teilpaket:** Teil 2.5
-
-**Priorität:** mittel
-
-**Grund:** Termin-Erstellung, -Änderung und -Löschung sollen Datums-, Status- und Verknüpfungsfehler einheitlich ablehnen und keine unvollständigen Änderungen hinterlassen.
-
-**Feedback:**
-
-- gesamten Code auf Konsistenz und Funktion prüfen
-- Lokale API-Endpunkte für Transaktionen, Vorgänge, Belege, To-Dos und Termine sollen auf einheitliche Validierung, korrekte Statuscodes und nachvollziehbare Fehlerantworten geprüft werden.
-
-## 5. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
+## 4. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
 
 **Epic-ID:** epic-system-consistency
 
@@ -93,10 +76,10 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- gesamten Code auf Konsistenz und Funktion prüfen
-- externe Dienste nur mit Mocks, Fakes oder Fixtures testen
+- Gesamten Code auf Konsistenz und Funktion prüfen
+- Externe Dienste nur mit Mocks, Fakes oder Fixtures testen
 
-## 6. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
+## 5. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
 
 **Epic-ID:** epic-balance-correction
 
@@ -112,9 +95,9 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen.
+- Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen
 
-## 7. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
+## 6. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
 
 **Epic-ID:** epic-balance-correction
 
@@ -130,4 +113,4 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Feedback:**
 
-- Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen.
+- Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen
