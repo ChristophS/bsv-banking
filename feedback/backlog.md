@@ -1,7 +1,5 @@
 # Backlog
 
-**Planungsstatus:** strukturiert
-
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
 ## 1. Klassifikations- und Abschlussblocker verständlich und handlungsorientiert darstellen
@@ -40,58 +38,3 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 **Feedback:**
 
 - Nutzerkomfort ohne Feature- und Leistungseinbußen
-
-## 3. Externe Adapter auf sichere lokale Fehlermodi und Mock-Abdeckung prüfen
-
-**Epic-ID:** epic-system-consistency
-
-**Epic-Titel:** Systematische Qualitäts- und Konsistenzprüfung des Vereins-Finanztools
-
-**Epic-Ziel:** Die bestehenden Funktionen, Datenflüsse und Schnittstellen des Vereins-Finanztools schrittweise auf konsistentes Verhalten, Datenintegrität und sichere lokale Testbarkeit prüfen und nachbessern.
-
-**Teilpaket:** Teil 4
-
-**Priorität:** mittel
-
-**Grund:** Banking, Microsoft Graph und DFBnet dürfen keine unkontrollierten produktiven Aktionen ausführen; Fehler-, Abbruch- und Testpfade müssen getrennt mit Mocks, Fakes oder Fixtures geprüft werden.
-
-**Feedback:**
-
-- Gesamten Code auf Konsistenz und Funktion prüfen
-- Externe Dienste nur mit Mocks, Fakes oder Fixtures testen
-
-## 4. Widerruf oder bewussten Ersatz bestehender manueller Saldo-Korrekturen ergänzen
-
-**Epic-ID:** epic-balance-correction
-
-**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
-
-**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
-
-**Teilpaket:** Teil 3
-
-**Priorität:** mittel
-
-**Grund:** Neben dem Anlegen einer manuellen Korrektur wird ein klar geregelter Weg benötigt, bestehende Korrekturen bewusst zu widerrufen oder zu ersetzen.
-
-**Feedback:**
-
-- Widerruf oder bewussten Ersatz bestehender Korrekturen in einem separaten Arbeitspaket ergänzen
-
-## 5. API um eine formale Bestätigungsaktion für manuelle Saldo-Korrekturen erweitern
-
-**Epic-ID:** epic-balance-correction
-
-**Epic-Titel:** Manuelle Behandlung abweichender Kontostandsanker
-
-**Epic-Ziel:** Abweichungen zwischen exportierten Bank-Salden und importierten Umsatz-Saldoketten kontrolliert, nachvollziehbar und ohne Veränderung von Originaldaten behandeln.
-
-**Teilpaket:** Teil 4
-
-**Priorität:** mittel
-
-**Grund:** Falls fachliche Prüfung und Anlegen des lokalen Ankers künftig getrennte Schritte werden sollen, braucht die API eine explizite Bestätigungsaktion.
-
-**Feedback:**
-
-- Die API um eine formale Bestätigungsaktion erweitern, falls die fachliche Prüfung und das Anlegen des Ankers künftig getrennte Schritte werden sollen
