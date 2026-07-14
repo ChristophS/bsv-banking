@@ -2,13 +2,11 @@
 
 ## Branchname
 
-`agent2/codex-20260714-114613`
+`agent2/codex-20260714-115108`
 
 ## Geänderte Dateien
 
-- `banking_dashboard/static/app.js`
-- `banking_dashboard/static/styles.css`
-- `tests/test_dashboard.py`
+- `feedback/cashier_workflow_analysis.md`
 - `feedback/implementation_report.md`
 
 Die bereits vor Arbeitsbeginn vorhandene Änderung an
@@ -17,56 +15,49 @@ Die bereits vor Arbeitsbeginn vorhandene Änderung an
 
 ## Umgesetzte Punkte
 
-- Ladefehler leeren die zuvor dargestellten Ergebnisse der Transaktions-,
-  Vorgangs-, To-do-, Termin- und Budgetlisten.
-- Ergebniszähler zeigen im Fehlerzustand keinen scheinbar aktuellen Zahlenwert,
-  sondern einen Gedankenstrich und – soweit ein separates Label vorhanden ist –
-  die Bezeichnung „Nicht verfügbar“.
-- Transaktions-, Vorgangs- und Budgetbereiche zeigen einen eigenen sichtbaren
-  Fehlerzustand statt der regulären Leerbestands- oder Nulltrefferanzeige.
-- To-do- und Terminlisten verwenden ihre vorhandene, bereits getrennte
-  Fehlerdarstellung und setzen nun zusätzlich den Ergebniszähler zurück.
-- Ein erfolgreicher erneuter Ladevorgang stellt Zähler, Ergebnisdarstellung und
-  reguläre Leer- beziehungsweise Filterzustände wieder her.
-- Die Fehlerdarstellung wurde über die betroffenen Listen hinweg farblich
-  vereinheitlicht.
-- Ein isolierter Node-basierter Regressionstest prüft einen Ladefehler nach
-  zuvor sichtbaren gefilterten To-do-Ergebnissen sowie die anschließende
-  erfolgreiche Wiederherstellung. Zusätzlich sichert er die ungültigen
-  Zählerzustände aller betroffenen Listen statisch ab.
+- Eine kompakte, leicht auffindbare Zustandsmatrix für Vorgänge,
+  Transaktionen, Mails, To-Dos, Termine und Dokumentbestände ergänzt.
+- Geladenen Bestand, leeren Bestand, erfolglose Suche oder Filterung und
+  Ladefehler mit jeweils eigener Bedeutung und Nutzerorientierung abgegrenzt.
+- Listenübergreifende Merkmale für Ergebniszahlen, aktive Such- und
+  Filterkontexte, initiales Laden und erneutes Laden dokumentiert.
+- Die Begriffe ausdrücklich als Anzeigezustände und nicht als neue fachliche
+  Status oder Datenstrukturen festgelegt.
 
 ## Nicht umgesetzte Punkte
 
-- Mail- und externe Dienstfunktionen wurden entsprechend der Abgrenzung des
-  Arbeitspakets nicht verändert.
-- Backend-, Datenbank- und Persistenzstrukturen wurden nicht verändert.
-- Es wurde keine übergreifende Zustandsmatrix als separates Dokument erstellt.
+- Es wurden keine Laufzeitfunktionen, Tests, APIs, Persistenzstrukturen oder
+  Datenmodelle verändert.
+- Es wurde kein separates Dokument angelegt; die Matrix steht wie gefordert in
+  der bestehenden Kassierer-Workflow-Analyse.
 
 ## Ausgeführte Tests
 
-- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `node --check banking_dashboard/static/app.js`
 - `git diff --check`
+- Manuelle Prüfung der Matrix auf Vollständigkeit, eindeutige Abgrenzung und
+  Verständlichkeit ohne interne Implementierungskenntnisse.
 
 ## Testergebnis
 
-- Dashboard-Suite: **136 bestanden, 6 übersprungen**, 0 fehlgeschlagen
-  (45,30 s).
-- JavaScript-Syntaxprüfung: erfolgreich.
 - Diff-Prüfung: erfolgreich.
+- Manuelle Dokumentationsprüfung: erfolgreich; alle vier Pflichtzustände sind
+  eindeutig unterschieden und enthalten Bedeutung sowie Nutzerorientierung.
+- Automatisierte Tests wurden nicht ausgeführt, da ausschließlich
+  Dokumentation geändert wurde.
 
 ## Bekannte Einschränkungen
 
-- Die sechs übersprungenen Tests sind optionale, bereits vorhandene Tests.
-- Der neue Verhaltenstest nutzt eine isolierte DOM-Nachbildung und keinen
-  echten Browser; externe Dienste und produktive Daten werden nicht verwendet.
+- Die Matrix legt bewusst keine konkreten UI-Komponenten, Texte oder
+  Implementierungsmechanismen fest.
+- Ob ein Bereich tatsächlich alle genannten Such- oder Filtermöglichkeiten
+  besitzt, bleibt von seinem bestehenden Funktionsumfang abhängig.
 
 ## Hinweise für den Review-Agenten
 
-- Der zentrale neue Test ist
-  `test_todo_load_error_invalidates_count_and_previous_filter_results`.
-- Die gemeinsame Tabellen-Zustandsdarstellung liegt in
-  `renderTableListState`; die bestehenden fachlichen Datenstrukturen bleiben
-  unverändert.
+- Die Matrix steht direkt nach „Auftrag und Rahmen“ und damit vor der
+  Beschreibung des heutigen Arbeitsablaufs.
+- Besonders zu prüfen ist die explizite Trennung zwischen einem fachlich leeren
+  Bestand, null Treffern im eingeschränkten Kontext und einem unverlässlichen
+  Ergebnis nach Ladefehler.
 - Die vorbestehende Änderung an `feedback/Review-report.md` gehört nicht zu
   dieser Umsetzung.
