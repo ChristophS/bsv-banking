@@ -1,8 +1,16 @@
 # Implementation Report
 
+## Nachbesserung nach Review
+
+- Der Einstieg `unclassified_transactions` setzt jetzt den serverseitigen Filter `unclassified_only=true`. Store und API verwenden exakt dieselbe Regel wie die Dashboard-Kennzahl: Ohne Splits werden die vier Pflichtfelder der Transaktion geprüft, mit Splits die Pflichtfelder jedes Splits. Beim regulären Einstieg in den Transaktions-Tab wird der Arbeitsfilter wieder aufgehoben.
+- Der Einstieg `unassigned_documents` fragt Dokumente mit dem serverseitigen Filter `unassigned_only=true` ab und öffnet das erste offene Dokument direkt im vorhandenen Vorgang-Erstell- und Zuordnungsdialog. Das Dokument ist dort bereits ausgewählt und muss nicht mehr über die allgemeine Vorgangsliste gesucht werden.
+- Store-, HTTP- und Browser-Tests prüfen den exakten Transaktionsfilter und beim Dokumenteinstieg den geöffneten Zuordnungsdialog samt vorausgewähltem Dokument.
+- Nach der Nachbesserung ausgeführt: `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -q` mit **131 bestanden, 6 übersprungen und 50 bestandenen Subtests**; außerdem `node --check banking_dashboard/static/app.js` und `git diff --check`, beide erfolgreich.
+- Die übersprungenen Tests benötigen Playwright beziehungsweise Chromium. Es wurden keine externen Dienste und keine echten Zugangsdaten verwendet.
+
 ## Branchname
 
-`agent2/codex-20260714-101753`
+`agent2/rework-20260714-102409`
 
 ## Geänderte Dateien
 

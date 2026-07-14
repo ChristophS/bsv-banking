@@ -287,6 +287,7 @@ class DashboardDataStore:
         date_from: str | None = None,
         date_to: str | None = None,
         hide_completed_vorgaenge: bool = False,
+        unclassified_only: bool = False,
     ) -> list[dict[str, Any]]:
         if sort not in SORT_COLUMNS:
             raise ValueError(f"Unbekannte Sortierspalte: {sort}")
@@ -321,6 +322,37 @@ class DashboardDataStore:
                           ON open_v.vorgangs_id = open_tv.vorgangs_id
                         WHERE open_tv.transaktions_id = n.transaktions_id
                           AND open_v.status <> 'abgeschlossen'
+                    )
+                )
+                """
+            )
+        if unclassified_only:
+            conditions.append(
+                """
+                (
+                    (
+                        NOT EXISTS (
+                            SELECT 1
+                            FROM transaction_splits AS filter_split
+                            WHERE filter_split.transaction_id = n.transaktions_id
+                        )
+                        AND (
+                            TRIM(COALESCE(n.transaktionstyp, '')) = ''
+                            OR TRIM(COALESCE(n.oberkategorie, '')) = ''
+                            OR TRIM(COALESCE(n.unterkategorie, '')) = ''
+                            OR TRIM(COALESCE(n.sphaere, '')) = ''
+                        )
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM transaction_splits AS filter_split
+                        WHERE filter_split.transaction_id = n.transaktions_id
+                          AND (
+                            TRIM(COALESCE(filter_split.transaction_type, '')) = ''
+                            OR TRIM(COALESCE(filter_split.top_category, '')) = ''
+                            OR TRIM(COALESCE(filter_split.sub_category, '')) = ''
+                            OR TRIM(COALESCE(filter_split.sphere, '')) = ''
+                          )
                     )
                 )
                 """
@@ -2806,17 +2838,32 @@ class DashboardDataStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
-    def list_belege(self, search: str = "") -> list[dict[str, Any]]:
+    def list_belege(
+        self,
+        search: str = "",
+        unassigned_only: bool = False,
+    ) -> list[dict[str, Any]]:
         with closing(self._connect(writable=True)) as connection:
             sync_belege_directory(connection, self.belege_directory)
             connection.commit()
         query = search.strip()
         parameters: list[str] = []
-        where = ""
+        conditions: list[str] = []
+        if unassigned_only:
+            conditions.append(
+                """
+                NOT EXISTS (
+                    SELECT 1
+                    FROM vorgang_belege AS filter_vb
+                    WHERE filter_vb.beleg_id = b.beleg_id
+                )
+                """
+            )
         if query:
             pattern = f"%{_escape_like(query.casefold())}%"
-            where = """
-                WHERE
+            conditions.append(
+                """
+                (
                     CASEFOLD(b.beleg_id) LIKE ? ESCAPE '\\'
                     OR CASEFOLD(b.dateiname) LIKE ? ESCAPE '\\'
                     OR CASEFOLD(b.dateipfad) LIKE ? ESCAPE '\\'
@@ -2827,8 +2874,11 @@ class DashboardDataStore:
                           AND CASEFOLD(search_vb.vorgangs_id)
                               LIKE ? ESCAPE '\\'
                     )
-            """
+                )
+                """
+            )
             parameters.extend((pattern,) * 4)
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         with closing(self._connect()) as connection:
             rows = connection.execute(
                 f"""
@@ -5773,8 +5823,13 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._json_response({"todo": todo})
                 return
             if parsed.path == "/api/belege":
+                query = parse_qs(parsed.query)
                 belege = self.server.data_store.list_belege(
-                    search=parse_qs(parsed.query).get("search", [""])[0]
+                    search=query.get("search", [""])[0],
+                    unassigned_only=(
+                        query.get("unassigned_only", ["false"])[0].casefold()
+                        in {"1", "true", "yes", "on"}
+                    ),
                 )
                 self._json_response(
                     {
@@ -6610,6 +6665,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             query.get("hide_completed_vorgaenge", ["false"])[0].casefold()
             in {"1", "true", "yes", "on"}
         )
+        unclassified_only = (
+            query.get("unclassified_only", ["false"])[0].casefold()
+            in {"1", "true", "yes", "on"}
+        )
         transactions = self.server.data_store.list_transactions(
             search=search,
             sort=sort,
@@ -6617,6 +6676,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             date_from=date_from,
             date_to=date_to,
             hide_completed_vorgaenge=hide_completed_vorgaenge,
+            unclassified_only=unclassified_only,
         )
         self._json_response(
             {
@@ -6628,6 +6688,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 "date_from": date_from,
                 "date_to": date_to,
                 "hide_completed_vorgaenge": hide_completed_vorgaenge,
+                "unclassified_only": unclassified_only,
                 "balances": self.server.data_store.balance_summary(),
             }
         )
