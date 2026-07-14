@@ -2,121 +2,72 @@
 
 ## Branchname
 
-`agent2/rework-20260714-105406`
+`agent2/codex-20260714-111901`
 
 ## Geänderte Dateien
 
+- `banking_dashboard/server.py`
 - `banking_dashboard/static/app.js`
 - `banking_dashboard/static/styles.css`
 - `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
 
-Die bereits vor Arbeitsbeginn vorhandene Änderung an `feedback/Review-report.md`
-und die unversionierten Dateien `feedback/agent2_prompt.md` sowie
-`feedback/agent2_review_request.md` wurden nicht verändert.
+Die bereits vor Arbeitsbeginn vorhandene Änderung an
+`feedback/Review-report.md` und die unversionierte Datei
+`feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Mail- und Transaktionszuordnungen verwenden gemeinsame Texte für Auswahl,
-  Bestätigung, Speichern, Erfolg und Fehler.
-- To-Do- und Termin-Detaildialoge bieten eine verständlich beschriftete,
-  durchsuchbare Vorgangsauswahl mit Zuständen für keine verfügbaren Vorgänge
-  und keine Suchtreffer.
-- Der Beleg-Detaildialog kann Dokumente über den bestehenden
-  vorgangsbasierten Beleg-Endpunkt einem Vorgang zuordnen.
-- Zuordnungen werden erst über eine explizit beschriftete Bestätigung
-  gespeichert. Eine fehlende Auswahl erzeugt eine handlungsorientierte Meldung.
-- Laufende Zuordnungsrequests sperren weitere Speicherversuche. Fachliche und
-  technische API-Fehler werden direkt am Formular angezeigt.
-- Nach erfolgreicher Belegzuordnung wird die Detailansicht neu geladen; bei Mail
-  und Transaktion bleiben die bestehenden Aktualisierungen erhalten.
-- Bestehende Vorgangs-, Verknüpfungs- und Service-Strukturen wurden unverändert
-  weiterverwendet. Es wurde kein neues Zuordnungsmodell eingeführt.
-- Der Vorgangsdetaildialog verwendet weiterhin seine vorhandenen gemeinsamen
-  Such- und Auswahlfelder für Transaktionen, Mails, To-Dos, Belege und Termine.
+- Das bestehende Vorgangsdetail liefert zusätzlich eine strukturierte
+  `abschluss_pruefung`, die ausschließlich aus den vorhandenen
+  Abschlussanforderungen abgeleitet wird.
+- Unvollständige Klassifikationen werden je Transaktion ausgewiesen und nennen
+  nur die tatsächlich fehlenden Pflichtfelder (Transaktionstyp,
+  Oberkategorie, Unterkategorie und/oder Sphäre).
+- Für Rechnungen werden die bereits bestehenden Voraussetzungen
+  „Transaktion vorhanden“ und „Beleg vorhanden“ jeweils als offen oder erfüllt
+  dargestellt.
+- Jeder offene Prüfpunkt enthält eine konkrete nächste Aktion. Erfüllte Punkte
+  sind in der Vorgangsansicht visuell von offenen Punkten unterscheidbar.
+- Mehrere offene Abschlussblocker werden gemeinsam in der Abschlussprüfung
+  angezeigt.
+- Die bestehende serverseitige Abschlussvalidierung, einschließlich der
+  Fehlbuchungsausnahme, wurde nicht verändert oder abgeschwächt.
 
 ## Nicht umgesetzte Punkte
 
-- Kein Umbau der Server-, Persistenz- oder Verknüpfungsarchitektur.
-- Keine neuen Entitäten oder externen Integrationen.
-- Keine Änderungen außerhalb der Zuordnungsdialoge und des Reports.
+- Keine neuen Abschlussregeln oder Pflichtfelder.
+- Kein Umbau von Vorgangs-, Transaktions-, Beleg- oder Verknüpfungsstrukturen.
+- Keine externen Dienste oder Browser-Automationen.
 
 ## Ausgeführte Tests
 
 - `node --check banking_dashboard/static/app.js`
 - `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `& "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k assignment_dialogs_share_confirmation_and_feedback_states`
 - `git diff --check`
-
-Der erste Lauf der vollständigen Suite wurde nur wegen eines zu kurzen
-Tool-Zeitlimits nach zwei Tests beendet und anschließend vollständig wiederholt.
 
 ## Testergebnis
 
 - JavaScript-Syntaxcheck: bestanden.
-- Vollständige Dashboard-Suite: **133 bestanden, 6 übersprungen**, 0
-  fehlgeschlagen (45,34 s).
-- Gezielter Zuordnungsdialog-Test nach der letzten Anpassung: **1 bestanden,
-  138 abgewählt**, 0 fehlgeschlagen (0,77 s).
-- `git diff --check`: bestanden; nur bestehende LF/CRLF-Hinweise.
+- Dashboard-Suite: **134 bestanden, 6 übersprungen**, 0 fehlgeschlagen
+  (44,17 s).
+- `git diff --check`: bestanden; lediglich bestehende LF/CRLF-Hinweise.
 
 ## Bekannte Einschränkungen
 
-- Die sechs übersprungenen Tests sind optionale Browser-/Playwright-Tests; es
-  wurde gemäß Sicherheitsvorgabe keine Browser-Automation gestartet.
-- To-Do und Termin speichern ihre Zuordnung weiterhin zusammen mit den übrigen
-  Entitätsfeldern über die vorhandenen PATCH-Endpunkte.
-- Die Vorgangsdetailansicht behält bewusst ihre vorhandene Mehrfachzuordnung von
-  Entitäten bei; sie nutzt kein neues separates Zuordnungsmodell.
+- Die sechs übersprungenen Tests sind optionale Browser-/Playwright-Tests;
+  gemäß Sicherheitsvorgabe wurde keine Browser-Automation gestartet.
+- Die neue Checkliste wird im geöffneten Vorgang angezeigt. Andere
+  Dashboard-Listen wurden entsprechend der Abgrenzung des Arbeitspakets nicht
+  umfassend überarbeitet.
 
 ## Hinweise für den Review-Agenten
 
-- Zentral sind `entityVorgangSelect()`,
-  `createStandaloneVorgangAssignment()`, `submitMailVorgangLink()` und
-  `appendTransactionVorgangLinkSection()` in `static/app.js`.
-- Der neue Test führt die gemeinsame produktive Submit-Logik mit lokalen Mocks
-  aus und prüft Auswahlpflicht, Erfolg, Fehler sowie Mehrfachklick-Sperre.
-- Bereits vorhandene HTTP-Tests decken erfolgreiche Zuordnungen und API-Fehler
-  für Transaktion, Mail, To-Do und Beleg ab.
-
-## Nachbesserung nach Review
-
-- Das aktuelle blockierende Review-Problem in `renderTodoEntityForm()` und
-  `renderTerminEntityForm()` ist behoben: Beide Submit-Pfade verwenden nun
-  `submitVorgangAssignment()`. Bei leerer Auswahl erscheint
-  `Bitte zuerst einen Vorgang auswählen.`; `persistTodo()` beziehungsweise der
-  Termin-PATCH werden nicht aufgerufen. Bestehende Zuordnungen können daher
-  nicht mehr durch eine leere Bestätigung entfernt werden.
-- Die gemeinsame Request-Sperre gilt damit ebenfalls für To-Dos und Termine.
-  Nach erfolgreichem Speichern wird die Detailansicht aktualisiert und zeigt am
-  neu gerenderten Formular weiterhin `Zuordnung gespeichert`.
-- Der Test prüft explizit für beide betroffenen Formularfunktionen die Nutzung
-  der gemeinsamen Auswahlvalidierung. Der ausgeführte Node-Test weist nach,
-  dass eine leere Auswahl keinen Request auslöst.
-- Für die aktuelle Nachbesserung wurden `node --check
-  banking_dashboard/static/app.js`, der gezielte Test (**1 bestanden, 138
-  abgewählt**) und die vollständige Dashboard-Suite (**133 bestanden, 6
-  übersprungen**, 0 fehlgeschlagen; 43,92 s) ausgeführt.
-- Eine separate Entfernen-Aktion wurde nicht eingeführt, da sie für die
-  blockierende Korrektur nicht erforderlich ist.
-
-- Die zuvor nur statische String-Prüfung wurde durch einen ausführbaren
-  JavaScript-Interaktionstest mit lokalen Mocks ersetzt. Er prüft fehlende
-  Auswahl ohne Request, erfolgreiche Speicherung, die Sperre eines parallelen
-  zweiten Speicherversuchs sowie einen fachlichen Request-Fehler einschließlich
-  erneuter Bedienbarkeit des Formulars.
-- Mail-, Beleg- und Transaktionszuordnung verwenden nun den gemeinsamen
-  `submitVorgangAssignment()`-Ablauf für Auswahlvalidierung, Lade-, Erfolgs- und
-  Fehlerzustand sowie die Request-Sperre.
-- Nach dem Neuaufbau der Mail- und Belegansicht wird der Erfolgsstatus am neu
-  gerenderten Formular erneut gesetzt. Die Transaktionsansicht zeigt
-  `Zuordnung gespeichert` nach dem Workspace-Reload im persistenten
-  Dialogstatus.
-- Für die Nachbesserung wurden zusätzlich ausgeführt:
-  `node --check banking_dashboard/static/app.js`, der gezielte neue Test
-  (**1 bestanden, 138 abgewählt**) und die vollständige Dashboard-Suite
-  (**133 bestanden, 6 übersprungen**, 0 fehlgeschlagen; 45,79 s).
-- Nicht umgesetzt wurden die nicht-blockierenden weitergehenden Vorschläge für
-  eine neue Browser-/DOM-Testinfrastruktur. Der neue Test benötigt keine
-  Browserinstallation und führt die produktiv verwendete Submit-Logik direkt
-  unter Node.js aus.
+- `_vorgang_completion_requirements()` bleibt die unveränderte fachliche
+  Sperrlogik. `_vorgang_completion_checklist()` bereitet dieselben Zustände nur
+  für die Anzeige auf.
+- Die Tests decken fehlende Klassifikationsfelder, einen fehlenden Beleg,
+  mehrere gleichzeitige Blocker und einen vollständig abschließbaren Vorgang
+  ab.
+- Vorhandene Änderungen an `feedback/Review-report.md` gehören nicht zu dieser
+  Umsetzung.

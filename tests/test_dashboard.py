@@ -1455,6 +1455,16 @@ class DashboardDataStoreTests(unittest.TestCase):
             detail["unvollstaendige_transaktionen"],
             ["tx_newer"],
         )
+        open_checks = [
+            check
+            for check in detail["abschluss_pruefung"]
+            if check["status"] == "offen"
+        ]
+        self.assertEqual(1, len(open_checks))
+        self.assertEqual("klassifikation", open_checks[0]["code"])
+        self.assertIn("tx_newer", open_checks[0]["title"])
+        self.assertIn("Unterkategorie", open_checks[0]["message"])
+        self.assertNotIn("Oberkategorie", open_checks[0]["message"])
 
     def test_fehlbuchung_vorgang_can_be_completed_with_empty_sphere(self):
         self.store.update_vorgang(
@@ -1526,6 +1536,14 @@ class DashboardDataStoreTests(unittest.TestCase):
         )
         self.assertFalse(updated["abschluss_moeglich"])
         self.assertIn("Dokument", " ".join(updated["abschluss_blocker"]))
+        document_check = next(
+            check
+            for check in updated["abschluss_pruefung"]
+            if check["code"] == "beleg"
+        )
+        self.assertEqual("offen", document_check["status"])
+        self.assertEqual("Beleg fehlt", document_check["title"])
+        self.assertIn("ordnen", document_check["action"].casefold())
 
         with self.assertRaisesRegex(ValueError, "Dokument"):
             self.store.update_vorgang_status("vorgang_tx_older", True)
@@ -1551,6 +1569,11 @@ class DashboardDataStoreTests(unittest.TestCase):
         )
 
         self.assertTrue(updated["abschluss_moeglich"])
+        self.assertTrue(updated["abschluss_pruefung"])
+        self.assertTrue(all(
+            check["status"] == "erfuellt"
+            for check in updated["abschluss_pruefung"]
+        ))
 
         completed = self.store.update_vorgang_status(
             "vorgang_tx_newer",
@@ -1558,6 +1581,33 @@ class DashboardDataStoreTests(unittest.TestCase):
         )
 
         self.assertEqual("abgeschlossen", completed["status"])
+
+    def test_rechnung_completion_checklists_all_open_blockers(self):
+        self.store.update_transaction_classification(
+            "tx_newer",
+            {"oberkategorie": "", "sphaere": ""},
+        )
+        detail = self.store.update_vorgang(
+            "vorgang_tx_newer",
+            {
+                "vorgangstyp": "Rechnung",
+                "completed": False,
+                "transaction_ids": ["tx_newer"],
+                "beleg_ids": [],
+            },
+        )
+
+        open_checks = [
+            check
+            for check in detail["abschluss_pruefung"]
+            if check["status"] == "offen"
+        ]
+        self.assertEqual(
+            ["klassifikation", "beleg"],
+            [check["code"] for check in open_checks],
+        )
+        self.assertIn("Oberkategorie", open_checks[0]["message"])
+        self.assertIn("Sphäre", open_checks[0]["message"])
 
     def test_incomplete_transaction_reopens_every_linked_vorgang(self):
         connection = sqlite3.connect(self.database_path)

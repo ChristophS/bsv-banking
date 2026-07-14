@@ -1502,6 +1502,12 @@ class DashboardDataStore:
         )
         detail["abschluss_moeglich"] = requirements["can_complete"]
         detail["abschluss_blocker"] = requirements["issues"]
+        detail["abschluss_pruefung"] = _vorgang_completion_checklist(
+            detail["vorgangstyp"],
+            detail["transaktionen"],
+            detail["belege"],
+            incomplete,
+        )
         return detail
 
     def mail_document_assignments(self, vorgangs_id: str) -> dict[str, Any]:
@@ -7966,6 +7972,81 @@ def _vorgang_completion_requirements(
         "can_complete": not issues,
         "issues": issues,
     }
+
+
+def _vorgang_completion_checklist(
+    vorgangstyp: Any,
+    transactions: list[dict[str, Any]],
+    belege: list[dict[str, Any]],
+    incomplete_transaction_ids: list[str],
+) -> list[dict[str, str]]:
+    """Describe the existing completion rules for presentation in the UI."""
+    incomplete_ids = set(incomplete_transaction_ids)
+    incomplete = [
+        transaction
+        for transaction in transactions
+        if transaction["transaktions_id"] in incomplete_ids
+    ]
+    checks: list[dict[str, str]] = []
+    if incomplete:
+        for transaction in incomplete:
+            metadata = _transaction_classification_metadata(transaction)
+            missing = ", ".join(
+                "Sphäre" if label == "Sphaere" else label
+                for label in metadata["classification_missing"]
+            )
+            transaction_id = str(transaction["transaktions_id"])
+            checks.append({
+                "code": "klassifikation",
+                "status": "offen",
+                "title": f"Klassifikation der Transaktion {transaction_id}",
+                "message": f"Fehlende Angaben: {missing}.",
+                "action": (
+                    "Öffnen Sie die verknüpfte Transaktion und ergänzen Sie "
+                    "die genannten Klassifikationsfelder."
+                ),
+            })
+    else:
+        checks.append({
+            "code": "klassifikation",
+            "status": "erfuellt",
+            "title": "Klassifikation vollständig",
+            "message": "Alle verknüpften Transaktionen erfüllen die Klassifikationsvorgaben.",
+            "action": "Keine Aktion erforderlich.",
+        })
+
+    if _is_rechnung_vorgang_type(vorgangstyp):
+        checks.append({
+            "code": "transaktion",
+            "status": "erfuellt" if transactions else "offen",
+            "title": "Transaktion vorhanden" if transactions else "Transaktion fehlt",
+            "message": (
+                "Mindestens eine Transaktion ist mit der Rechnung verknüpft."
+                if transactions
+                else "Für eine Rechnung ist mindestens eine verknüpfte Transaktion erforderlich."
+            ),
+            "action": (
+                "Keine Aktion erforderlich."
+                if transactions
+                else "Suchen Sie die zugehörige Transaktion und ordnen Sie sie diesem Vorgang zu."
+            ),
+        })
+        checks.append({
+            "code": "beleg",
+            "status": "erfuellt" if belege else "offen",
+            "title": "Beleg vorhanden" if belege else "Beleg fehlt",
+            "message": (
+                "Mindestens ein Dokument ist mit der Rechnung verknüpft."
+                if belege
+                else "Für eine Rechnung ist mindestens ein verknüpfter Beleg erforderlich."
+            ),
+            "action": (
+                "Keine Aktion erforderlich."
+                if belege
+                else "Ordnen Sie diesem Vorgang im Abschnitt Dokumente einen Beleg zu."
+            ),
+        })
+    return checks
 
 
 def _guess_document_category(value: str) -> str:
