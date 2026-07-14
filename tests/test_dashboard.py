@@ -5777,7 +5777,7 @@ class DashboardTodoBrowserTests(unittest.TestCase):
 
                     card.click()
 
-                    expect(page.locator("#detail-dialog")).to_be_visible()
+                    expect(page.locator("#transaction-dialog")).to_be_visible()
                     expect(page.locator("#detail-title")).to_have_text(
                         "nicht-zugewiesen.pdf"
                     )

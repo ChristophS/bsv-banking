@@ -2,6 +2,7 @@
 
 ## Nachbesserung nach Review
 
+- Der blockierende Selektorfehler im Browser-Test `test_unassigned_documents_overview_card_click_opens_document_context` wurde behoben: Der Test erwartet nun den im vollständigen HTML und in der bestehenden JavaScript-Logik tatsächlich verwendeten Dialog `#transaction-dialog` statt des nicht vorhandenen `#detail-dialog`. Die fachliche Implementierung blieb unverändert.
 - Der Einstieg `unclassified_transactions` setzt jetzt den serverseitigen Filter `unclassified_only=true`. Store und API verwenden exakt dieselbe Regel wie die Dashboard-Kennzahl: Ohne Splits werden die vier Pflichtfelder der Transaktion geprüft, mit Splits die Pflichtfelder jedes Splits. Beim regulären Einstieg in den Transaktions-Tab wird der Arbeitsfilter wieder aufgehoben.
 - Der Einstieg `unassigned_documents` fragt Dokumente mit dem serverseitigen Filter `unassigned_only=true` ab und öffnet das erste offene Dokument direkt im vorhandenen Vorgang-Erstell- und Zuordnungsdialog. Das Dokument ist dort bereits ausgewählt und muss nicht mehr über die allgemeine Vorgangsliste gesucht werden.
 - Store-, HTTP- und Browser-Tests prüfen den exakten Transaktionsfilter und beim Dokumenteinstieg den geöffneten Zuordnungsdialog samt vorausgewähltem Dokument.
@@ -10,7 +11,7 @@
 
 ## Branchname
 
-`agent2/rework-20260714-102409`
+`agent2/rework-20260714-102912`
 
 ## Geänderte Dateien
 
@@ -48,7 +49,7 @@
 
 ## Testergebnis
 
-- Vollständige Dashboard-Suite: 130 bestanden, 6 übersprungen, 0 fehlgeschlagen.
+- Vollständige Dashboard-Suite nach der Selektorkorrektur: 131 bestanden, 6 übersprungen, 0 fehlgeschlagen.
 - Gezielte Übersichtstests nach der abschließenden Split-Korrektur: 4 bestanden, 2 optionale Browsertests übersprungen, 0 fehlgeschlagen.
 - JavaScript-Syntaxprüfung: bestanden.
 - Diff-Prüfung: bestanden; nur vorhandene Hinweise zur künftigen LF/CRLF-Konvertierung.
@@ -56,11 +57,13 @@
 ## Bekannte Einschränkungen
 
 - Die sechs übersprungenen Tests benötigen Playwright beziehungsweise einen lokal installierten Chromium-Browser. Es wurden keine Browser-Automationen gegen externe Dienste gestartet.
+- Der korrigierte Browser-Test wurde in dieser Umgebung wegen des fehlenden Playwright/Chromium weiterhin übersprungen; die Selektor-Konsistenz wurde statisch gegen `index.html` und `app.js` geprüft.
 - Dokumente besitzen keinen eigenen Haupt-Tab. Der Einstieg verwendet daher repo-konform den bestehenden dokumentbezogenen Vorgangsfluss.
 - Die feste Prioritätsreihenfolge ist die kleinste sichere Annahme mangels einer im Repository hinterlegten abweichenden Fachentscheidung: zuerst Buchungsklassifikation, dann zentrale Vorgänge, anschließend To-Dos, Mails, Dokumente und Termine.
 
 ## Hinweise für den Review-Agenten
 
+- Der zuvor beanstandete Dokumenteinstiegs-Test referenziert jetzt konsistent `#transaction-dialog`; HTML und JavaScript verwenden dieselbe ID.
 - Besonders zu prüfen sind die Prioritätsmetadaten und Zustände in `overview_counts()` sowie deren Darstellung in `renderOverview()`.
 - Die neue Transaktionskennzahl unterscheidet bewusst zwischen unklassifiziert und lediglich noch keinem Vorgang zugewiesen.
 - Bei gesplitteten Transaktionen zählt eine Buchung als offen, sobald mindestens ein Split unvollständig klassifiziert ist; die Felder der Ursprungstransaktion werden dann nicht zusätzlich bewertet.
