@@ -6,44 +6,53 @@
 
 **Needs more context:** false
 
+## Begründung
+
+Die Analyse erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Der GitHub-Compare ist sauber und enthält ausschließlich die erwartete Analyse sowie die aktualisierte Implementierungsdokumentation.
+
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die wesentlichen Integritätsanforderungen. Split-Vorgangsreferenzen werden gegen die bestehende transaktion_vorgaenge-Struktur validiert, ungültige Schreibvorgänge atomar abgelehnt und Referenzen bei Löschung oder Änderung einer Verknüpfung kontrolliert auf NULL gesetzt. Die relevanten Regressionstests decken gültige Speicherung, ungültige Referenzen sowie DELETE- und UPDATE-Folgeeffekte ab. Der GitHub-Compare ist vollständig und der Branch liegt zwei Commits vor main.
+Die Kassierer-Workflows sind nachvollziehbar für Sichten, Klassifikation, Zuordnung, Validierung und Abschluss dokumentiert. Reibungspunkte sind nach Problemart sowie P0/P1/P2 priorisiert, mit konkreten Folgepaketen und Rücksicht auf bestehende Vorgangsbeziehungen, Fachregeln und Leistungsanforderungen. Es werden keine UI-, Datenmodell- oder API-Änderungen vorweggenommen.
 
-## Review-Ergebnis
+# Technischer Review
 
-**Entscheidung: akzeptiert**
+## Ergebnis
 
-### Geprüfte Anforderungen
+**Akzeptiert.**
 
-- Die bestehende Vorgangsarchitektur wird weiterverwendet. Split-Referenzen werden nicht als Ersatz für `transaktion_vorgaenge` behandelt, sondern nur akzeptiert, wenn die passende Transaktion-Vorgang-Verknüpfung existiert.
-- `BEFORE INSERT` und `BEFORE UPDATE`-Trigger verhindern ungültige Split-Vorgangsreferenzen mit einem nachvollziehbaren SQLite-Integritätsfehler.
-- Die Validierung erfolgt vor dem Persistieren der Änderung. Zusammen mit den Savepoint- und SQLite-Abbruchmechanismen bleibt der vorherige gültige Zustand bei fehlerhaften Split-Änderungen erhalten.
-- Beim Löschen einer `transaktion_vorgaenge`-Zeile wird eine zugehörige Split-Referenz kontrolliert auf `NULL` gesetzt.
-- Beim Ändern der Schlüssel einer bestehenden `transaktion_vorgaenge`-Zeile wird die alte Split-Referenz ebenfalls auf `NULL` gesetzt. Ein Update ohne tatsächlichen Schlüsselwechsel lässt gültige Referenzen unverändert.
-- Die bestehenden Fremdschlüssel- und Kaskadenregeln bleiben erhalten. Transaktionslöschungen entfernen abhängige Splits und Links; Vorgangslöschungen führen nicht zu verwaisten Split-Referenzen.
-- Die Abschluss- und Klassifikationslogik bleibt in den vorhandenen Triggern und Vorgangsdaten verankert und wird nicht umgangen.
+## Geprüfte Änderungen
 
-### Tests
+Der Branch ist gegenüber `main` um einen Commit voraus, nicht hinterher, und der GitHub-Compare enthält genau die erwarteten Dateien:
 
-Die ergänzten Tests prüfen:
+- `feedback/cashier_workflow_analysis.md`
+- `feedback/implementation_report.md`
 
-- gültige Speicherung eines Splits mit einem passend verknüpften Vorgang,
-- Ablehnung einer fremden Vorgangsreferenz beim Anlegen und Ändern,
-- unveränderten vorherigen Split-Zustand nach abgelehnten Änderungen,
-- Bereinigung beim Löschen einer Transaktion-Vorgang-Verknüpfung,
-- Bereinigung der alten Referenz beim Ändern einer Transaktion-Vorgang-Verknüpfung,
-- den bestehenden Abschluss-Folgeeffekt beim initialen Verknüpfen einer unvollständig klassifizierten Transaktion.
+Es gibt keine fehlenden oder zusätzlichen Änderungen im Compare. Die Änderung bleibt im vorgesehenen Dokumentationsumfang; bestehende UI-, Datenmodell-, API-, Service- und Verknüpfungstabellen wurden nicht verändert.
 
-Der gemeldete Testlauf umfasst 44 erfolgreiche Transaktionstests sowie einen erfolgreichen Dashboard-Testlauf mit 129 bestandenen und 6 optional übersprungenen Tests. Die übersprungenen Tests betreffen keine für dieses Arbeitspaket erforderliche Persistenzprüfung.
+## Erfüllung der Anforderungen
 
-### Repository- und Compare-Prüfung
+Die Analyse beschreibt den bestehenden Ablauf aus Kassierersicht für:
 
-- Der GitHub-Diff entspricht den gemeldeten geänderten Dateien.
-- Es fehlen keine Runner-validierten Dateien im GitHub-Compare und es gibt keine unerwarteten zusätzlichen Dateien.
-- Der Branch ist gegenüber `main` zwei Commits voraus und nicht zurück. Der Compare-Zustand ist damit verwendbar.
-- Es wurden keine UI-, API-, externen Dienst- oder produktiven Datenänderungen eingeführt.
+- offene Arbeit und Priorisierung,
+- Vorgänge und Transaktionen,
+- Dokumente und Mails,
+- To-Dos und Termine,
+- Klassifikation,
+- Zuordnung,
+- Validierung und Abschluss.
 
-### Nicht blockierende Hinweise
+Die Reibungspunkte sind fachlich nach fehlender Sichtbarkeit, unklaren Zuständen, unnötigen Schritten und fehlender Rückmeldung unterschieden. Zehn konkrete Punkte wurden als P0, P1 oder P2 priorisiert. Für jeden Punkt gibt es einen abgegrenzten Verbesserungsvorschlag und eine ableitbare nächste Handlung.
 
-Ein zusätzlicher Test für einen direkten UPDATE-Versuch auf eine nicht existente Vorgangs-ID wäre noch möglich. Die bestehende Fremdschlüsseldefinition und die bereits geprüfte Validierungslogik decken diesen Fehlerfall jedoch ausreichend ab, sodass daraus kein Freigabeblocker entsteht.
+Die vorgeschlagene vorgangsbasiere Arbeitsliste, der Dokument-Zuordnungsmodus und die Anzeige von Abschlussblockern umgehen die bestehende Vorgangsarchitektur nicht. Die Analyse stellt ausdrücklich klar, dass bestehende Verknüpfungen wie `vorgang_belege` weiterverwendet werden sollen und keine direkten Ersatzbeziehungen zwischen Entitäten eingeführt werden.
+
+Die sieben Folgearbeitspakete sind ausreichend klar abgegrenzt, um daraus eigenständige spätere UI-Arbeitspakete zu erstellen. Auswirkungen auf bestehende Abschlussregeln, manuelle Status, Vorschlagsbestätigung, Mail-Lesestatus, getrennte To-Do-/Termin-Zustände und Performance sind ausdrücklich dokumentiert.
+
+## Tests und Qualität
+
+Für ein reines Analysepaket ist es plausibel, keine neuen automatisierten Tests zu ergänzen. Die vorhandenen Dashboard-Tests wurden laut Bericht erfolgreich ausgeführt: 129 bestanden, 6 übersprungen, 0 fehlgeschlagen. Zusätzlich wurde die Diff-Syntax geprüft.
+
+Die Analyse trennt belegbare Beobachtungen von offenen fachlichen Fragen und weist darauf hin, dass Prioritäten und Häufigkeiten mit realen Kassierern validiert werden müssen. Es werden keine externen Aktionen oder produktiven Datenzugriffe vorgeschlagen.
+
+## Festgestellte Restpunkte
+
+Es bestehen keine blockierenden Mängel. Die Prioritätsreihenfolge und einzelne fachliche Annahmen müssen vor der Umsetzung der Folgepakete noch mit der Vereinsverwaltung validiert werden; diese Einschränkung ist im Dokument bereits transparent festgehalten.
