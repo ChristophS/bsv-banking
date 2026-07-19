@@ -1709,6 +1709,53 @@ class MailIntegrationHTTPTests(unittest.TestCase):
         self.assertTrue(payload["marked_read"])
         self.assertEqual(["mail-1"], self.backend.read)
 
+    def test_stale_mail_removed_disappears_from_visible_mail_overview(self):
+        self.backend.messages.append(
+            {
+                **self.backend.messages[0],
+                "id": "mail-2",
+                "subject": "Weiterhin sichtbare Testmail",
+                "conversationId": "conversation-2",
+            }
+        )
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            visible_before = json.load(response)["messages"]
+        stale_id = next(
+            mail["id"] for mail in visible_before
+            if mail["subject"] == "Testmail"
+        )
+        retained_id = next(
+            mail["id"] for mail in visible_before
+            if mail["subject"] == "Weiterhin sichtbare Testmail"
+        )
+        original_read_message = self.backend.read_message
+
+        def read_message(entry_id):
+            if entry_id == "mail-1":
+                raise ExternalMailNotFoundError("mail missing")
+            return original_read_message(entry_id)
+
+        self.backend.read_message = Mock(side_effect=read_message)
+
+        with self.assertRaises(HTTPError) as raised:
+            urlopen(
+                self.base_url + f"/api/mail/{stale_id}",
+                timeout=5,
+            )
+        self.assertEqual(404, raised.exception.code)
+        stale_payload = json.load(raised.exception)
+        self.assertTrue(stale_payload["stale_mail_removed"])
+
+        with urlopen(
+            self.base_url + "/api/mail?local=1",
+            timeout=5,
+        ) as response:
+            visible_after = json.load(response)["messages"]
+
+        visible_ids = [mail["id"] for mail in visible_after]
+        self.assertNotIn(stale_id, visible_ids)
+        self.assertIn(retained_id, visible_ids)
+
     def test_selected_mails_can_be_deleted_without_spam_threshold(self):
         with urlopen(self.base_url + "/api/mail", timeout=5) as response:
             inbox_id = json.load(response)["messages"][0]["id"]

@@ -2,75 +2,65 @@
 
 ## Branchname
 
-`agent2/rework-20260719-141938`
+`agent2/codex-20260719-142532`
 
 ## Geänderte Dateien
 
-- `banking_dashboard/mail_integration.py`
 - `tests/test_mail_integration.py`
 - `feedback/implementation_report.md`
 
 Die bereits vor Arbeitsbeginn geänderte Datei `feedback/Review-report.md` und
-die unversionierten Prompt-/Review-Dateien wurden nicht verändert.
+die unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Der vorhandene explizite Fehlertyp `ExternalMailNotFoundError` bleibt die
-  einzige Klassifikation für extern fehlende Mailobjekte.
-- Microsoft-Graph-Fehler werden weiterhin anhand von HTTP 404 oder dem
-  Graph-Fehlercode `ErrorItemNotFound` übersetzt.
-- Die vorhandenen Mail-, Vorgangs- und Verknüpfungsstrukturen blieben
-  unverändert.
-
-## Nachbesserung nach Review
-
-- `_outlook_read_message` klassifiziert das stabile MAPI-HRESULT
-  `MAPI_E_NOT_FOUND` (`0x8004010F`) nun als `ExternalMailNotFoundError`, ohne
-  den Text der COM-Fehlermeldung auszuwerten.
-- Andere Outlook-COM-Fehler werden weiterhin als generische
-  `MailIntegrationError` weitergegeben.
-- Der Outlook-Worker transportiert `ExternalMailNotFoundError` mit einem
-  eigenen Status zum aufrufenden Prozess. Damit verliert
-  `OutlookMailBackend` den expliziten Fehlertyp nicht an der Prozessgrenze und
-  das vorhandene stale-Verhalten kann ihn fachlich behandeln.
-- Zwei Fake-Tests sichern die Outlook-Abgrenzung zwischen einem fehlenden
-  Objekt und einem anderen COM-Fehler ab. Es wurden keine externen Dienste
-  oder echten Outlook-Profile verwendet.
+- Ein isolierter HTTP-Test simuliert zwei zunächst sichtbare Mails mit dem
+  bestehenden `FakeMailBackend`.
+- Für genau eine Mail simuliert der Fake anschließend einen
+  `ExternalMailNotFoundError`.
+- Der Test bestätigt den fachlichen HTTP-Status 404 und das Antwortmerkmal
+  `stale_mail_removed`.
+- Die lokale, sichtbare Mailübersicht wird nach der Verarbeitung erneut
+  abgerufen. Der Test bestätigt, dass der veraltete Eintrag entfernt ist und
+  die nicht betroffene Mail weiterhin sichtbar bleibt.
+- Bestehende Mail-, Vorgangs- und Verknüpfungsstrukturen wurden unverändert
+  weiterverwendet. Es erfolgte kein externer Mailzugriff.
 
 ## Nicht umgesetzte Punkte
 
-- Keine sichtbare Entfernung stale Einträge aus der Mailübersicht außerhalb
-  des bereits vorhandenen Detailabruf-Verhaltens (Teil 1.2).
-- Keine neuen Mail-, Vorgangs- oder Verknüpfungsmodelle.
-- Keine echten externen Mailzugriffe oder Logins.
-- Die nicht-blockierenden Review-Hinweise wurden nicht umgesetzt, da sie für
-  die gezielte Outlook-Korrektur nicht erforderlich sind.
+- Keine Änderungen am Produktivcode oder an der Mail-Synchronisationslogik.
+- Kein Browser-Test, da der vorhandene HTTP-Test sowohl das fachliche
+  Antwortformat als auch den Inhalt der sichtbaren Mailübersicht direkt und
+  ohne optionale Browser-Abhängigkeit reproduzierbar absichert.
+- Keine neuen Mailprovider, Modelle oder Verknüpfungen.
 
 ## Ausgeführte Tests
 
 ```text
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py -k stale_mail_removed
 "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py
 "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py
 ```
 
 ## Testergebnis
 
-- `tests/test_mail_integration.py`: 49 bestanden, 1 übersprungen.
+- Gezielter Test: 1 bestanden, 50 abgewählt.
+- `tests/test_mail_integration.py`: 50 bestanden, 1 übersprungen.
 - `tests/test_dashboard.py`: 137 bestanden, 6 übersprungen.
+- Alle ausgeführten Tests waren erfolgreich.
 
 ## Bekannte Einschränkungen
 
-- Die Fehlerübersetzungen wurden ausschließlich mit simulierten Graph- und
-  Outlook-Fehlern getestet; es fand kein externer Mailzugriff statt.
-- Die Outlook-Klassifikation basiert gezielt auf `MAPI_E_NOT_FOUND`; andere
-  HRESULTs werden nicht als fehlendes Objekt interpretiert.
+- Der Test prüft die vom Frontend verwendete Mailübersicht auf HTTP-Ebene und
+  nicht über einen echten Browser.
+- Der externe Maildienst wird bewusst nur durch den vorhandenen Fake und einen
+  simulierten expliziten Fehler abgebildet.
 
 ## Hinweise für den Review-Agenten
 
-- Die Outlook-Korrektur umfasst sowohl die Klassifikation in
-  `_outlook_read_message` als auch den Erhalt des Fehlertyps über
-  `_outlook_worker_main` und `_run_outlook_worker`.
-- Der Outlook-Gegenbeispieltest verwendet einen anderen HRESULT und bestätigt,
-  dass dieser ein generischer `MailIntegrationError` bleibt.
-- `_is_missing_external_mail_error` wertet weiterhin ausschließlich den Typ
-  `ExternalMailNotFoundError` und keine Meldungstexte aus.
+- Der neue Test heißt
+  `test_stale_mail_removed_disappears_from_visible_mail_overview`.
+- Ein Fehlschlag tritt sowohl bei fehlendem `stale_mail_removed`-Status als
+  auch dann auf, wenn die veraltete Mail in `/api/mail?local=1` sichtbar bleibt
+  oder die Kontroll-Mail daraus verschwindet.
+- Es wurden keine Review-Report-Dateien verändert.
