@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+Für eine spätere Verbesserung sollte ein browserbasierter Regressionstest die sichtbaren Transaktionszeilen bei typischer Viewport-Höhe sowie die Tastatur- und Screenreader-Bedienung des Saldokorrektur-Details-Elements absichern.
