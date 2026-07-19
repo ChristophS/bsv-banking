@@ -2,12 +2,13 @@
 
 ## Branchname
 
-`agent2/codex-20260719-134535`
+`agent2/codex-20260719-135350`
 
 ## Geaenderte Dateien
 
-- `banking_dashboard/mail_integration.py`
-- `tests/test_mail_integration.py`
+- `banking_dashboard/static/index.html`
+- `banking_dashboard/static/styles.css`
+- `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
 
 Die bereits vor Arbeitsbeginn vorhandene Aenderung an
@@ -16,55 +17,52 @@ Die bereits vor Arbeitsbeginn vorhandene Aenderung an
 
 ## Umgesetzte Punkte
 
-- Die Aktion zum Markieren einer Mail als gelesen erkennt den eng begrenzten
-  Fehlercode `MailboxConcurrency` beziehungsweise `ErrorMailboxConcurrency`
-  ohne Beachtung der Gross-/Kleinschreibung.
-- Bei diesem erwartbaren Fehler erfolgt genau ein unmittelbarer erneuter
-  Versuch (maximal zwei Backend-Aufrufe insgesamt, keine Warteschleife).
-- Ist auch der zweite Versuch betroffen, erhaelt die Mailuebersicht ueber den
-  bestehenden `MailIntegrationError` eine verstaendliche Aufforderung zum
-  erneuten manuellen Versuch. Der lokale Lesestatus bleibt unveraendert.
-- Nicht erwartbare Fehler werden unveraendert weitergereicht und nicht erneut
-  versucht oder verschluckt.
-- Microsoft-Graph-Fehler behalten nun Fehlercode und Meldung, damit ein im
-  strukturierten Fehlercode gelieferter Concurrency-Fehler erkennbar bleibt.
-- Mock-basierte Tests decken Erfolg nach einmaligem Concurrency-Fehler, einen
-  dauerhaft erwartbaren Fehler und einen nicht erwartbaren Fehler ab. Der
-  vorhandene Erfolgstest bleibt bestehen.
+- Der bislang vollstaendig sichtbare Saldo-Korrektur-Block ist jetzt ein
+  standardmaessig geschlossener, kompakter Detailbereich.
+- Anzahl und Bezeichnung der vorhandenen Saldo-Korrekturen bleiben auch im
+  geschlossenen Zustand sichtbar; der Bereich kann direkt ueber
+  `Anzeigen` beziehungsweise `Ausblenden` bedient werden.
+- Korrekturliste, fachlicher Hinweis und Formular bleiben unveraendert im
+  Transaktionsbereich erreichbar.
+- Die kompakte Saldenuebersicht bleibt oberhalb des Detailbereichs sichtbar.
+  Die vorhandenen kontoindividuellen Hinweise `Stand <Datum>` zeigen weiterhin
+  den Datenstand an.
+- Ein automatisierter Strukturtest sichert den initial geschlossenen Zustand,
+  die Lage vor der Transaktionstabelle und den sichtbaren Datenstand ab.
 
 ## Nicht umgesetzte Punkte
 
-- Keine allgemeine Mail-Synchronisation und kein Entfernen extern geloeschter
-  Mails.
-- Keine echten Mailbox-Aufrufe, externen Logins oder produktiven Maildaten.
-- Kein Umbau der bestehenden Integrations- oder Persistenzarchitektur.
+- Keine Aenderung an Transaktionsimport, Saldenberechnung oder Persistenz.
+- Keine fachliche Erweiterung oder Neugestaltung der Saldo-Korrekturen.
+- Keine Aenderung an Vorgangs-, Mail- oder externen Diensten.
 
 ## Ausgefuehrte Tests
 
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py`
 - `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
 - `git diff --check`
 
 ## Testergebnis
 
-- Mailintegration: 43 bestanden, 1 uebersprungen.
-- Dashboard: 136 bestanden, 6 uebersprungen.
-- Diff-Pruefung: erfolgreich; nur Hinweise zur bestehenden LF/CRLF-Konvertierung.
+- Dashboard: 137 bestanden, 6 uebersprungen.
+- Diff-Pruefung: erfolgreich; nur Hinweise zur bestehenden
+  LF/CRLF-Konvertierung.
 
 ## Bekannte Einschraenkungen
 
-- Die uebersprungenen Tests sind vorhandene Playwright-Browsertests; die lokal
-  benoetigte Browserumgebung ist nicht installiert.
-- Der Wiederholungsversuch erfolgt bewusst ohne Verzoegerung, damit Requests
-  begrenzt bleiben und keine blockierende Wartezeit eingefuehrt wird.
+- Die sechs uebersprungenen Tests sind vorhandene Playwright-Browsertests; die
+  lokal benoetigte Browserumgebung ist nicht installiert.
+- Die konkrete UI-Annahme ist die kleinste sichere Umsetzung: Der fachliche
+  Bereich bleibt an seiner bisherigen Position, wird jedoch initial
+  eingeklappt. Dadurch bleibt die Transaktionsliste ohne Wegklicken des grossen
+  Inhaltsblocks sichtbar.
 
 ## Hinweise fuer den Review-Agenten
 
-- Besonders zu pruefen sind die Obergrenze von zwei Backend-Aufrufen und dass
-  bei dauerhaftem Concurrency-Fehler weder lokaler Lesestatus noch aktive
-  Mailansicht veraendert werden.
-- Die Erkennung ist absichtlich auf den externen Fehlerbezeichner
-  `MailboxConcurrency` eingegrenzt; sonstige Backend-Fehler behalten das
-  bisherige Fehlerverhalten.
+- Manuell sollte insbesondere geprueft werden, dass Filter und erste
+  Tabellenzeilen bei ueblicher Viewport-Hoehe unmittelbar sichtbar sind.
+- Bitte ausserdem Oeffnen und Schliessen des Detailbereichs sowie Liste und
+  Anlageformular fuer Saldo-Korrekturen pruefen.
+- Die sichtbaren Saldenkarten oberhalb des Detailbereichs tragen weiterhin das
+  kontoindividuelle Datenstandsdatum.
 - Die vorbestehende Aenderung an `feedback/Review-report.md` gehoert nicht zu
   dieser Umsetzung.

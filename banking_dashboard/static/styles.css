@@ -1111,11 +1111,18 @@ kbd {
 
 .balance-corrections {
   margin: 0 30px 24px;
-  padding: 20px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: #fafbfa;
 }
+
+.balance-corrections > summary {
+  padding: 14px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.balance-corrections > summary::-webkit-details-marker { display: none; }
 
 .balance-correction-heading,
 .balance-correction-card-heading,
@@ -1140,16 +1147,31 @@ kbd {
 }
 
 .balance-correction-heading > span {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   color: var(--ink-muted);
   font-size: 11px;
   font-weight: 800;
+}
+
+.balance-correction-toggle-label::after { content: "Anzeigen"; }
+.balance-corrections[open] .balance-correction-toggle-label::after {
+  content: "Ausblenden";
 }
 
 .balance-correction-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
   gap: 20px;
-  margin-top: 18px;
+  padding: 4px 20px 20px;
+}
+
+.balance-correction-description {
+  margin: 0 0 12px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .balance-correction-list,
