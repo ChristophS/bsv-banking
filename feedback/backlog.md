@@ -1,7 +1,5 @@
 # Backlog
 
-**Planungsstatus:** strukturiert
-
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
 ## 1. Dashboard als Startseite mit freier Tab-Navigation gestalten
