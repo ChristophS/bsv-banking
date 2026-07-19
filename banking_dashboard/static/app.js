@@ -2297,6 +2297,16 @@ async function loadMailDetail(entryId) {
       fetch(`/api/mail/${encodeURIComponent(entryId)}/vorgaenge`),
       fetch("/api/vorgaenge"),
     ]);
+    if (response.status === 404) {
+      const missingPayload = await response.json();
+      if (missingPayload.stale_mail_removed) {
+        state.mails = state.mails.filter((mail) => mail.id !== entryId);
+        state.mailDeleteSelections.delete(entryId);
+        clearMailDetail();
+        renderMailList();
+        return;
+      }
+    }
     const payload = await readResponse(response);
     const linksPayload = await readResponse(linksResponse);
     const vorgaengePayload = await readResponse(vorgaengeResponse);

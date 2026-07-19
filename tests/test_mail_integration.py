@@ -16,6 +16,7 @@ from banking_dashboard.mail_integration import (
     DashboardMailManager,
     InboxMailStore,
     MailIntegrationError,
+    StaleMailRemovedError,
     MailAttachmentContent,
     MicrosoftGraphMailBackend,
     MicrosoftGraphOAuthClient,
@@ -907,6 +908,57 @@ class MailIntegrationUnitTests(unittest.TestCase):
 
         self.assertEqual(0, message_count)
         self.assertEqual(0, attachment_count)
+
+    def test_externally_deleted_mail_is_removed_from_local_inbox(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            backend = FakeMailBackend()
+            manager = DashboardMailManager(
+                backend,
+                FakeSpamScorer(),
+                inbox_database_path=database_path,
+            )
+            inbox_id = manager.list_messages()["messages"][0]["id"]
+            backend.read_message = Mock(
+                side_effect=MailIntegrationError(
+                    "The specified object was not found in the store"
+                )
+            )
+
+            with self.assertRaises(StaleMailRemovedError):
+                manager.read_message(inbox_id)
+
+            self.assertEqual([], manager.cached_messages()["messages"])
+            with self.assertRaisesRegex(LookupError, "nicht gefunden"):
+                manager.read_message(inbox_id)
+            backend.read_message.assert_called_once_with("mail-1")
+
+    def test_unexpected_mail_read_error_keeps_local_inbox_entry(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            backend = FakeMailBackend()
+            manager = DashboardMailManager(
+                backend,
+                FakeSpamScorer(),
+                inbox_database_path=database_path,
+            )
+            inbox_id = manager.list_messages()["messages"][0]["id"]
+            backend.read_message = Mock(
+                side_effect=MailIntegrationError("Unerwarteter Mailfehler")
+            )
+
+            with self.assertRaisesRegex(
+                MailIntegrationError,
+                "Unerwarteter Mailfehler",
+            ):
+                manager.read_message(inbox_id)
+
+            self.assertEqual(
+                [inbox_id],
+                [mail["id"] for mail in manager.cached_messages()["messages"]],
+            )
 
     def test_full_target_mail_load_marks_stale_local_unread_as_read(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
