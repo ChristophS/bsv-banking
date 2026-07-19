@@ -1111,6 +1111,73 @@ class MailIntegrationUnitTests(unittest.TestCase):
         self.assertEqual(["mail-1"], backend.read)
         backend.list_conversation_messages.assert_not_called()
 
+    def test_mark_read_retries_mailbox_concurrency_once(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            backend = FakeMailBackend()
+            backend.mark_read = Mock(
+                side_effect=[
+                    MailIntegrationError("ErrorMailboxConcurrency"),
+                    None,
+                ]
+            )
+            manager = DashboardMailManager(
+                backend,
+                FakeSpamScorer(),
+                inbox_database_path=database_path,
+            )
+            inbox_id = manager.list_messages()["messages"][0]["id"]
+
+            result = manager.mark_read(inbox_id)
+
+        self.assertTrue(result["marked_read"])
+        self.assertEqual(2, backend.mark_read.call_count)
+
+    def test_mark_read_reports_persistent_mailbox_concurrency(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            backend = FakeMailBackend()
+            backend.mark_read = Mock(
+                side_effect=MailIntegrationError("MailboxConcurrency")
+            )
+            manager = DashboardMailManager(
+                backend,
+                FakeSpamScorer(),
+                inbox_database_path=database_path,
+            )
+            inbox_id = manager.list_messages()["messages"][0]["id"]
+
+            with self.assertRaises(MailIntegrationError) as raised:
+                manager.mark_read(inbox_id)
+
+        self.assertEqual(2, backend.mark_read.call_count)
+        self.assertIn("Bitte erneut versuchen", str(raised.exception))
+
+    def test_mark_read_does_not_retry_unexpected_error(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            backend = FakeMailBackend()
+            backend.mark_read = Mock(
+                side_effect=MailIntegrationError("Unerwarteter Mailfehler")
+            )
+            manager = DashboardMailManager(
+                backend,
+                FakeSpamScorer(),
+                inbox_database_path=database_path,
+            )
+            inbox_id = manager.list_messages()["messages"][0]["id"]
+
+            with self.assertRaisesRegex(
+                MailIntegrationError,
+                "Unerwarteter Mailfehler",
+            ):
+                manager.mark_read(inbox_id)
+
+        backend.mark_read.assert_called_once_with("mail-1")
+
     def test_graph_oauth_device_code_is_reported_without_blocking(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             cache_path = Path(temporary_directory) / "token.json"
