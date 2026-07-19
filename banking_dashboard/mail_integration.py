@@ -102,6 +102,10 @@ class MailIntegrationError(RuntimeError):
     pass
 
 
+class StaleMailRemovedError(LookupError):
+    """A locally known mail disappeared from the external mailbox."""
+
+
 @dataclass(frozen=True)
 class MailAttachmentContent:
     content: bytes
@@ -1357,19 +1361,27 @@ class DashboardMailManager:
 
     def read_message(self, entry_id: str) -> dict[str, Any]:
         inbox_id, source_message_id = self._resolve_mail_id(entry_id)
-        message = (
-            self.inbox_store.message(inbox_id)
-            if self.inbox_store is not None
-            else None
-        )
-        if message is None or (
-            self.inbox_store is not None
-            and not self.inbox_store.content_is_loaded(inbox_id)
-        ):
-            message = self._read_and_store_message(
-                inbox_id,
-                source_message_id,
-        )
+        try:
+            message = (
+                self.inbox_store.message(inbox_id)
+                if self.inbox_store is not None
+                else None
+            )
+            if message is None or (
+                self.inbox_store is not None
+                and not self.inbox_store.content_is_loaded(inbox_id)
+            ):
+                message = self._read_and_store_message(
+                    inbox_id,
+                    source_message_id,
+                )
+        except Exception as exc:
+            if not _is_missing_external_mail_error(exc):
+                raise
+            self._delete_local_targets([inbox_id])
+            raise StaleMailRemovedError(
+                "Mail ist im externen Postfach nicht mehr vorhanden."
+            ) from exc
         if not message:
             raise LookupError("Mail wurde nicht gefunden.")
         message = self._ensure_text_attachment_contents_loaded(
@@ -3747,6 +3759,25 @@ def _graph_mail_error(exc: HTTPError) -> MailIntegrationError:
 
 def _is_mailbox_concurrency_error(exc: Exception) -> bool:
     return MAILBOX_CONCURRENCY_ERROR_CODE in str(exc).casefold()
+
+
+def _is_missing_external_mail_error(exc: Exception) -> bool:
+    if isinstance(exc, LookupError):
+        return True
+    detail = str(exc).casefold()
+    return any(
+        pattern in detail
+        for pattern in (
+            "erroritemnotfound",
+            "the specified object was not found in the store",
+            "the object was not found in the store",
+            "cannot open the item",
+            "properties for this item are not available",
+            "properties cannot be loaded",
+            "eigenschaften koennen nicht geladen werden",
+            "eigenschaften können nicht geladen werden",
+        )
+    )
 
 
 def _mark_read_with_retry(backend: MailBackend, entry_id: str) -> None:

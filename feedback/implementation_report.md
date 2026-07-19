@@ -1,68 +1,53 @@
-# Implementation Report
+# Implementierungsbericht
 
 ## Branchname
 
-`agent2/codex-20260719-135350`
+`agent2/codex-20260719-135857`
 
-## Geaenderte Dateien
+## Geänderte Dateien
 
-- `banking_dashboard/static/index.html`
-- `banking_dashboard/static/styles.css`
-- `tests/test_dashboard.py`
+- `banking_dashboard/mail_integration.py`
+- `banking_dashboard/server.py`
+- `banking_dashboard/static/app.js`
+- `tests/test_mail_integration.py`
 - `feedback/implementation_report.md`
 
-Die bereits vor Arbeitsbeginn vorhandene Aenderung an
-`feedback/Review-report.md` und die unversionierte Datei
-`feedback/agent2_prompt.md` wurden nicht veraendert.
+Die bereits vor Arbeitsbeginn vorhandenen Änderungen an `feedback/Review-report.md` und die unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Der bislang vollstaendig sichtbare Saldo-Korrektur-Block ist jetzt ein
-  standardmaessig geschlossener, kompakter Detailbereich.
-- Anzahl und Bezeichnung der vorhandenen Saldo-Korrekturen bleiben auch im
-  geschlossenen Zustand sichtbar; der Bereich kann direkt ueber
-  `Anzeigen` beziehungsweise `Ausblenden` bedient werden.
-- Korrekturliste, fachlicher Hinweis und Formular bleiben unveraendert im
-  Transaktionsbereich erreichbar.
-- Die kompakte Saldenuebersicht bleibt oberhalb des Detailbereichs sichtbar.
-  Die vorhandenen kontoindividuellen Hinweise `Stand <Datum>` zeigen weiterhin
-  den Datenstand an.
-- Ein automatisierter Strukturtest sichert den initial geschlossenen Zustand,
-  die Lage vor der Transaktionstabelle und den sichtbaren Datenstand ab.
+- Erwartbare externe Fehler für nicht mehr vorhandene Mailobjekte und nicht ladbare Eigenschaften werden eng anhand bekannter Fehlerbilder erkannt.
+- Der zugehörige lokale Inbox-Datensatz einschließlich abhängiger Datensätze wird über die bestehende Store-Methode entfernt.
+- In-Memory-Mailzustand, Scores und Signaturen werden über die vorhandene Bereinigungslogik entfernt.
+- Der HTTP-Endpunkt kennzeichnet den erwartbaren Fall separat.
+- Die Mailoberfläche entfernt den veralteten Eintrag und zeigt dafür keinen technischen Fehler an.
+- Wiederholtes Öffnen nach der Bereinigung bleibt idempotent und löst keinen zweiten externen Abruf oder Löschvorgang aus.
+- Unerwartete Mailfehler werden weiterhin weitergereicht und lassen den lokalen Eintrag bestehen.
 
 ## Nicht umgesetzte Punkte
 
-- Keine Aenderung an Transaktionsimport, Saldenberechnung oder Persistenz.
-- Keine fachliche Erweiterung oder Neugestaltung der Saldo-Korrekturen.
-- Keine Aenderung an Vorgangs-, Mail- oder externen Diensten.
+- Keine vollständige Mail-Synchronisation und kein neues Mail-Datenmodell.
+- Keine externen Löschaktionen.
+- Keine Änderungen an Versand, Suche, Vorgängen, Transaktionen oder Anhängen außerhalb der für das Öffnen notwendigen Fehlerbehandlung.
 
-## Ausgefuehrte Tests
+## Ausgeführte Tests
 
-- `"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py`
-- `git diff --check`
+```text
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py tests/test_dashboard.py
+```
+
+Zusätzlich wurde `git diff --check` ohne Beanstandung ausgeführt.
 
 ## Testergebnis
 
-- Dashboard: 137 bestanden, 6 uebersprungen.
-- Diff-Pruefung: erfolgreich; nur Hinweise zur bestehenden
-  LF/CRLF-Konvertierung.
+182 bestanden, 7 übersprungen. Die übersprungenen Tests sind optionale Browser-/Umgebungstests.
 
-## Bekannte Einschraenkungen
+## Bekannte Einschränkungen
 
-- Die sechs uebersprungenen Tests sind vorhandene Playwright-Browsertests; die
-  lokal benoetigte Browserumgebung ist nicht installiert.
-- Die konkrete UI-Annahme ist die kleinste sichere Umsetzung: Der fachliche
-  Bereich bleibt an seiner bisherigen Position, wird jedoch initial
-  eingeklappt. Dadurch bleibt die Transaktionsliste ohne Wegklicken des grossen
-  Inhaltsblocks sichtbar.
+- Die Erkennung stützt sich bewusst nur auf `LookupError` und bekannte Text-/Fehlercode-Muster der bestehenden Outlook-/Graph-Backends.
+- Bereits vollständig lokal geladene Mails werden entsprechend der bestehenden Offline-/Cache-Architektur nicht bei jedem Öffnen erneut extern abgerufen. Die Bereinigung greift, sobald ein externer Detailabruf das bekannte Fehlerbild liefert.
 
-## Hinweise fuer den Review-Agenten
+## Hinweise für den Review-Agenten
 
-- Manuell sollte insbesondere geprueft werden, dass Filter und erste
-  Tabellenzeilen bei ueblicher Viewport-Hoehe unmittelbar sichtbar sind.
-- Bitte ausserdem Oeffnen und Schliessen des Detailbereichs sowie Liste und
-  Anlageformular fuer Saldo-Korrekturen pruefen.
-- Die sichtbaren Saldenkarten oberhalb des Detailbereichs tragen weiterhin das
-  kontoindividuelle Datenstandsdatum.
-- Die vorbestehende Aenderung an `feedback/Review-report.md` gehoert nicht zu
-  dieser Umsetzung.
+- Besonders relevant sind die beiden neuen Unit-Tests für externe Löschung, Idempotenz und unveränderte Behandlung unerwarteter Fehler.
+- Die Änderung an `banking_dashboard/static/app.js` ist für das Akzeptanzkriterium erforderlich, dass der erwartbare Fall nicht als technischer UI-Fehler erscheint.

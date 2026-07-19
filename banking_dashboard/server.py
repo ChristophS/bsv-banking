@@ -27,6 +27,7 @@ from .mail_integration import (
     MailAttachmentContent,
     MailBackend,
     MailIntegrationError,
+    StaleMailRemovedError,
     MailSummarizer,
     SpamScorer,
     TARGET_MAIL_FOLDER_NAMES,
@@ -6037,6 +6038,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._json_response(
                 {"error": str(exc)},
                 status=HTTPStatus.BAD_REQUEST,
+            )
+        except StaleMailRemovedError as exc:
+            self._json_response(
+                {"error": str(exc), "stale_mail_removed": True},
+                status=HTTPStatus.NOT_FOUND,
             )
         except LookupError as exc:
             self._json_response(
