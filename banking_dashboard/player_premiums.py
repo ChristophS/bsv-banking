@@ -730,7 +730,9 @@ def _collect_matches(
 
 
 def _match_table_signature(page: Any, tables: Any) -> str:
-    parts = [str(getattr(page, "url", ""))]
+    # DFBnet can expose the same result page under changing navigation URLs.
+    # Only the visible result data identifies whether collection made progress.
+    parts = []
     for index in range(tables.count()):
         try:
             parts.append(_clean_text(tables.nth(index).inner_text(timeout=1_000)))
@@ -748,7 +750,7 @@ def _deduplicate_matches(matches: Sequence[MatchSummary]) -> list[MatchSummary]:
             match.home_team,
             match.away_team,
             match.result,
-            match.detail_href,
+            match.competition_type,
         )
         if key in seen:
             continue

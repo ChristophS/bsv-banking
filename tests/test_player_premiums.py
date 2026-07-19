@@ -1,10 +1,12 @@
 import unittest
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from banking_dashboard.player_premiums import (
     TEAM_BY_ID,
     MatchSummary,
+    _collect_matches,
     available_seasons,
     build_team_result,
     extract_player_names,
@@ -15,6 +17,98 @@ from banking_dashboard.player_premiums import (
     validate_point_values,
     validate_team_ids,
 )
+
+
+class _FixtureLocator:
+    def __init__(self, items):
+        self.items = list(items)
+
+    def filter(self, **_kwargs):
+        return self
+
+    def count(self):
+        return len(self.items)
+
+    def nth(self, index):
+        return self.items[index]
+
+    @property
+    def first(self):
+        return self.items[0]
+
+
+class _FixtureTextCells:
+    def __init__(self, values):
+        self.values = values
+
+    def all_inner_texts(self):
+        return self.values
+
+
+class _FixtureAction:
+    def __init__(self, href):
+        self.href = href
+
+    @property
+    def first(self):
+        return self
+
+    def get_attribute(self, name):
+        return self.href if name == "href" else None
+
+
+class _FixtureRow:
+    def __init__(self, cells, href=""):
+        self.cells = cells
+        self.href = href
+
+    def locator(self, selector):
+        if selector == "th,td":
+            return _FixtureTextCells(self.cells)
+        if selector == "a.dfb-link":
+            return _FixtureLocator([_FixtureAction(self.href)] if self.href else [])
+        raise AssertionError(f"Unexpected row selector: {selector}")
+
+
+class _FixtureTable:
+    def __init__(self, rows):
+        self.rows = [_FixtureRow(*row) for row in rows]
+
+    def locator(self, selector):
+        if selector != "tr":
+            raise AssertionError(f"Unexpected table selector: {selector}")
+        return _FixtureLocator(self.rows)
+
+    def inner_text(self, **_kwargs):
+        return "\n".join(" | ".join(row.cells) for row in self.rows)
+
+
+class _FixturePage:
+    def __init__(self, pages):
+        self.pages = pages
+        self.page_index = 0
+
+    @property
+    def url(self):
+        return f"https://dfbnet.invalid/results?page={self.page_index + 1}"
+
+    def locator(self, selector):
+        if selector != "table.listtable":
+            raise AssertionError(f"Unexpected page selector: {selector}")
+        return _FixtureLocator([_FixtureTable(self.pages[self.page_index])])
+
+    def wait_for_load_state(self, *_args, **_kwargs):
+        return None
+
+    def wait_for_timeout(self, *_args, **_kwargs):
+        return None
+
+
+def _result_row(number, matchday, date_text, home, away, result, href=""):
+    return (
+        ["", "", number, date_text, str(matchday), home, "-", away, result, ""],
+        href,
+    )
 
 
 class PlayerPremiumConfigurationTests(unittest.TestCase):
@@ -416,6 +510,114 @@ class PlayerPremiumEvaluationTests(unittest.TestCase):
             [11, 12],
         )
         self.assertEqual(result["completeness"]["status"], "warning")
+
+    def test_collect_matches_reads_all_pages_and_deduplicates_rows(self):
+        team = TEAM_BY_ID["damen"]
+        group = (["Frauen, Bezirksliga - Meisterschaft"], "")
+        first_match = _result_row(
+            "001",
+            1,
+            "10.08.2025",
+            team.dfbnet_name,
+            "SV Gegner Eins Frauen",
+            "2 : 0",
+            "/match/001",
+        )
+        second_match = _result_row(
+            "002",
+            2,
+            "17.08.2025",
+            "SV Gegner Zwei Frauen",
+            team.dfbnet_name,
+            "1 : 1",
+            "/match/002",
+        )
+        repeated_first_match = _result_row(
+            "001",
+            1,
+            "10.08.2025",
+            team.dfbnet_name,
+            "SV Gegner Eins Frauen",
+            "2 : 0",
+            "/match/001?navigation=page-2",
+        )
+        page = _FixturePage(
+            [
+                [group, first_match],
+                [group, repeated_first_match, second_match],
+            ]
+        )
+
+        def next_page(_page):
+            if page.page_index + 1 >= len(page.pages):
+                return False
+            page.page_index += 1
+            return True
+
+        with patch(
+            "banking_dashboard.player_premiums._go_to_next_page",
+            side_effect=next_page,
+        ):
+            matches = _collect_matches(page, [team])[team.team_id]
+
+        self.assertEqual([match.label for match in matches], ["ST 1", "ST 2"])
+        self.assertEqual(len(matches), 2)
+
+    def test_collect_matches_stops_when_next_page_repeats_result_data(self):
+        team = TEAM_BY_ID["damen"]
+        group = (["Frauen, Bezirksliga - Meisterschaft"], "")
+        match = _result_row(
+            "001",
+            1,
+            "10.08.2025",
+            team.dfbnet_name,
+            "SV Gegner Eins Frauen",
+            "2 : 0",
+            "/match/001",
+        )
+        page = _FixturePage([[group, match], [group, match]])
+        navigation_calls = 0
+
+        def repeat_page(_page):
+            nonlocal navigation_calls
+            navigation_calls += 1
+            page.page_index = 1
+            return True
+
+        with patch(
+            "banking_dashboard.player_premiums._go_to_next_page",
+            side_effect=repeat_page,
+        ):
+            matches = _collect_matches(page, [team])[team.team_id]
+
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(navigation_calls, 1)
+
+    def test_complete_mult_page_matchdays_have_no_warning(self):
+        team = TEAM_BY_ID["damen"]
+        matches = tuple(
+            MatchSummary(
+                f"match_{matchday}",
+                f"ST {matchday}",
+                f"2025-08-{10 + matchday:02d}",
+                "Meisterschaft",
+                "Meisterschaft",
+                f"ST {matchday}",
+                f"Gegner {matchday}",
+                "1:0",
+                "win",
+                3,
+                "",
+                "",
+            )
+            for matchday in (1, 2, 3)
+        )
+
+        result = build_team_result(team, matches, {}, "2.50")
+
+        self.assertEqual(result["completeness"]["missing_matchdays"], [])
+        self.assertEqual(result["completeness"]["warnings"], [])
+        self.assertEqual(result["completeness"]["status"], "complete")
 
     def test_player_names_exclude_headers_and_numbers(self):
         self.assertEqual(
