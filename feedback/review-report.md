@@ -8,37 +8,25 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen: MailboxConcurrency wird erkannt, genau einmal begrenzt wiederholt und bei dauerhaftem Fehler verständlich gemeldet. Erfolgsfälle, erwartbare Concurrency-Fehler und unerwartete Fehler sind mock-basiert getestet. Der lokale Lesestatus bleibt bei einem endgültigen Fehler unverändert.
+Die Umsetzung erfüllt die Muss-Anforderungen: Der Saldo-Korrektur-Bereich ist standardmäßig eingeklappt, bleibt einschließlich Zähler, Liste und Formular erreichbar, und die Transaktionsfilter sowie die Tabelle folgen weiterhin im bestehenden Bereich. Der Datenstand bleibt über die sichtbaren Saldenkarten erkennbar. GitHub Compare ist konsistent mit dem Runner-Stand.
 
 ## Review-Ergebnis
 
-Die Änderung ist für dieses Arbeitspaket freigabefähig.
+**Entscheidung: Angenommen**
 
-### Erfüllte Anforderungen
+### Geprüfte Anforderungen
 
-- `DashboardMailManager.mark_read` verwendet weiterhin die bestehende Backend- und Aktionsstruktur.
-- Ein Fehlercode beziehungsweise eine Fehlermeldung mit `MailboxConcurrency` oder `ErrorMailboxConcurrency` wird erkannt.
-- Die Wiederholung ist durch `MARK_READ_MAX_ATTEMPTS = 2` strikt begrenzt. Es gibt keine Schleife ohne Obergrenze und keine Warte- oder Polling-Schleife.
-- Bei erfolgreichem Wiederholungsversuch wird der lokale Lesestatus wie bisher aktualisiert und die Aktion als Erfolg zurückgegeben.
-- Bei dauerhaftem Concurrency-Fehler wird ein verständlicher `MailIntegrationError` mit Hinweis auf einen erneuten manuellen Versuch ausgelöst.
-- Bei einem nicht erwartbaren Fehler erfolgt kein Retry und der Fehler wird über die bestehende Fehlerbehandlung weitergegeben.
-- Die Graph-Fehleraufbereitung bewahrt jetzt sowohl Fehlercode als auch Meldung, sodass strukturierte Concurrency-Fehler erkennbar bleiben.
-- Die lokale Aktualisierung erfolgt erst nach erfolgreicher Backend-Aktion; bei einem endgültigen Fehler bleibt der lokale Lesestatus unverändert.
+- Der Saldo-Korrektur-Block wird durch ein standardmäßig geschlossenes `<details>`-Element ersetzt.
+- Die Transaktionsliste und ihre Filter bleiben im bestehenden Transaktionsbereich erhalten und folgen direkt nach dem kompakten Korrekturbereich.
+- Saldokorrekturen bleiben über die Summary erreichbar. Zähler, Bezeichnung, Korrekturliste, fachlicher Hinweis und Anlageformular werden nicht entfernt.
+- Die Saldenübersicht mit `total-balance-note` und kontoindividuellen `balance-note`-Elementen bleibt oberhalb des Korrekturbereichs sichtbar.
+- Es wurden keine Import-, Saldenberechnungs-, Persistenz- oder Vorgangsstrukturen umgangen.
+- Der GitHub-Diff entspricht dem Runner-Stand; es gibt keine fehlenden oder zusätzlichen Compare-Dateien. Der Branch ist mit einem Commit vor `main` und ohne Rückstand nutzbar.
 
 ### Tests
 
-Die ergänzten Tests decken ab:
+Der ergänzte Test `test_balance_corrections_are_collapsed_before_transaction_table` prüft den initial geschlossenen Zustand, die Position vor der Transaktionstabelle und die weiterhin vorhandenen Datenstands-Elemente. Laut Implementation Report liefen die Dashboard-Tests mit 137 erfolgreichen und 6 übersprungenen Tests. Die übersprungenen Tests betreffen die lokal nicht verfügbare Playwright-Browserumgebung und sind für diese Bewertung nicht blockierend.
 
-- Erfolg nach einem einmaligen `MailboxConcurrency`-Fehler mit genau zwei Backend-Aufrufen.
-- Dauerhaften Concurrency-Fehler mit verständlicher Rückmeldung und genau zwei Backend-Aufrufen.
-- Nicht erwartbaren Fehler ohne Wiederholung und mit unveränderter Fehlermeldung.
+### Nicht blockierende Hinweise
 
-Zusätzlich bleiben die bestehenden Mail- und Dashboard-Tests laut Implementierungsbericht erfolgreich. Die Tests verwenden einen Fake beziehungsweise Mock und führen keine echten Mailbox-Aktionen aus.
-
-### Diff- und Architekturprüfung
-
-Der GitHub-Compare ist konsistent: Der Branch ist gegenüber `main` genau einen Commit voraus, ohne fehlende oder zusätzliche Dateien im Compare. Die Änderungen an `mail_integration.py` und `tests/test_mail_integration.py` bleiben innerhalb der bestehenden Integrationsarchitektur. Es wurde keine parallele Mailintegration und keine Änderung an Persistenz- oder Vorgangsstrukturen eingeführt.
-
-### Optionale Verbesserungen
-
-Die Funktion `_is_mailbox_concurrency_error` prüft derzeit eine Teilzeichenkette in `str(exc)`. Das ist für die gezeigten Fehlerformen ausreichend, könnte aber bei zukünftigen Fehlertexten versehentlich auch nicht exakt passende Meldungen akzeptieren. Eine spätere Verbesserung wäre die Prüfung eines strukturierten Fehlercodes oder eine engere Normalisierung. Außerdem wären direkte Tests für die strukturierte Graph-Fehlerübersetzung und die Fehlerweitergabe aus dem Outlook-Worker sinnvoll, blockieren die aktuelle Freigabe aber nicht.
+Die Tests könnten noch um einen echten Browser-Test für Öffnen/Schließen und die sichtbare Tabellenposition ergänzt werden. Außerdem wären ein zugänglicheres Zustandslabel und eine weniger problematische Summary-Struktur mögliche Verbesserungen. Diese Punkte verhindern die Annahme jedoch nicht.
