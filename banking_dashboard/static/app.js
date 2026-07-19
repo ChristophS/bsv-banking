@@ -79,6 +79,7 @@ const state = {
 
 const elements = {
   tabs: [...document.querySelectorAll("[data-tab]")],
+  dashboardPanel: document.querySelector("#dashboard-panel"),
   overviewCards: document.querySelector("#overview-cards"),
   dashboardRefresh: document.querySelector("#dashboard-refresh"),
   dashboardRefreshStatus: document.querySelector("#dashboard-refresh-status"),
@@ -607,13 +608,17 @@ elements.entityDialog.addEventListener("click", (event) => {
 });
 
 function activateTab(name) {
-  const isTransactions = name === "transactions";
-  const isVorgaenge = name === "vorgaenge";
-  const isTodos = name === "todos";
-  const isTermine = name === "termine";
-  const isBudget = name === "budget";
-  const isMail = name === "mail";
-  const isOtherTasks = name === "other-tasks";
+  const availableTabs = new Set(elements.tabs.map((tab) => tab.dataset.tab));
+  const activeName = availableTabs.has(name) ? name : "dashboard";
+  const isDashboard = activeName === "dashboard";
+  const isTransactions = activeName === "transactions";
+  const isVorgaenge = activeName === "vorgaenge";
+  const isTodos = activeName === "todos";
+  const isTermine = activeName === "termine";
+  const isBudget = activeName === "budget";
+  const isMail = activeName === "mail";
+  const isOtherTasks = activeName === "other-tasks";
+  elements.dashboardPanel.hidden = !isDashboard;
   elements.transactionPanel.hidden = !isTransactions;
   elements.vorgaengePanel.hidden = !isVorgaenge;
   elements.todoPanel.hidden = !isTodos;
@@ -622,10 +627,15 @@ function activateTab(name) {
   elements.mailPanel.hidden = !isMail;
   elements.otherTasksPanel.hidden = !isOtherTasks;
   elements.tabs.forEach((tab) => {
-    const active = tab.dataset.tab === name;
+    const active = tab.dataset.tab === activeName;
     tab.classList.toggle("is-active", active);
     tab.setAttribute("aria-selected", String(active));
   });
+  try {
+    sessionStorage.setItem("dashboard.activeTab", activeName);
+  } catch (error) {
+    // Navigation remains usable when browser storage is unavailable.
+  }
   if (isVorgaenge && !state.vorgaengeLoaded) {
     loadVorgaenge();
   }
@@ -10649,6 +10659,13 @@ function showError(message) {
 updateSortIndicators();
 setDefaultPeriod();
 setDefaultHistoryPeriod();
+let initialTab = "dashboard";
+try {
+  initialTab = sessionStorage.getItem("dashboard.activeTab") || initialTab;
+} catch (error) {
+  // The dashboard start page is the safe fallback without session storage.
+}
+activateTab(initialTab);
 loadOverview();
 loadTransactions();
 loadBalanceCorrections();

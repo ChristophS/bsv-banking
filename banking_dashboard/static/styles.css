@@ -4953,12 +4953,14 @@ th[aria-sort="descending"] .sort-indicator {
 
   .tabs {
     width: 100%;
-    flex-wrap: wrap;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
   }
 
   .tab {
-    min-width: 140px;
-    flex: 1 1 40%;
+    min-width: max-content;
+    flex: 0 0 auto;
   }
 
   .dashboard-start {
