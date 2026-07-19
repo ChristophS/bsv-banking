@@ -1,5 +1,7 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
 ## 1. Transaktionsansicht ohne dominanten Saldokorrektur-Block anzeigen
@@ -14,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Beim Öffnen von Transaktionen sollen die Transaktionen sofort sichtbar sein. Saldokorrekturen sollen die eigentliche Transaktionsliste nicht verdrängen; das Datum des Datenstands soll erkennbar sein.
+**Grund:** Beim Öffnen von Transaktionen sollen die Transaktionen sofort sichtbar sein. Saldokorrekturen sollen die eigentliche Transaktionsliste nicht verdrängen; der Datenstand soll erkennbar sein.
 
 **Feedback:**
 
@@ -22,26 +24,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Wenn ich auf Transaktionen gehe, will ich sofort die Transaktionen sehen.
 - Am besten noch mit dem Datum des Standes der Daten.
 
-## 2. Mail als gelesen markieren trotz MailboxConcurrency-Fehler ermöglichen
-
-**Epic-ID:** epic-mail-synchronisation
-
-**Epic-Titel:** Mailübersicht robust mit dem externen Mailbestand synchronisieren
-
-**Epic-Ziel:** Mailstatus und Mailübersicht sollen mit erwartbaren externen Änderungen und temporären Mailbox-Fehlern robust umgehen.
-
-**Teilpaket:** Teil 1
-
-**Priorität:** hoch
-
-**Grund:** Das Markieren einer Mail als gelesen benötigt eine robuste, begrenzte Verarbeitung erwartbarer Mailbox-Concurrency-Fehler ohne echte externe Mail-Aktionen in Tests.
-
-**Feedback:**
-
-- Ich wollte eine Mail als gelesen markieren. Das ging nicht.
-- Application is over its MailboxConcurrency limit.
-
-## 3. Nicht mehr vorhandene Mails aus der Übersicht entfernen
+## 2. Nicht mehr vorhandene Mails aus der Übersicht entfernen
 
 **Epic-ID:** epic-mail-synchronisation
 
@@ -61,7 +44,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - The process failed to get the correct properties.
 - Wenn die Mail anderweitig gelöscht wurde, sollte sie umgehend aus der Übersicht gelöscht werden.
 
-## 4. Vorgang beim Anlegen optional direkt abschließen
+## 3. Vorgang beim Anlegen optional direkt abschließen
 
 **Epic-ID:** epic-vorgangsabschluss
 
