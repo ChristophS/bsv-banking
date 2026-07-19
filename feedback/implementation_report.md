@@ -2,66 +2,66 @@
 
 ## Branchname
 
-`agent2/codex-20260719-140509`
+`agent2/codex-20260719-141532`
 
 ## Geänderte Dateien
 
+- `banking_dashboard/mail_integration.py`
+- `tests/test_mail_integration.py`
 - `feedback/implementation_report.md`
 
-Die fachliche Umsetzung in `banking_dashboard/server.py`,
-`banking_dashboard/static/app.js` und `tests/test_dashboard.py` war bereits im
-Ausgangsstand dieses Branches enthalten und musste nicht nachgebessert werden.
-Die bereits vor Arbeitsbeginn vorhandene Änderung an
-`feedback/Review-report.md` sowie die unversionierte Datei
-`feedback/agent2_prompt.md` wurden nicht verändert.
+Die bereits vor Arbeitsbeginn geänderte Datei `feedback/Review-report.md` und
+die unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Die bestehende Vorgangserstellung akzeptiert die optionale boolesche Angabe
-  `completed`; ohne Angabe bleibt der Anfangsstatus unverändert
-  `in_bearbeitung`.
-- Bei ausdrücklich gesetztem `completed: true` wird der Vorgang mit dem
-  bestehenden Status `abgeschlossen` und als manueller Abschluss gespeichert.
-- Vor dem Speichern werden die vorhandenen fachlichen Abschlussanforderungen
-  geprüft. Ein nicht abschließbarer Vorgang wird nicht teilweise angelegt.
-- Transaktions-, Mail-, To-Do-, Beleg- und Terminverknüpfungen laufen weiterhin
-  über die vorhandene vorgangsbasierte Verknüpfungslogik.
-- Die bestehende Erstellungsoberfläche bietet die verständlich benannte Option
-  „Direkt abschließen“ an und sendet sie nur bei aktivierter Checkbox.
-- HTTP-Tests decken den erfolgreichen Direktabschluss einschließlich
-  Transaktionsverknüpfung sowie die Ablehnung ohne partielle Persistenz ab.
+- Mit `ExternalMailNotFoundError` wurde ein expliziter, von generischen
+  Integrationsfehlern unterscheidbarer Fehlertyp für extern fehlende
+  Mailobjekte ergänzt.
+- Microsoft-Graph-Fehler werden anhand des stabilen HTTP-Status 404 oder des
+  Graph-Fehlercodes `ErrorItemNotFound` in diesen Fehlertyp übersetzt.
+- Die Synchronisationslogik entfernt einen lokalen stale Mail-Eintrag nur noch
+  bei diesem expliziten Fehlertyp. Fehlermeldungstexte werden nicht mehr zur
+  Klassifikation ausgewertet.
+- Generische Lookup-/Mailboxfehler behalten ihr bisheriges Verhalten und
+  lassen den lokalen Mail-Eintrag bestehen.
+- Die vorhandenen Mail-, Vorgangs- und Verknüpfungsstrukturen blieben
+  unverändert.
+- Unit-Tests decken die explizite Erkennung, die Graph-Übersetzung sowie die
+  Abgrenzung eines gleichlautenden generischen Fehlers ab.
 
 ## Nicht umgesetzte Punkte
 
-- Keine weiteren Status- oder Workflow-Erweiterungen.
-- Kein Umbau der Vorgangs-, Beleg-, Transaktions- oder Verknüpfungsstrukturen.
-- Keine Änderung bestehender Vorgänge und kein Massenabschluss.
-- Keine externen Integrationen.
+- Keine sichtbare Entfernung stale Einträge aus der Mailübersicht außerhalb
+  des bereits vorhandenen Detailabruf-Verhaltens (Teil 1.2).
+- Keine neuen Mail-, Vorgangs- oder Verknüpfungsmodelle.
+- Keine echten externen Mailzugriffe oder Logins.
 
 ## Ausgeführte Tests
 
 ```text
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py
 "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py
 ```
 
 ## Testergebnis
 
-137 Tests bestanden, 6 Tests übersprungen. Die übersprungenen Tests sind
-optionale Browser-/Umgebungstests.
+- `tests/test_mail_integration.py`: 47 bestanden, 1 übersprungen.
+- `tests/test_dashboard.py`: 137 bestanden, 6 übersprungen.
 
 ## Bekannte Einschränkungen
 
-- Es wurde keine echte Browser-Automation ausgeführt; die serverseitigen
-  Erstellungs- und Fehlerfälle sind automatisiert abgedeckt.
-- Die Code-Umsetzung befand sich bereits im Ausgangsstand des Branches. In
-  diesem Arbeitslauf war daher ausschließlich eine Aktualisierung dieses
-  Berichts erforderlich.
+- Die Fehlerübersetzung wurde isoliert mit einem simulierten HTTP-Fehler
+  getestet; es fand kein Zugriff auf Microsoft Graph statt.
+- Ein HTTP-404 wird für Graph-Mailanfragen als fehlendes externes Mailobjekt
+  klassifiziert. Authentifizierungs- und Erreichbarkeitsfehler bleiben
+  `MailIntegrationError`.
 
 ## Hinweise für den Review-Agenten
 
-- Relevant sind insbesondere
-  `test_vorgang_can_be_created_completed_over_http` und
-  `test_completed_vorgang_creation_rejects_incomplete_transaction_over_http`
-  in `tests/test_dashboard.py`.
-- Die Abschlussprüfung erfolgt vor dem INSERT. Dadurch hinterlässt ein mit 400
-  abgelehnter Direktabschluss keinen teilweise angelegten Vorgang.
+- Entscheidend ist, dass `_is_missing_external_mail_error` ausschließlich den
+  Typ `ExternalMailNotFoundError` prüft und keinerlei Meldungstext mehr
+  auswertet.
+- Der Abgrenzungstest verwendet absichtlich den Text `ErrorItemNotFound` in
+  einem generischen `MailIntegrationError`; der lokale Eintrag bleibt dabei
+  erhalten.

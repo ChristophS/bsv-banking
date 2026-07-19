@@ -102,6 +102,10 @@ class MailIntegrationError(RuntimeError):
     pass
 
 
+class ExternalMailNotFoundError(MailIntegrationError):
+    """The requested mail object no longer exists in the external mailbox."""
+
+
 class StaleMailRemovedError(LookupError):
     """A locally known mail disappeared from the external mailbox."""
 
@@ -3736,6 +3740,7 @@ def _thread_finance_keywords(message: dict[str, Any]) -> set[str]:
 
 def _graph_mail_error(exc: HTTPError) -> MailIntegrationError:
     detail = ""
+    error_code = ""
     try:
         payload = json.loads(exc.read().decode("utf-8", errors="replace"))
         if isinstance(payload, dict):
@@ -3752,7 +3757,12 @@ def _graph_mail_error(exc: HTTPError) -> MailIntegrationError:
         detail = ""
     if exc.code in {401, 403}:
         detail = detail or "OAuth2-Berechtigung fehlt oder ist abgelaufen."
-    return MailIntegrationError(
+    error_type = (
+        ExternalMailNotFoundError
+        if exc.code == 404 or error_code.casefold() == "erroritemnotfound"
+        else MailIntegrationError
+    )
+    return error_type(
         detail or f"Microsoft Graph-Anfrage fehlgeschlagen ({exc.code})."
     )
 
@@ -3762,22 +3772,7 @@ def _is_mailbox_concurrency_error(exc: Exception) -> bool:
 
 
 def _is_missing_external_mail_error(exc: Exception) -> bool:
-    if isinstance(exc, LookupError):
-        return True
-    detail = str(exc).casefold()
-    return any(
-        pattern in detail
-        for pattern in (
-            "erroritemnotfound",
-            "the specified object was not found in the store",
-            "the object was not found in the store",
-            "cannot open the item",
-            "properties for this item are not available",
-            "properties cannot be loaded",
-            "eigenschaften koennen nicht geladen werden",
-            "eigenschaften können nicht geladen werden",
-        )
-    )
+    return isinstance(exc, ExternalMailNotFoundError)
 
 
 def _mark_read_with_retry(backend: MailBackend, entry_id: str) -> None:
