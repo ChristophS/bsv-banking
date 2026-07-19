@@ -1,1 +1,3 @@
-Für ein späteres Robustheits-Backlog: Deduplizierung mit einem stabilen fachlichen Match-Schlüssel ergänzen oder testen, der nicht von einer möglicherweise variierenden Detail-URL abhängt.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
