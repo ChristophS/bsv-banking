@@ -684,6 +684,8 @@ def _collect_matches(
     while True:
         tables = page.locator("table.listtable").filter(visible=True)
         if not tables.count():
+            if visited_pages:
+                break
             raise PlayerPremiumError("Ergebnistabelle der Spielberichte fehlt.")
 
         page_signature = _match_table_signature(page, tables)
@@ -730,7 +732,9 @@ def _collect_matches(
 
 
 def _match_table_signature(page: Any, tables: Any) -> str:
-    parts = [str(getattr(page, "url", ""))]
+    # The URL may change even when DFBnet returns the same result page again.
+    # Only the table contents identify whether pagination actually progressed.
+    parts = []
     for index in range(tables.count()):
         try:
             parts.append(_clean_text(tables.nth(index).inner_text(timeout=1_000)))
