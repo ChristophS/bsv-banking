@@ -457,20 +457,23 @@
         <div class="account-balances" id="account-balances"></div>
       </div>
 
-      <section class="balance-corrections" aria-labelledby="balance-corrections-title">
-        <div class="balance-correction-heading">
+      <details class="balance-corrections">
+        <summary class="balance-correction-heading">
           <div>
             <p class="eyebrow">Manuell geprüfte Saldoanker</p>
             <h3 id="balance-corrections-title">Saldo-Korrekturen</h3>
-            <p>
+          </div>
+          <span>
+            <span id="balance-correction-count">0 Korrekturen</span>
+            <span class="balance-correction-toggle-label" aria-hidden="true"></span>
+          </span>
+        </summary>
+        <div class="balance-correction-layout">
+          <div>
+            <p class="balance-correction-description">
               Korrekturen verändern keine Originaltransaktionen. Sie dürfen nur
               nach manueller Prüfung eines Kontoauszugs oder Bankstands angelegt werden.
             </p>
-          </div>
-          <span id="balance-correction-count">0 Korrekturen</span>
-        </div>
-        <div class="balance-correction-layout">
-          <div>
             <div class="loading-state" id="balance-correction-loading">
               <span class="spinner" aria-hidden="true"></span>
               Korrekturen werden geladen
@@ -511,7 +514,7 @@
             </div>
           </form>
         </div>
-      </section>
+      </details>
 
       <div class="toolbar">
         <label class="search-field" for="transaction-search">

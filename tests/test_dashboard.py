@@ -2969,6 +2969,19 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn("balance_minor: Number(rawAmount)", javascript)
         self.assertNotIn("delete-balance-correction", html)
 
+    def test_balance_corrections_are_collapsed_before_transaction_table(self):
+        with urlopen(self.base_url + "/", timeout=5) as response:
+            html = response.read().decode("utf-8")
+
+        corrections_start = html.index('<details class="balance-corrections">')
+        corrections_end = html.index("</details>", corrections_start)
+        transaction_table = html.index('id="transaction-table"')
+
+        self.assertNotIn(" open", html[corrections_start:corrections_end])
+        self.assertLess(corrections_end, transaction_table)
+        self.assertIn('id="total-balance-note"', html[:corrections_start])
+        self.assertIn('class="balance-note"', html[:corrections_start])
+
     def test_assignment_dialog_submit_flow_handles_validation_success_and_error(self):
         javascript_path = Path(__file__).parents[1] / "banking_dashboard/static/app.js"
         javascript = javascript_path.read_text(encoding="utf-8")
