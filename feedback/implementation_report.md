@@ -2,52 +2,66 @@
 
 ## Branchname
 
-`agent2/codex-20260719-135857`
+`agent2/codex-20260719-140509`
 
 ## Geänderte Dateien
 
-- `banking_dashboard/mail_integration.py`
-- `banking_dashboard/server.py`
-- `banking_dashboard/static/app.js`
-- `tests/test_mail_integration.py`
 - `feedback/implementation_report.md`
 
-Die bereits vor Arbeitsbeginn vorhandenen Änderungen an `feedback/Review-report.md` und die unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
+Die fachliche Umsetzung in `banking_dashboard/server.py`,
+`banking_dashboard/static/app.js` und `tests/test_dashboard.py` war bereits im
+Ausgangsstand dieses Branches enthalten und musste nicht nachgebessert werden.
+Die bereits vor Arbeitsbeginn vorhandene Änderung an
+`feedback/Review-report.md` sowie die unversionierte Datei
+`feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Erwartbare externe Fehler für nicht mehr vorhandene Mailobjekte und nicht ladbare Eigenschaften werden eng anhand bekannter Fehlerbilder erkannt.
-- Der zugehörige lokale Inbox-Datensatz einschließlich abhängiger Datensätze wird über die bestehende Store-Methode entfernt.
-- In-Memory-Mailzustand, Scores und Signaturen werden über die vorhandene Bereinigungslogik entfernt.
-- Der HTTP-Endpunkt kennzeichnet den erwartbaren Fall separat.
-- Die Mailoberfläche entfernt den veralteten Eintrag und zeigt dafür keinen technischen Fehler an.
-- Wiederholtes Öffnen nach der Bereinigung bleibt idempotent und löst keinen zweiten externen Abruf oder Löschvorgang aus.
-- Unerwartete Mailfehler werden weiterhin weitergereicht und lassen den lokalen Eintrag bestehen.
+- Die bestehende Vorgangserstellung akzeptiert die optionale boolesche Angabe
+  `completed`; ohne Angabe bleibt der Anfangsstatus unverändert
+  `in_bearbeitung`.
+- Bei ausdrücklich gesetztem `completed: true` wird der Vorgang mit dem
+  bestehenden Status `abgeschlossen` und als manueller Abschluss gespeichert.
+- Vor dem Speichern werden die vorhandenen fachlichen Abschlussanforderungen
+  geprüft. Ein nicht abschließbarer Vorgang wird nicht teilweise angelegt.
+- Transaktions-, Mail-, To-Do-, Beleg- und Terminverknüpfungen laufen weiterhin
+  über die vorhandene vorgangsbasierte Verknüpfungslogik.
+- Die bestehende Erstellungsoberfläche bietet die verständlich benannte Option
+  „Direkt abschließen“ an und sendet sie nur bei aktivierter Checkbox.
+- HTTP-Tests decken den erfolgreichen Direktabschluss einschließlich
+  Transaktionsverknüpfung sowie die Ablehnung ohne partielle Persistenz ab.
 
 ## Nicht umgesetzte Punkte
 
-- Keine vollständige Mail-Synchronisation und kein neues Mail-Datenmodell.
-- Keine externen Löschaktionen.
-- Keine Änderungen an Versand, Suche, Vorgängen, Transaktionen oder Anhängen außerhalb der für das Öffnen notwendigen Fehlerbehandlung.
+- Keine weiteren Status- oder Workflow-Erweiterungen.
+- Kein Umbau der Vorgangs-, Beleg-, Transaktions- oder Verknüpfungsstrukturen.
+- Keine Änderung bestehender Vorgänge und kein Massenabschluss.
+- Keine externen Integrationen.
 
 ## Ausgeführte Tests
 
 ```text
-"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py tests/test_dashboard.py
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py
 ```
-
-Zusätzlich wurde `git diff --check` ohne Beanstandung ausgeführt.
 
 ## Testergebnis
 
-182 bestanden, 7 übersprungen. Die übersprungenen Tests sind optionale Browser-/Umgebungstests.
+137 Tests bestanden, 6 Tests übersprungen. Die übersprungenen Tests sind
+optionale Browser-/Umgebungstests.
 
 ## Bekannte Einschränkungen
 
-- Die Erkennung stützt sich bewusst nur auf `LookupError` und bekannte Text-/Fehlercode-Muster der bestehenden Outlook-/Graph-Backends.
-- Bereits vollständig lokal geladene Mails werden entsprechend der bestehenden Offline-/Cache-Architektur nicht bei jedem Öffnen erneut extern abgerufen. Die Bereinigung greift, sobald ein externer Detailabruf das bekannte Fehlerbild liefert.
+- Es wurde keine echte Browser-Automation ausgeführt; die serverseitigen
+  Erstellungs- und Fehlerfälle sind automatisiert abgedeckt.
+- Die Code-Umsetzung befand sich bereits im Ausgangsstand des Branches. In
+  diesem Arbeitslauf war daher ausschließlich eine Aktualisierung dieses
+  Berichts erforderlich.
 
 ## Hinweise für den Review-Agenten
 
-- Besonders relevant sind die beiden neuen Unit-Tests für externe Löschung, Idempotenz und unveränderte Behandlung unerwarteter Fehler.
-- Die Änderung an `banking_dashboard/static/app.js` ist für das Akzeptanzkriterium erforderlich, dass der erwartbare Fall nicht als technischer UI-Fehler erscheint.
+- Relevant sind insbesondere
+  `test_vorgang_can_be_created_completed_over_http` und
+  `test_completed_vorgang_creation_rejects_incomplete_transaction_over_http`
+  in `tests/test_dashboard.py`.
+- Die Abschlussprüfung erfolgt vor dem INSERT. Dadurch hinterlässt ein mit 400
+  abgelehnter Direktabschluss keinen teilweise angelegten Vorgang.
