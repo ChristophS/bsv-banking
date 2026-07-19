@@ -1,28 +1,10 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Nicht mehr vorhandene Mails aus der Übersicht entfernen
-
-**Epic-ID:** epic-mail-synchronisation
-
-**Epic-Titel:** Mailübersicht robust mit dem externen Mailbestand synchronisieren
-
-**Epic-Ziel:** Mailstatus und Mailübersicht sollen mit erwartbaren externen Änderungen und temporären Mailbox-Fehlern robust umgehen.
-
-**Teilpaket:** Teil 2
-
-**Priorität:** hoch
-
-**Grund:** Wenn eine Mail außerhalb der Anwendung gelöscht wurde und beim Öffnen nicht mehr im externen Store gefunden wird, soll die Übersicht den veralteten Eintrag umgehend entfernen statt einen Fehler anzuzeigen.
-
-**Feedback:**
-
-- The specified object was not found in the store.
-- The process failed to get the correct properties.
-- Wenn die Mail anderweitig gelöscht wurde, sollte sie umgehend aus der Übersicht gelöscht werden.
-
-## 2. Vorgang beim Anlegen optional direkt abschließen
+## 1. Vorgang beim Anlegen optional direkt abschließen
 
 **Epic-ID:** epic-vorgangsabschluss
 
