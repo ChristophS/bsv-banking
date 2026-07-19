@@ -1,1 +1,3 @@
-Für ein späteres Folgepaket wäre eine einheitliche domänenspezifische Fehlerübersetzung für weitere externe Mailanbieter sinnvoll, sofern zusätzliche Backends hinzukommen. Dabei sollten Lookup-, Authentifizierungs- und temporäre Mailbox-Fehler weiterhin über getrennte Typen oder Codes modelliert werden.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
