@@ -1,6 +1,7 @@
 import unittest
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from banking_dashboard.player_premiums import (
     TEAM_BY_ID,
@@ -15,6 +16,102 @@ from banking_dashboard.player_premiums import (
     validate_point_values,
     validate_team_ids,
 )
+from banking_dashboard import player_premiums
+
+
+class _FakeLocator:
+    def __init__(self, items):
+        self.items = list(items)
+
+    def filter(self, **_kwargs):
+        return self
+
+    def count(self):
+        return len(self.items)
+
+    def nth(self, index):
+        return self.items[index]
+
+
+class _FakeRow:
+    def __init__(self, cells):
+        self.cells = cells
+
+    def locator(self, selector):
+        if selector == "th,td":
+            return _FakeCells(self.cells)
+        if selector == "a.dfb-link":
+            return _FakeLocator([])
+        raise AssertionError(selector)
+
+
+class _FakeCells:
+    def __init__(self, cells):
+        self.cells = cells
+
+    def all_inner_texts(self):
+        return self.cells
+
+
+class _FakeTable:
+    def __init__(self, rows):
+        self.rows = [_FakeRow(row) for row in rows]
+
+    def locator(self, selector):
+        if selector != "tr":
+            raise AssertionError(selector)
+        return _FakeLocator(self.rows)
+
+    def inner_text(self, timeout=0):
+        return "\n".join(" | ".join(row.cells) for row in self.rows)
+
+
+class _FakePage:
+    def __init__(self, pages):
+        self.pages = pages
+        self.index = 0
+        self.url = "https://example.invalid/results?page=1"
+
+    def locator(self, selector):
+        if selector != "table.listtable":
+            raise AssertionError(selector)
+        if self.pages[self.index] is None:
+            return _FakeLocator([])
+        return _FakeLocator([_FakeTable(self.pages[self.index])])
+
+    def next_page(self):
+        if self.index + 1 >= len(self.pages):
+            return False
+        self.index += 1
+        self.url = f"https://example.invalid/results?page={self.index + 1}"
+        return True
+
+    def wait_for_load_state(self, *_args, **_kwargs):
+        return None
+
+    def wait_for_timeout(self, *_args, **_kwargs):
+        return None
+
+
+def _result_page(*matchdays):
+    group = ["Herren, Kreisliga - Meisterschaft"]
+    rows = [group]
+    for matchday in matchdays:
+        rows.append(
+            [
+                "",
+                "",
+                f"{matchday:03d}",
+                f"{matchday:02d}.10.2025",
+                str(matchday),
+                TEAM_BY_ID["herren_1"].dfbnet_name,
+                "-",
+                f"Gegner {matchday}",
+                "2 : 0",
+                "",
+            ]
+        )
+    return rows
 
 
 class PlayerPremiumConfigurationTests(unittest.TestCase):
@@ -64,6 +161,62 @@ class PlayerPremiumConfigurationTests(unittest.TestCase):
 
 
 class PlayerPremiumEvaluationTests(unittest.TestCase):
+    def test_collects_all_result_pages_including_matchdays_12_and_18(self):
+        page = _FakePage([_result_page(1, 12), _result_page(12, 18)])
+
+        with patch.object(
+            player_premiums,
+            "_go_to_next_page",
+            side_effect=lambda current: current.next_page(),
+        ):
+            result = player_premiums._collect_matches(
+                page,
+                [TEAM_BY_ID["herren_1"]],
+            )
+
+        self.assertEqual(
+            [match.label for match in result["herren_1"]],
+            ["ST 1", "ST 12", "ST 18"],
+        )
+
+    def test_repeated_result_page_stops_and_deduplicates_matches(self):
+        repeated = _result_page(12)
+        page = _FakePage([repeated, repeated, _result_page(18)])
+        navigation_calls = 0
+
+        def next_page(current):
+            nonlocal navigation_calls
+            navigation_calls += 1
+            return current.next_page()
+
+        with patch.object(
+            player_premiums,
+            "_go_to_next_page",
+            side_effect=next_page,
+        ):
+            result = player_premiums._collect_matches(
+                page,
+                [TEAM_BY_ID["herren_1"]],
+            )
+
+        self.assertEqual([match.label for match in result["herren_1"]], ["ST 12"])
+        self.assertEqual(navigation_calls, 1)
+
+    def test_empty_followup_page_stops_without_losing_first_page(self):
+        page = _FakePage([_result_page(12), None])
+
+        with patch.object(
+            player_premiums,
+            "_go_to_next_page",
+            side_effect=lambda current: current.next_page(),
+        ):
+            result = player_premiums._collect_matches(
+                page,
+                [TEAM_BY_ID["herren_1"]],
+            )
+
+        self.assertEqual([match.label for match in result["herren_1"]], ["ST 12"])
+
     def test_match_rows_determine_home_and_away_points(self):
         team = TEAM_BY_ID["herren_1"]
         home_win = parse_match_row(
