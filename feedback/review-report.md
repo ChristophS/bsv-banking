@@ -8,38 +8,67 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen: Erwartbare Fehler für extern entfernte Mails werden erkannt, der lokale Inbox-Datensatz inklusive abhängiger Daten und In-Memory-Zustand wird entfernt, der HTTP-Endpunkt kennzeichnet den Fall separat und die Oberfläche entfernt den Eintrag ohne technischen Fehler. Unerwartete Mailfehler werden weitergereicht. Die Idempotenz ist durch den anschließenden lokalen Lookup ohne erneuten Backend-Abruf abgesichert. Branch und GitHub-Compare sind konsistent und die ergänzten Tests decken Löschung, Idempotenz und unerwartete Fehler ab.
+Die geprüfte Umsetzung erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Die optionale Checkbox „Direkt abschließen“ wird im bestehenden Erstellungsfluss verarbeitet, der Vorgang bleibt über die vorhandenen Verknüpfungen eingebunden, der bisherige offene Anfangsstatus bleibt ohne Option erhalten und fachliche Abschlussprüfungen verhindern eine teilweise Persistenz. Die relevanten HTTP-Tests decken erfolgreichen Abschluss und Ablehnung unvollständiger Vorgänge ab. Der GitHub-Diff enthält ausschließlich die aktualisierte Implementierungsdokumentation; die fachliche Umsetzung ist am geprüften Commit jedoch vorhanden und der Branch ist vergleichbar.
 
 # Technischer Review
 
-## Entscheidung
+## Ergebnis
 
-**Akzeptiert.**
+**Accepted:** true
 
-## Geprüfte Anforderungen
+## Geprüfter Umfang
 
-- Erwartbare Fehlerbilder für nicht mehr vorhandene externe Mailobjekte werden in `_is_missing_external_mail_error` erkannt.
-- Beim erwartbaren Fehler wird der lokale Inbox-Datensatz über die bestehende `InboxMailStore.mark_deleted`-Logik entfernt. Durch die vorhandenen Foreign-Key-Beziehungen werden abhängige Datensätze mit entfernt.
-- Der aktive Managerzustand für Nachrichten, Spam-Scores und Signaturen wird über `_remove_from_active_state` bereinigt.
-- `StaleMailRemovedError` wird im HTTP-Endpunkt separat behandelt und als `404` mit `stale_mail_removed: true` ausgegeben.
-- Die Mailoberfläche erkennt diese Antwort, entfernt den Eintrag aus `state.mails`, leert die Detailansicht und rendert die Liste ohne technischen Fehler.
-- Unerwartete Fehler werden nicht pauschal verschluckt, sondern erneut ausgelöst und durch die bestehende Fehlerbehandlung verarbeitet.
-- Die zweite Aktualisierung nach erfolgreicher lokaler Entfernung löst keinen zweiten Backend-Aufruf und keinen zweiten Löschvorgang aus, weil der lokale Datensatz nicht mehr aufgelöst werden kann.
+Der GitHub-Compare-Stand ist sauber und enthält einen Commit mit der aktualisierten `feedback/implementation_report.md`. Die im Bericht als bereits vorhandene fachliche Umsetzung genannten Dateien wurden am geprüften Commit vollständig geprüft:
+
+- `banking_dashboard/server.py`
+- `banking_dashboard/static/app.js`
+- `tests/test_dashboard.py`
+
+## Prüfung der Muss-Anforderungen
+
+### Option zum kombinierten Anlegen und Abschließen
+
+`DashboardDataStore.create_vorgang()` akzeptiert das optionale boolesche Feld `completed`. Bei `completed: true` wird der Status mit dem bestehenden Wert `abgeschlossen` und `status_manuell = 1` gespeichert. Ohne Angabe bleibt der Status `in_bearbeitung`.
+
+Die bestehende Erstellungsoberfläche enthält die verständlich benannte Option „Direkt abschließen“ und übermittelt das Feld nur bei aktivierter Checkbox.
+
+### Nutzung der bestehenden Vorgangsstruktur
+
+Die Umsetzung verwendet weiterhin `vorgaenge`, `transaktion_vorgaenge` sowie die bestehenden Verknüpfungsroutinen `_replace_vorgang_links()` und `_replace_transaction_vorgang_links()`. Transaktionen, Mails, To-Dos, Belege und Termine werden nicht über eine parallele Struktur verwaltet.
+
+### Unverändertes Verhalten beim reinen Anlegen
+
+Wenn `completed` nicht gesetzt oder `false` ist, wird der Vorgang weiterhin mit dem Status `in_bearbeitung` angelegt. Die bestehende Erstellungslogik und die Statusverwaltung bleiben erhalten.
+
+### Abschluss nur bei ausdrücklicher Auswahl
+
+Die Abschlussprüfung und der Abschlussstatus werden nur ausgeführt, wenn `values["completed"]` wahr ist. Das normale Anlegen löst keinen Abschluss aus.
+
+## Fehler- und Datenintegritätsprüfung
+
+Vor dem INSERT prüft `_validate_vorgang_completion_values()` die fachlichen Abschlussbedingungen. Dazu gehören insbesondere die Klassifikationsanforderungen verknüpfter Transaktionen sowie die besonderen Anforderungen für Rechnungsvorgänge.
+
+Die Verknüpfungen werden innerhalb derselben Schreibtransaktion angelegt. Fehler bei unbekannten Entitäten oder ungültigen Verknüpfungen verhindern damit eine erfolgreiche Transaktion; ein nicht erfolgreich angelegter Vorgang kann folglich nicht abgeschlossen zurückbleiben.
 
 ## Tests
 
-Die neuen Tests decken ab:
+In `tests/test_dashboard.py` sind die zentralen Anforderungen automatisiert abgedeckt, unter anderem:
 
-- extern gelöschte Mail führt zur Entfernung aus dem lokalen Inbox-Bestand,
-- anschließender erneuter Zugriff bleibt fehlerfrei im Sinne der Idempotenz und ruft das Backend nicht erneut auf,
-- unerwarteter Mailfehler bleibt ein `MailIntegrationError` und lässt den lokalen Bestand bestehen.
+- `test_vorgang_can_be_created_completed_over_http`
+- `test_completed_vorgang_creation_rejects_incomplete_transaction_over_http`
+- Tests zum unveränderten offenen Status und zu bestehenden Entitätsverknüpfungen
+- Tests zu fachlichen Abschlussbedingungen und zur Vermeidung teilweiser Persistenz
 
-Der Implementation Report meldet außerdem 182 bestandene Tests und 7 übersprungene optionale Browser-/Umgebungstests. Der GitHub-Compare ist `ahead` um einen Commit, ohne fehlende oder zusätzliche Dateien gegenüber dem Runner-Stand.
+Der Implementierungsbericht nennt 137 bestandene Tests und 6 übersprungene optionale Browser-/Umgebungstests. Die übersprungenen Tests stellen für die serverseitig geprüften Muss-Anforderungen keinen Blocker dar.
 
-## Architektur und Scope
+## Scope und Architektur
 
-Die Änderung verwendet bestehende Store-, Manager- und HTTP-Strukturen. Es wurde kein paralleles Mailmodell eingeführt und es erfolgen keine externen Löschaktionen. Die zusätzliche Frontend-Anpassung ist für das Akzeptanzkriterium zur fehlerfreien Benutzeroberfläche erforderlich. Die Änderung am Implementierungsbericht ist im Rahmen des Coding-Agenten-Reports unkritisch.
+Es wurden keine neuen externen Integrationen, keine parallelen Statusmodelle und kein grundsätzlicher Umbau der Vorgangs- oder Verknüpfungsstruktur festgestellt. Die Umsetzung verwendet bestehende Statuswerte und die vorhandenen Services beziehungsweise Verknüpfungsroutinen.
 
-## Nicht blockierende Hinweise
+## Compare- und Branch-Prüfung
 
-Die Erkennung behandelt `LookupError` insgesamt als Hinweis auf ein fehlendes externes Objekt. Das ist für die bestehende Backend-Semantik plausibel, könnte aber langfristig durch explizitere externe Fehlerklassen oder Fehlercodes weiter eingegrenzt werden. Ein zusätzlicher HTTP-/UI-Test würde die bereits vorhandene fachliche Testabdeckung noch vervollständigen.
+Der Branch ist gegenüber `main` um einen Commit voraus und nicht hinter der Basis (`ahead_by=1`, `behind_by=0`). Es gibt keine fehlenden oder unerwarteten Dateien im GitHub-Compare. Der einzige Commit ändert den Implementierungsbericht; die fachliche Funktion ist am geprüften Commit dennoch vorhanden und wurde anhand des vollständigen Dateikontexts verifiziert.
+
+## Fazit
+
+Die Umsetzung erfüllt die Muss-Anforderungen und Akzeptanzkriterien. Es bestehen keine blockierenden technischen oder fachlichen Probleme.
