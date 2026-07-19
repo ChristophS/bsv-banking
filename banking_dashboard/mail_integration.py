@@ -96,6 +96,7 @@ TEXT_ATTACHMENT_EXTENSIONS = {
     ".txt",
     ".xml",
 }
+OUTLOOK_MAPI_E_NOT_FOUND = 0x8004010F
 
 
 class MailIntegrationError(RuntimeError):
@@ -3864,6 +3865,8 @@ def _run_outlook_worker(operation: str, *args: Any) -> Any:
         raise ValueError(payload)
     if status == "lookup_error":
         raise LookupError(payload)
+    if status == "external_mail_not_found":
+        raise ExternalMailNotFoundError(payload)
     raise MailIntegrationError(payload)
 
 
@@ -3889,6 +3892,8 @@ def _outlook_worker_main(
         result_queue.put(("value_error", str(exc)))
     except LookupError as exc:
         result_queue.put(("lookup_error", str(exc)))
+    except ExternalMailNotFoundError as exc:
+        result_queue.put(("external_mail_not_found", str(exc)))
     except MailIntegrationError as exc:
         result_queue.put(("mail_error", str(exc)))
     except Exception:
@@ -3964,6 +3969,10 @@ def _outlook_read_message(entry_id: str) -> dict[str, Any]:
         item = _outlook_namespace(win32_client).GetItemFromID(entry_id)
         return _mail_item_to_read_dict(item)
     except Exception as exc:
+        if _outlook_hresult(exc) == OUTLOOK_MAPI_E_NOT_FOUND:
+            raise ExternalMailNotFoundError(
+                "Die Outlook-Mail ist nicht mehr vorhanden."
+            ) from exc
         raise MailIntegrationError(
             "Die Outlook-Mail konnte nicht gelesen werden."
         ) from exc
@@ -4476,6 +4485,16 @@ def _outlook_modules() -> tuple[Any, Any]:
 def _outlook_namespace(win32_client: Any) -> Any:
     outlook = win32_client.Dispatch("Outlook.Application")
     return outlook.GetNamespace("MAPI")
+
+
+def _outlook_hresult(exc: Exception) -> int | None:
+    """Return a COM HRESULT as an unsigned value without inspecting its text."""
+    value = getattr(exc, "hresult", None)
+    if value is None and exc.args and isinstance(exc.args[0], int):
+        value = exc.args[0]
+    if not isinstance(value, int):
+        return None
+    return value & 0xFFFFFFFF
 
 
 def _collect_unread_messages(

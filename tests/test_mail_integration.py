@@ -24,6 +24,7 @@ from banking_dashboard.mail_integration import (
     OpenAISpamScorer,
     _mail_category,
     _oauth_error_detail,
+    _outlook_read_message,
     _prepare_and_send_reply,
     _strip_html,
     _updated_outlook_categories,
@@ -1007,6 +1008,51 @@ class MailIntegrationUnitTests(unittest.TestCase):
         ):
             with self.assertRaises(ExternalMailNotFoundError):
                 backend.read_message("missing")
+
+    def test_outlook_missing_item_is_translated_to_external_mail_not_found(self):
+        pythoncom = Mock()
+        namespace = Mock()
+        missing_error = Exception(-2147221233, "provider-specific text")
+        namespace.GetItemFromID.side_effect = missing_error
+
+        with (
+            patch(
+                "banking_dashboard.mail_integration._outlook_modules",
+                return_value=(pythoncom, Mock()),
+            ),
+            patch(
+                "banking_dashboard.mail_integration._outlook_namespace",
+                return_value=namespace,
+            ),
+        ):
+            with self.assertRaises(ExternalMailNotFoundError):
+                _outlook_read_message("missing")
+
+        pythoncom.CoUninitialize.assert_called_once_with()
+
+    def test_outlook_other_com_error_remains_generic(self):
+        pythoncom = Mock()
+        namespace = Mock()
+        namespace.GetItemFromID.side_effect = Exception(
+            -2147023174,
+            "provider-specific text",
+        )
+
+        with (
+            patch(
+                "banking_dashboard.mail_integration._outlook_modules",
+                return_value=(pythoncom, Mock()),
+            ),
+            patch(
+                "banking_dashboard.mail_integration._outlook_namespace",
+                return_value=namespace,
+            ),
+        ):
+            with self.assertRaises(MailIntegrationError) as raised:
+                _outlook_read_message("temporarily-unavailable")
+
+        self.assertNotIsInstance(raised.exception, ExternalMailNotFoundError)
+        pythoncom.CoUninitialize.assert_called_once_with()
 
     def test_full_target_mail_load_marks_stale_local_unread_as_read(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
