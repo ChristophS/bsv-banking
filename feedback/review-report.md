@@ -8,36 +8,41 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen. Fehlende externe Mailobjekte werden über ExternalMailNotFoundError klassifiziert, Graph-404/ErrorItemNotFound sowie Outlook-MAPI_E_NOT_FOUND werden typbasiert übersetzt, generische Outlook- und Mailbox-Fehler bleiben unterscheidbar. Der Fehlertyp wird über die Outlook-Prozessgrenze transportiert. Geeignete Mock-/Fake-Tests decken die Erkennung und Abgrenzung ab; bestehende vorgangsbasierte Mailstrukturen bleiben unverändert.
+Der neue isolierte HTTP-Test deckt den stale_mail_removed-Fall fachlich und für die sichtbare lokale Mailübersicht ab. Er prüft die Entfernung der veralteten Mail sowie den Erhalt einer nicht betroffenen Mail. Der Test verwendet ausschließlich den vorhandenen FakeMailBackend und verändert keine Produktivlogik. GitHub Compare ist sauber und der Branch enthält genau einen nutzbaren Commit.
 
 ## Review-Ergebnis
 
-**Akzeptiert.**
+**Akzeptiert: Ja**
 
-### Erfüllte Anforderungen
+### Geprüfte Anforderungen
 
-- `ExternalMailNotFoundError` ist als expliziter, stabil auswertbarer Fehlertyp vorhanden.
-- Microsoft-Graph-Fehler werden anhand des HTTP-Status 404 oder des strukturierten Graph-Codes `ErrorItemNotFound` in diesen Fehlertyp übersetzt.
-- Outlook klassifiziert das stabile HRESULT `MAPI_E_NOT_FOUND` (`0x8004010F`) ohne Auswertung instabiler Fehlermeldungstexte.
-- Andere Outlook-COM-Fehler werden weiterhin als generischer `MailIntegrationError` behandelt.
-- Der explizite Fehlertyp wird über die Outlook-Worker-Prozessgrenze mit einem eigenen Status erhalten.
-- Die Synchronisationslogik wertet beim Stale-Mail-Verhalten ausschließlich `ExternalMailNotFoundError` aus. Generische Fehler mit ähnlichen Texten, darunter `ErrorItemNotFound`, entfernen keinen lokalen Eintrag.
-- Vorhandene Mail-, Vorgangs- und Verknüpfungsstrukturen wurden nicht umgangen oder neu aufgebaut.
-- Tests verwenden ausschließlich Mocks, Fakes und simulierte Fehler; echte externe Mailaktionen finden nicht statt.
+- Ein automatisierter Test für den stale_mail_removed-Fall wurde in `tests/test_mail_integration.py` ergänzt.
+- Der Test verwendet den bestehenden `FakeMailBackend` und simuliert das externe Entfernen genau einer Mail über `ExternalMailNotFoundError`.
+- Zwei zunächst sichtbare Mails werden eingerichtet.
+- Der Test prüft den HTTP-Fehlerstatus 404 und das Antwortmerkmal `stale_mail_removed`.
+- Nach der Verarbeitung wird `/api/mail?local=1` erneut abgefragt.
+- Die veraltete Mail darf nicht mehr sichtbar sein.
+- Die nicht betroffene Kontroll-Mail muss weiterhin sichtbar sein.
+- Es werden keine echten externen Maildienste, Logins, Secrets oder Netzwerkzugriffe benötigt.
+- Produktivcode, Mail-Synchronisationslogik, Vorgangsmodelle und Verknüpfungsstrukturen wurden nicht verändert.
 
-### Testabdeckung
+### Technische Bewertung
 
-Die ergänzten Tests belegen:
+Der Test erweitert die vorhandene HTTP-Teststruktur und verwendet die bestehende Server-, Datenbank- und Fake-Initialisierung. Dadurch wird das Zusammenspiel zwischen fachlicher stale-Behandlung und lokaler sichtbarer Mailübersicht realistisch abgesichert, ohne einen parallelen Testaufbau oder neue Ersatzstrukturen einzuführen.
 
-- explizites Stale-Verhalten bei `ExternalMailNotFoundError`,
-- gegenteiliges Verhalten bei einem generischen Fehler mit fehlend wirkendem Meldungstext,
-- Graph-404-Übersetzung zu `ExternalMailNotFoundError`,
-- Outlook-Erkennung des fehlenden Objekts anhand des HRESULT,
-- Abgrenzung eines anderen Outlook-HRESULTs als generischer `MailIntegrationError`.
+Die Mock-Implementierung löst den Fehler nur für die ursprüngliche Mail aus. Die zweite Mail wird weiterhin normal gelesen beziehungsweise bleibt im lokalen Bestand erhalten. Die abschließenden Assertions stellen damit sowohl die Entfernung des stale-Eintrags als auch die Nicht-Beeinträchtigung anderer Einträge sicher.
 
-Der gemeldete GitHub-Compare ist brauchbar (`ahead_by: 2`, `behind_by: 0`), und es gibt keine Abweichungen zwischen Runner- und GitHub-Änderungspfaden.
+### Diff- und Branch-Prüfung
 
-### Nicht blockierende Hinweise
+- GitHub Compare: `ahead`, 1 Commit vor `main`, nicht hinter `main`.
+- Keine fehlenden oder zusätzlichen Dateien im Compare.
+- Die Testdatei enthält ausschließlich die erwartete Ergänzung.
+- Die Anpassung am Implementierungsbericht ist nicht funktional, widerspricht dem Auftrag aber nicht.
 
-- Ein zusätzlicher Test für `ErrorItemNotFound` bei einem Nicht-404-Graph-Status wäre sinnvoll, aber für die Freigabe nicht erforderlich.
-- Die Outlook-HRESULT-Konstante könnte noch etwas stärker dokumentiert werden.
+### Tests
+
+Laut Implementierungsbericht wurden der gezielte neue Test, die vollständige Mail-Testsuite und die Dashboard-Tests erfolgreich ausgeführt. Die gemeldeten Ergebnisse sind plausibel und decken die zentrale Änderung angemessen ab.
+
+### Optionale Verbesserung
+
+Der Test könnte zusätzlich einen konkreten String-Statuswert `stale_mail_removed` prüfen, sofern die API diesen neben dem booleschen Feld bereitstellt. Das ist für die vorliegenden Muss-Anforderungen jedoch nicht erforderlich, da das Antwortmerkmal bereits direkt geprüft wird.
