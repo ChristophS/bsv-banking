@@ -1,27 +1,10 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Dashboard als Startseite mit freier Tab-Navigation gestalten
-
-**Epic-ID:** epic-dashboard-navigation
-
-**Epic-Titel:** Dashboard-Navigation und fachliche Übersichten entlasten
-
-**Epic-Ziel:** Das Dashboard soll je Fachbereich unmittelbar die relevanten Inhalte zeigen, ohne dauerhaft sichtbare globale Blöcke als Sichtblocker.
-
-**Teilpaket:** Teil 1
-
-**Priorität:** hoch
-
-**Grund:** Die offene Arbeit steht derzeit dauerhaft oben und blockiert beim Wechsel der Tabs die Sicht auf weitere Inhalte. Sie soll eher auf einer eigenen Startseite erscheinen.
-
-**Feedback:**
-
-- Die offene Arbeit steht zwar immer oben. Das sollte aber eher eine Startseite sein.
-- Wenn ich die Tabs wechsle, blockiert das die Sicht und ich muss erst nach unten scrollen.
-
-## 2. Transaktionsansicht ohne dominanten Saldokorrektur-Block anzeigen
+## 1. Transaktionsansicht ohne dominanten Saldokorrektur-Block anzeigen
 
 **Epic-ID:** epic-dashboard-navigation
 
@@ -41,7 +24,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Wenn ich auf Transaktionen gehe, will ich sofort die Transaktionen sehen.
 - Am besten noch mit dem Datum des Standes der Daten.
 
-## 3. Mail als gelesen markieren trotz MailboxConcurrency-Fehler ermöglichen
+## 2. Mail als gelesen markieren trotz MailboxConcurrency-Fehler ermöglichen
 
 **Epic-ID:** epic-mail-synchronisation
 
@@ -53,14 +36,14 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 **Priorität:** hoch
 
-**Grund:** Das Markieren einer Mail als gelesen schlägt mit einer MailboxConcurrency-Fehlermeldung fehl und benötigt eine robuste, begrenzte Verarbeitung ohne echte externe Mail-Aktionen in Tests.
+**Grund:** Das Markieren einer Mail als gelesen benötigt eine robuste, begrenzte Verarbeitung erwartbarer Mailbox-Concurrency-Fehler ohne echte externe Mail-Aktionen in Tests.
 
 **Feedback:**
 
 - Ich wollte eine Mail als gelesen markieren. Das ging nicht.
 - Application is over its MailboxConcurrency limit.
 
-## 4. Nicht mehr vorhandene Mails aus der Übersicht entfernen
+## 3. Nicht mehr vorhandene Mails aus der Übersicht entfernen
 
 **Epic-ID:** epic-mail-synchronisation
 
@@ -80,7 +63,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - The process failed to get the correct properties.
 - Wenn die Mail anderweitig gelöscht wurde, sollte sie umgehend aus der Übersicht gelöscht werden.
 
-## 5. Vorgang beim Anlegen optional direkt abschließen
+## 4. Vorgang beim Anlegen optional direkt abschließen
 
 **Epic-ID:** epic-vorgangsabschluss
 
