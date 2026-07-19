@@ -1,1 +1,3 @@
-Für ein späteres Arbeitspaket sollte die Fehlerabstraktion der verschiedenen Mail-Backends vereinheitlicht werden, damit Concurrency-Fehler unabhängig davon, ob sie aus Microsoft Graph oder Outlook stammen, über einen strukturierten Fehlercode erkannt und getestet werden können.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
