@@ -1,7 +1,5 @@
 # Backlog
 
-**Planungsstatus:** strukturiert
-
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
 ## 1. Automatisierten HTTP- oder Browser-Test für stale_mail_removed und die Entfernung aus der sichtbaren Mailübersicht hinzufügen
