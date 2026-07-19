@@ -24,12 +24,23 @@
   </header>
 
   <main class="app-shell">
-    <nav class="tabs" aria-label="Dashboard-Bereiche">
+    <nav class="tabs" role="tablist" aria-label="Dashboard-Bereiche">
       <button
         class="tab is-active"
         type="button"
         role="tab"
         aria-selected="true"
+        aria-controls="dashboard-panel"
+        id="dashboard-tab"
+        data-tab="dashboard"
+      >
+        Start
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
         aria-controls="transactions-panel"
         id="transactions-tab"
         data-tab="transactions"
@@ -104,7 +115,12 @@
       </button>
     </nav>
 
-    <section class="overview-strip" aria-label="Vorgangsübersicht">
+    <section
+      class="overview-strip"
+      id="dashboard-panel"
+      role="tabpanel"
+      aria-labelledby="dashboard-tab"
+    >
       <div class="dashboard-start">
         <div class="dashboard-start-heading">
           <div>
@@ -164,6 +180,7 @@
       id="transactions-panel"
       role="tabpanel"
       aria-labelledby="transactions-tab"
+      hidden
     >
       <div class="panel-heading">
         <div>

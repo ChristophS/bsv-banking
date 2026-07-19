@@ -6353,6 +6353,10 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                     page.goto(base_url, wait_until="networkidle")
 
                     expect(page.locator(".dashboard-start")).to_be_visible()
+                    expect(page.locator("#dashboard-tab")).to_have_attribute(
+                        "aria-selected", "true"
+                    )
+                    expect(page.locator("#transactions-panel")).to_be_hidden()
                     expect(page.locator("#dashboard-refresh")).to_have_text(
                         "Alles synchronisieren"
                     )
@@ -6370,6 +6374,7 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         page.locator("#vorgang-hide-completed")
                     ).to_be_checked()
 
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='open_todos']").click()
                     expect(page.locator("#todo-tab")).to_have_class(
                         re.compile("is-active")
@@ -6378,6 +6383,7 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         page.locator("#todo-hide-completed")
                     ).to_be_checked()
 
+                    page.locator("#dashboard-tab").click()
                     page.locator(
                         "[data-overview-key='unassigned_transactions']"
                     ).click()
@@ -6390,11 +6396,13 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         )
                     ).to_be_checked()
 
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='unread_mails']").click()
                     expect(page.locator("#mail-tab")).to_have_class(
                         re.compile("is-active")
                     )
 
+                    page.locator("#dashboard-tab").click()
                     page.locator(
                         "[data-overview-key='upcoming_termine']"
                     ).press("Enter")
@@ -6408,6 +6416,7 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         page.locator("#termin-special-filter")
                     ).to_be_hidden()
 
+                    page.locator("#dashboard-tab").click()
                     with page.expect_response(
                         lambda response: "/api/termine?" in response.url
                         and "unassigned_upcoming=true" in response.url
@@ -6427,6 +6436,7 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         "Nicht zugewiesene anstehende Termine"
                     )
 
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='unread_mails']").click()
                     expect(page.locator("#mail-tab")).to_have_class(
                         re.compile("is-active")
@@ -6443,6 +6453,7 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         page.locator("#termin-special-filter")
                     ).to_be_hidden()
 
+                    page.locator("#dashboard-tab").click()
                     with page.expect_response(
                         lambda response: "/api/termine?" in response.url
                         and "unassigned_upcoming=true" in response.url
@@ -6467,6 +6478,7 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         page.locator("#termin-special-filter")
                     ).to_be_hidden()
 
+                    page.locator("#dashboard-tab").click()
                     page.locator(
                         "[data-overview-key='unassigned_documents']"
                     ).press(" ")
@@ -6474,6 +6486,7 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         re.compile("is-active")
                     )
 
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='unread_mails']").click()
                     page.evaluate(
                         """
@@ -6487,11 +6500,13 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         }
                         """
                     )
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='custom_documents']").click()
                     expect(page.locator("#vorgaenge-tab")).to_have_class(
                         re.compile("is-active")
                     )
 
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='unread_mails']").click()
                     expect(page.locator("#mail-tab")).to_have_class(
                         re.compile("is-active")
@@ -6514,16 +6529,24 @@ class DashboardTodoBrowserTests(unittest.TestCase):
                         }
                         """
                     )
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='__proto__']").click()
                     expect(page.locator("#todo-tab")).to_have_class(
                         re.compile("is-active")
                     )
 
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='unread_mails']").click()
+                    page.locator("#dashboard-tab").click()
                     page.locator("[data-overview-key='constructor']").click()
                     expect(page.locator("#vorgaenge-tab")).to_have_class(
                         re.compile("is-active")
                     )
+                    page.reload(wait_until="networkidle")
+                    expect(page.locator("#vorgaenge-tab")).to_have_attribute(
+                        "aria-selected", "true"
+                    )
+                    expect(page.locator("#dashboard-panel")).to_be_hidden()
                     self.assertEqual([], page_errors)
                     browser.close()
             finally:
