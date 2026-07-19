@@ -1,2 +1,3 @@
-- Explizite Exception-Klassen beziehungsweise strukturierte Fehlercodes für externe Mailobjekte statt textbasierter Erkennung ergänzen.
-- Einen automatisierten HTTP- oder Browser-Test für `stale_mail_removed` und die Entfernung aus der sichtbaren Mailübersicht hinzufügen.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
