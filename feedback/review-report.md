@@ -8,39 +8,42 @@
 
 ## Zusammenfassung
 
-Die Zustandsmatrix erfüllt die Muss-Anforderungen vollständig. Sie unterscheidet geladenen Bestand, leeren Bestand, erfolglose Such- oder Filtertreffer und Ladefehler klar, beschreibt jeweils Bedeutung und Nutzerorientierung und grenzt initiales Laden sowie erneute Ladeversuche ab. Es wurden keine Laufzeitfunktionen oder Datenstrukturen verändert; der GitHub-Compare ist sauber und enthält genau einen neuen Commit.
+Die Umsetzung erfüllt die Muss-Anforderungen zur vollständigen Verarbeitung mehrseitiger DFBnet-Ergebnislisten. Die Seitensignatur berücksichtigt nun ausschließlich Tabelleninhalte, leere Folgeseiten werden nach einer bereits verarbeiteten Seite stabil beendet und unveränderte Folgeseiten verhindern Endlosschleifen. Die Tests decken Spieltage 12 und 18, seitenübergreifende Duplikate, wiederholte Seiten und leere Folgeseiten mit isolierten Fakes ab. Der GitHub-Compare ist sauber und enthält genau die erwarteten Änderungen.
 
-## Review-Ergebnis
+# Technischer Review
 
-**Akzeptiert:** Ja
+## Ergebnis
 
-### Geprüfte Anforderungen
+**Akzeptiert.**
 
-- Die Dokumentation enthält eine kompakte und leicht auffindbare Zustandsmatrix direkt im bestehenden Dokument `feedback/cashier_workflow_analysis.md`.
-- Die vier geforderten Zustände sind separat beschrieben:
-  - Geladener Bestand
-  - Leerer Bestand
-  - Keine Such- oder Filtertreffer
-  - Ladefehler
-- Für jeden Zustand werden fachliche Bedeutung sowie Nutzerorientierung beziehungsweise nächste Handlung angegeben.
-- Leerer Bestand wird ausdrücklich von null Treffern bei aktiver Suche oder Filterung abgegrenzt.
-- Ladefehler werden eindeutig von beiden erfolgreichen, aber leeren Ergebniszuständen abgegrenzt. Es wird klargestellt, dass bei einem Ladefehler keine Aussage über vorhandene oder fehlende Einträge möglich ist.
-- Initiales Laden wird als eigener Übergangszustand berücksichtigt, in dem noch keiner der vier Ergebniszustände behauptet werden darf.
-- Die Begriffe werden als Anzeigezustände und nicht als neue fachliche Status oder Datenstrukturen festgelegt.
-- Listenübergreifende Merkmale wie Ergebniszahlen, Filterkontext, Zurücksetzen und erneutes Laden werden konsistent dokumentiert.
+## Geprüfte Anforderungen
 
-### Zusammenspiel mit dem vorhandenen Kontext
+- Die Ergebnislisten-Abfrage verarbeitet weiterhin Folgeseiten über die vorhandene Navigation.
+- Die Erkennung bereits verarbeiteter Seiten basiert jetzt auf dem Inhalt der Ergebnistabellen und nicht mehr auf der URL. Damit werden URL-Änderungen bei unverändertem Seiteninhalt korrekt als Wiederholung erkannt.
+- Eine leere Folgeseite beendet die Sammlung nach bereits erfolgreicher Verarbeitung der ersten Seite ohne Endlosschleife.
+- Eine fehlende Ergebnistabelle auf der ersten Seite bleibt ein klarer Fehler.
+- Die bestehende Match- und Prämienlogik, Spielerzuordnung und Vollständigkeitsprüfung wurden nicht fachlich umgebaut.
+- Die bestehende Deduplizierung wird nach Abschluss der Seitensammlung weiterhin angewendet.
+- Die Vollständigkeitswarnung für fehlende Spieltage bleibt unverändert aktiv.
 
-Die Matrix passt zur bestehenden Analyse: Vorgänge bleiben das zentrale fachliche Objekt, und es werden keine neuen Beziehungen, Datenmodelle oder Laufzeitmechanismen eingeführt. Die Formulierungen vermeiden konkrete UI- oder Implementierungsdetails, die aus dem Kontext nicht abgesichert wären.
+## Tests
 
-### Diff- und Scope-Prüfung
+Die ergänzten Fake-Tests decken zentrale Akzeptanzkriterien ab:
 
-Der relevante Inhalt wurde ausschließlich in der vorgesehenen Analyse ergänzt. Die zusätzliche Änderung an `feedback/implementation_report.md` aktualisiert den Umsetzungsbericht und dokumentiert den tatsächlichen Arbeitsstand. Es wurden keine Dashboard-, API-, Persistenz- oder Datenmodelländerungen vorgenommen. Der GitHub-Compare ist `ahead` mit einem Commit, ohne fehlende oder zusätzliche Compare-Dateien.
+- mehrere Ergebnislistenseiten einschließlich Spieltag 12 und 18,
+- seitenübergreifendes Duplikat,
+- wiederholte Seite mit stabilem Abbruch,
+- leere Folgeseite ohne Verlust der bereits gesammelten Ergebnisse.
 
-### Tests und Prüfbarkeit
+Die Tests verwenden ausschließlich isolierte Fakes und Mocks. Es gibt keine echten externen DFBnet-Aktionen. Laut Implementierungsbericht wurden die Spielerprämien-Tests sowie der gemeinsame Testlauf erfolgreich ausgeführt.
 
-Automatisierte Tests sind für die reine Dokumentationsänderung nicht erforderlich. Der dokumentierte manuelle Check sowie `git diff --check` sind für diesen Scope angemessen. Die Matrix ist ohne Kenntnis interner Implementierungsdetails verständlich und erfüllt die angegebenen manuellen Testhinweise.
+## Repository- und Compare-Prüfung
 
-### Fazit
+- GitHub Compare: `ahead`, 1 Commit vor `main`, 0 Commits zurück.
+- Keine fehlenden oder zusätzlichen Dateien im Compare.
+- Die Änderungen an `banking_dashboard/player_premiums.py` und `tests/test_player_premiums.py` entsprechen dem Arbeitspaket.
+- Die Anpassung des `feedback/implementation_report.md` ist als Berichtsänderung plausibel und kein fachlicher Scope Creep.
 
-Keine blockierenden Abweichungen festgestellt. Das Arbeitspaket ist vollständig und kann akzeptiert werden.
+## Nicht blockierende Anmerkung
+
+Die Deduplizierung berücksichtigt `detail_href` im Schlüssel. Unterschiedliche Detail-URLs für dasselbe Ergebnis könnten daher theoretisch ein Duplikat durchlassen. Das ist anhand des vorliegenden Kontexts kein nachgewiesener Fehler und verhindert die Freigabe nicht; ein zusätzlicher Test mit variierenden Detail-URLs wäre dennoch sinnvoll.
