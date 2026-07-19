@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 from banking_dashboard import create_server
 from banking_dashboard.mail_integration import (
     DashboardMailManager,
+    ExternalMailNotFoundError,
     InboxMailStore,
     MailIntegrationError,
     StaleMailRemovedError,
@@ -23,6 +24,7 @@ from banking_dashboard.mail_integration import (
     OpenAISpamScorer,
     _mail_category,
     _oauth_error_detail,
+    _outlook_read_message,
     _prepare_and_send_reply,
     _strip_html,
     _updated_outlook_categories,
@@ -921,9 +923,7 @@ class MailIntegrationUnitTests(unittest.TestCase):
             )
             inbox_id = manager.list_messages()["messages"][0]["id"]
             backend.read_message = Mock(
-                side_effect=MailIntegrationError(
-                    "The specified object was not found in the store"
-                )
+                side_effect=ExternalMailNotFoundError("mail missing")
             )
 
             with self.assertRaises(StaleMailRemovedError):
@@ -959,6 +959,100 @@ class MailIntegrationUnitTests(unittest.TestCase):
                 [inbox_id],
                 [mail["id"] for mail in manager.cached_messages()["messages"]],
             )
+
+    def test_missing_mail_text_in_generic_error_keeps_local_inbox_entry(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "transactions.sqlite3"
+            create_dashboard_database(database_path)
+            backend = FakeMailBackend()
+            manager = DashboardMailManager(
+                backend,
+                FakeSpamScorer(),
+                inbox_database_path=database_path,
+            )
+            inbox_id = manager.list_messages()["messages"][0]["id"]
+            backend.read_message = Mock(
+                side_effect=MailIntegrationError("ErrorItemNotFound")
+            )
+
+            with self.assertRaises(MailIntegrationError):
+                manager.read_message(inbox_id)
+
+            self.assertEqual(
+                [inbox_id],
+                [mail["id"] for mail in manager.cached_messages()["messages"]],
+            )
+
+    def test_graph_404_is_translated_to_external_mail_not_found(self):
+        backend = MicrosoftGraphMailBackend(Mock())
+        response = Mock()
+        response.read.return_value = json.dumps(
+            {
+                "error": {
+                    "code": "ErrorItemNotFound",
+                    "message": "arbitrary provider text",
+                }
+            }
+        ).encode("utf-8")
+        graph_error = HTTPError(
+            "https://graph.microsoft.test/me/messages/missing",
+            404,
+            "Not Found",
+            {},
+            response,
+        )
+
+        with patch(
+            "banking_dashboard.mail_integration.urlopen",
+            side_effect=graph_error,
+        ):
+            with self.assertRaises(ExternalMailNotFoundError):
+                backend.read_message("missing")
+
+    def test_outlook_missing_item_is_translated_to_external_mail_not_found(self):
+        pythoncom = Mock()
+        namespace = Mock()
+        missing_error = Exception(-2147221233, "provider-specific text")
+        namespace.GetItemFromID.side_effect = missing_error
+
+        with (
+            patch(
+                "banking_dashboard.mail_integration._outlook_modules",
+                return_value=(pythoncom, Mock()),
+            ),
+            patch(
+                "banking_dashboard.mail_integration._outlook_namespace",
+                return_value=namespace,
+            ),
+        ):
+            with self.assertRaises(ExternalMailNotFoundError):
+                _outlook_read_message("missing")
+
+        pythoncom.CoUninitialize.assert_called_once_with()
+
+    def test_outlook_other_com_error_remains_generic(self):
+        pythoncom = Mock()
+        namespace = Mock()
+        namespace.GetItemFromID.side_effect = Exception(
+            -2147023174,
+            "provider-specific text",
+        )
+
+        with (
+            patch(
+                "banking_dashboard.mail_integration._outlook_modules",
+                return_value=(pythoncom, Mock()),
+            ),
+            patch(
+                "banking_dashboard.mail_integration._outlook_namespace",
+                return_value=namespace,
+            ),
+        ):
+            with self.assertRaises(MailIntegrationError) as raised:
+                _outlook_read_message("temporarily-unavailable")
+
+        self.assertNotIsInstance(raised.exception, ExternalMailNotFoundError)
+        pythoncom.CoUninitialize.assert_called_once_with()
 
     def test_full_target_mail_load_marks_stale_local_unread_as_read(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

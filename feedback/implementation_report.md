@@ -2,66 +2,75 @@
 
 ## Branchname
 
-`agent2/codex-20260719-140509`
+`agent2/rework-20260719-141938`
 
 ## Geänderte Dateien
 
+- `banking_dashboard/mail_integration.py`
+- `tests/test_mail_integration.py`
 - `feedback/implementation_report.md`
 
-Die fachliche Umsetzung in `banking_dashboard/server.py`,
-`banking_dashboard/static/app.js` und `tests/test_dashboard.py` war bereits im
-Ausgangsstand dieses Branches enthalten und musste nicht nachgebessert werden.
-Die bereits vor Arbeitsbeginn vorhandene Änderung an
-`feedback/Review-report.md` sowie die unversionierte Datei
-`feedback/agent2_prompt.md` wurden nicht verändert.
+Die bereits vor Arbeitsbeginn geänderte Datei `feedback/Review-report.md` und
+die unversionierten Prompt-/Review-Dateien wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Die bestehende Vorgangserstellung akzeptiert die optionale boolesche Angabe
-  `completed`; ohne Angabe bleibt der Anfangsstatus unverändert
-  `in_bearbeitung`.
-- Bei ausdrücklich gesetztem `completed: true` wird der Vorgang mit dem
-  bestehenden Status `abgeschlossen` und als manueller Abschluss gespeichert.
-- Vor dem Speichern werden die vorhandenen fachlichen Abschlussanforderungen
-  geprüft. Ein nicht abschließbarer Vorgang wird nicht teilweise angelegt.
-- Transaktions-, Mail-, To-Do-, Beleg- und Terminverknüpfungen laufen weiterhin
-  über die vorhandene vorgangsbasierte Verknüpfungslogik.
-- Die bestehende Erstellungsoberfläche bietet die verständlich benannte Option
-  „Direkt abschließen“ an und sendet sie nur bei aktivierter Checkbox.
-- HTTP-Tests decken den erfolgreichen Direktabschluss einschließlich
-  Transaktionsverknüpfung sowie die Ablehnung ohne partielle Persistenz ab.
+- Der vorhandene explizite Fehlertyp `ExternalMailNotFoundError` bleibt die
+  einzige Klassifikation für extern fehlende Mailobjekte.
+- Microsoft-Graph-Fehler werden weiterhin anhand von HTTP 404 oder dem
+  Graph-Fehlercode `ErrorItemNotFound` übersetzt.
+- Die vorhandenen Mail-, Vorgangs- und Verknüpfungsstrukturen blieben
+  unverändert.
+
+## Nachbesserung nach Review
+
+- `_outlook_read_message` klassifiziert das stabile MAPI-HRESULT
+  `MAPI_E_NOT_FOUND` (`0x8004010F`) nun als `ExternalMailNotFoundError`, ohne
+  den Text der COM-Fehlermeldung auszuwerten.
+- Andere Outlook-COM-Fehler werden weiterhin als generische
+  `MailIntegrationError` weitergegeben.
+- Der Outlook-Worker transportiert `ExternalMailNotFoundError` mit einem
+  eigenen Status zum aufrufenden Prozess. Damit verliert
+  `OutlookMailBackend` den expliziten Fehlertyp nicht an der Prozessgrenze und
+  das vorhandene stale-Verhalten kann ihn fachlich behandeln.
+- Zwei Fake-Tests sichern die Outlook-Abgrenzung zwischen einem fehlenden
+  Objekt und einem anderen COM-Fehler ab. Es wurden keine externen Dienste
+  oder echten Outlook-Profile verwendet.
 
 ## Nicht umgesetzte Punkte
 
-- Keine weiteren Status- oder Workflow-Erweiterungen.
-- Kein Umbau der Vorgangs-, Beleg-, Transaktions- oder Verknüpfungsstrukturen.
-- Keine Änderung bestehender Vorgänge und kein Massenabschluss.
-- Keine externen Integrationen.
+- Keine sichtbare Entfernung stale Einträge aus der Mailübersicht außerhalb
+  des bereits vorhandenen Detailabruf-Verhaltens (Teil 1.2).
+- Keine neuen Mail-, Vorgangs- oder Verknüpfungsmodelle.
+- Keine echten externen Mailzugriffe oder Logins.
+- Die nicht-blockierenden Review-Hinweise wurden nicht umgesetzt, da sie für
+  die gezielte Outlook-Korrektur nicht erforderlich sind.
 
 ## Ausgeführte Tests
 
 ```text
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_mail_integration.py
 "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py
 ```
 
 ## Testergebnis
 
-137 Tests bestanden, 6 Tests übersprungen. Die übersprungenen Tests sind
-optionale Browser-/Umgebungstests.
+- `tests/test_mail_integration.py`: 49 bestanden, 1 übersprungen.
+- `tests/test_dashboard.py`: 137 bestanden, 6 übersprungen.
 
 ## Bekannte Einschränkungen
 
-- Es wurde keine echte Browser-Automation ausgeführt; die serverseitigen
-  Erstellungs- und Fehlerfälle sind automatisiert abgedeckt.
-- Die Code-Umsetzung befand sich bereits im Ausgangsstand des Branches. In
-  diesem Arbeitslauf war daher ausschließlich eine Aktualisierung dieses
-  Berichts erforderlich.
+- Die Fehlerübersetzungen wurden ausschließlich mit simulierten Graph- und
+  Outlook-Fehlern getestet; es fand kein externer Mailzugriff statt.
+- Die Outlook-Klassifikation basiert gezielt auf `MAPI_E_NOT_FOUND`; andere
+  HRESULTs werden nicht als fehlendes Objekt interpretiert.
 
 ## Hinweise für den Review-Agenten
 
-- Relevant sind insbesondere
-  `test_vorgang_can_be_created_completed_over_http` und
-  `test_completed_vorgang_creation_rejects_incomplete_transaction_over_http`
-  in `tests/test_dashboard.py`.
-- Die Abschlussprüfung erfolgt vor dem INSERT. Dadurch hinterlässt ein mit 400
-  abgelehnter Direktabschluss keinen teilweise angelegten Vorgang.
+- Die Outlook-Korrektur umfasst sowohl die Klassifikation in
+  `_outlook_read_message` als auch den Erhalt des Fehlertyps über
+  `_outlook_worker_main` und `_run_outlook_worker`.
+- Der Outlook-Gegenbeispieltest verwendet einen anderen HRESULT und bestätigt,
+  dass dieser ein generischer `MailIntegrationError` bleibt.
+- `_is_missing_external_mail_error` wertet weiterhin ausschließlich den Typ
+  `ExternalMailNotFoundError` und keine Meldungstexte aus.

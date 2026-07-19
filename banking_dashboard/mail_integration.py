@@ -96,10 +96,15 @@ TEXT_ATTACHMENT_EXTENSIONS = {
     ".txt",
     ".xml",
 }
+OUTLOOK_MAPI_E_NOT_FOUND = 0x8004010F
 
 
 class MailIntegrationError(RuntimeError):
     pass
+
+
+class ExternalMailNotFoundError(MailIntegrationError):
+    """The requested mail object no longer exists in the external mailbox."""
 
 
 class StaleMailRemovedError(LookupError):
@@ -3736,6 +3741,7 @@ def _thread_finance_keywords(message: dict[str, Any]) -> set[str]:
 
 def _graph_mail_error(exc: HTTPError) -> MailIntegrationError:
     detail = ""
+    error_code = ""
     try:
         payload = json.loads(exc.read().decode("utf-8", errors="replace"))
         if isinstance(payload, dict):
@@ -3752,7 +3758,12 @@ def _graph_mail_error(exc: HTTPError) -> MailIntegrationError:
         detail = ""
     if exc.code in {401, 403}:
         detail = detail or "OAuth2-Berechtigung fehlt oder ist abgelaufen."
-    return MailIntegrationError(
+    error_type = (
+        ExternalMailNotFoundError
+        if exc.code == 404 or error_code.casefold() == "erroritemnotfound"
+        else MailIntegrationError
+    )
+    return error_type(
         detail or f"Microsoft Graph-Anfrage fehlgeschlagen ({exc.code})."
     )
 
@@ -3762,22 +3773,7 @@ def _is_mailbox_concurrency_error(exc: Exception) -> bool:
 
 
 def _is_missing_external_mail_error(exc: Exception) -> bool:
-    if isinstance(exc, LookupError):
-        return True
-    detail = str(exc).casefold()
-    return any(
-        pattern in detail
-        for pattern in (
-            "erroritemnotfound",
-            "the specified object was not found in the store",
-            "the object was not found in the store",
-            "cannot open the item",
-            "properties for this item are not available",
-            "properties cannot be loaded",
-            "eigenschaften koennen nicht geladen werden",
-            "eigenschaften können nicht geladen werden",
-        )
-    )
+    return isinstance(exc, ExternalMailNotFoundError)
 
 
 def _mark_read_with_retry(backend: MailBackend, entry_id: str) -> None:
@@ -3869,6 +3865,8 @@ def _run_outlook_worker(operation: str, *args: Any) -> Any:
         raise ValueError(payload)
     if status == "lookup_error":
         raise LookupError(payload)
+    if status == "external_mail_not_found":
+        raise ExternalMailNotFoundError(payload)
     raise MailIntegrationError(payload)
 
 
@@ -3894,6 +3892,8 @@ def _outlook_worker_main(
         result_queue.put(("value_error", str(exc)))
     except LookupError as exc:
         result_queue.put(("lookup_error", str(exc)))
+    except ExternalMailNotFoundError as exc:
+        result_queue.put(("external_mail_not_found", str(exc)))
     except MailIntegrationError as exc:
         result_queue.put(("mail_error", str(exc)))
     except Exception:
@@ -3969,6 +3969,10 @@ def _outlook_read_message(entry_id: str) -> dict[str, Any]:
         item = _outlook_namespace(win32_client).GetItemFromID(entry_id)
         return _mail_item_to_read_dict(item)
     except Exception as exc:
+        if _outlook_hresult(exc) == OUTLOOK_MAPI_E_NOT_FOUND:
+            raise ExternalMailNotFoundError(
+                "Die Outlook-Mail ist nicht mehr vorhanden."
+            ) from exc
         raise MailIntegrationError(
             "Die Outlook-Mail konnte nicht gelesen werden."
         ) from exc
@@ -4481,6 +4485,16 @@ def _outlook_modules() -> tuple[Any, Any]:
 def _outlook_namespace(win32_client: Any) -> Any:
     outlook = win32_client.Dispatch("Outlook.Application")
     return outlook.GetNamespace("MAPI")
+
+
+def _outlook_hresult(exc: Exception) -> int | None:
+    """Return a COM HRESULT as an unsigned value without inspecting its text."""
+    value = getattr(exc, "hresult", None)
+    if value is None and exc.args and isinstance(exc.args[0], int):
+        value = exc.args[0]
+    if not isinstance(value, int):
+        return None
+    return value & 0xFFFFFFFF
 
 
 def _collect_unread_messages(
