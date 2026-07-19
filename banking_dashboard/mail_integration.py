@@ -60,6 +60,8 @@ MAX_SUMMARY_ATTACHMENTS = 6
 MAX_CONVERSATION_MESSAGES = 50
 MAX_GRAPH_UNREAD_MESSAGES = 200
 MAIL_LIST_PAGE_SIZE = 10
+MAILBOX_CONCURRENCY_ERROR_CODE = "mailboxconcurrency"
+MARK_READ_MAX_ATTEMPTS = 2
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 GRAPH_UNREAD_FILTER = (
     "receivedDateTime ge 1900-01-01T00:00:00Z and isRead eq false"
@@ -1632,7 +1634,10 @@ class DashboardMailManager:
         backend = self._required_backend()
         succeeded, failed = self._apply_backend_action(
             targets,
-            lambda target_source_id: backend.mark_read(target_source_id),
+            lambda target_source_id: _mark_read_with_retry(
+                backend,
+                target_source_id,
+            ),
         )
         if failed:
             raise MailIntegrationError(failed[0]["error"])
@@ -3724,10 +3729,10 @@ def _graph_mail_error(exc: HTTPError) -> MailIntegrationError:
         if isinstance(payload, dict):
             error = payload.get("error")
             if isinstance(error, dict):
-                detail = str(
-                    error.get("message")
-                    or error.get("code")
-                    or ""
+                error_code = str(error.get("code") or "").strip()
+                error_message = str(error.get("message") or "").strip()
+                detail = ": ".join(
+                    part for part in (error_code, error_message) if part
                 )
             else:
                 detail = str(payload.get("error_description") or error or "")
@@ -3738,6 +3743,26 @@ def _graph_mail_error(exc: HTTPError) -> MailIntegrationError:
     return MailIntegrationError(
         detail or f"Microsoft Graph-Anfrage fehlgeschlagen ({exc.code})."
     )
+
+
+def _is_mailbox_concurrency_error(exc: Exception) -> bool:
+    return MAILBOX_CONCURRENCY_ERROR_CODE in str(exc).casefold()
+
+
+def _mark_read_with_retry(backend: MailBackend, entry_id: str) -> None:
+    for attempt in range(MARK_READ_MAX_ATTEMPTS):
+        try:
+            backend.mark_read(entry_id)
+            return
+        except Exception as exc:
+            if not _is_mailbox_concurrency_error(exc):
+                raise
+            if attempt + 1 == MARK_READ_MAX_ATTEMPTS:
+                raise MailIntegrationError(
+                    "Die Mailbox wurde gleichzeitig geaendert. Die Mail "
+                    "konnte nicht als gelesen markiert werden. Bitte erneut "
+                    "versuchen."
+                ) from exc
 
 
 class OutlookMailBackend:
