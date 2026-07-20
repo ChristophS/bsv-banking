@@ -8,42 +8,43 @@
 
 ## Zusammenfassung
 
-Die Kategorienübersicht enthält nun je Kategorie die zugehörigen Einzeltransaktionen einschließlich deduplizierter Dokumentmetadaten aus den bestehenden Vorgangs- und Split-Verknüpfungen. Die UI ermöglicht das Aufklappen der Kategorien und öffnet beim Klick den bestehenden Transaktionsdialog. Die zentrale Architektur bleibt erhalten, passende Backend- und Regressionstests wurden ergänzt, und der GitHub-Compare ist sauber.
+Der periodenbezogene Finanzexport ist als Excel-kompatible CSV umgesetzt. Der Export enthält Transaktions- und Klassifikationsdetails, berücksichtigt Split-Transaktionen sowie direkte und Split-basierte Vorgangsverknüpfungen und ist über UI und HTTP-Endpunkt downloadbar. Die relevanten lokalen Tests decken Dateiformat, Zeitraumvalidierung und HTTP-Download ab. Der GitHub-Compare ist sauber und der Branch enthält genau einen nutzbaren Commit.
 
 ## Review-Ergebnis
 
-### Entscheidung
+**Entscheidung: Angenommen**
 
-**Freigegeben.**
+### Erfüllte Anforderungen
 
-### Geprüfte Anforderungen
+- Der frei wählbare Zeitraum wird für den Export verwendet.
+- Der Export ist als Excel-kompatible CSV mit UTF-8-BOM, Semikolon-Trennzeichen, `sep=;`-Hinweis und deutschem Dezimaltrennzeichen umgesetzt.
+- Transaktionsdetails wie Buchungsdatum, Valutadatum, Kontodaten, Gegenpartei, Buchungstext, Verwendungszweck, Betrag und Währung werden exportiert.
+- Die Klassifikationsfelder einschließlich fachlicher Beschreibung und abgeleitetem Klassifikationsstatus werden exportiert.
+- Split-Transaktionen werden je Split ausgegeben; nicht aufgeteilte Transaktionen werden als einzelne Zeile ausgegeben.
+- Direkte Vorgangsverknüpfungen sowie Split-basierte Vorgangsverknüpfungen werden über Vorgangs-IDs exportiert. Die bestehenden Vorgangs- und Verknüpfungsstrukturen bleiben erhalten.
+- Der Export ist über den Button in der vorhandenen Finanzübersicht und über `GET /api/financial-overview/export` erreichbar.
+- Ungültige Zeiträume führen über die bestehende Fehlerbehandlung zu HTTP 400.
 
-- Die Finanzübersicht liefert weiterhin die bestehende periodenbezogene Kategorienaggregation.
-- Jede Ausgabenkategorie enthält nun eine Liste der zugehörigen Einzeltransaktionen.
-- Einzeltransaktionen enthalten Buchungsdaten, Betrag, Währung und zugeordnete Dokumentmetadaten.
-- Dokumente werden über die vorhandenen fachlichen Verknüpfungen ermittelt:
-  - direkte `transaktion_vorgaenge`-Verknüpfungen
-  - `transaction_splits.vorgangs_id`-Verknüpfungen
-  - `vorgang_belege` und `belege`
-- Mehrfach passende Vorgänge führen dank `SELECT DISTINCT` nicht zu doppelten Dokumenten.
-- Die Kategorieaggregation und Transaktionszählung bleiben gegen Mehrfachverknüpfungen geschützt.
-- Die Oberfläche verwendet native aufklappbare Kategorien und öffnet beim Klick auf eine Einzeltransaktion den bestehenden Transaktionsdialog.
-- Vorgänge, Tabellen und bestehende Verknüpfungsstrukturen wurden nicht ersetzt oder umgangen.
-- Es wurden keine externen Aktionen oder produktiven Datenzugriffe in der neuen Logik eingeführt.
+### Tests
 
-### Tests und Nachweise
+Die Änderungen enthalten passende lokale Tests für:
 
-Der neue Backend-Test deckt die Dokumentzuordnung zu einer Kategorie-Transaktion ab. Der bestehende Aggregationstest prüft zusätzlich die eingebettete Transaktionsliste und den dokumentlosen Fall. Laut Implementierungsbericht liefen 147 Dashboard-Tests erfolgreich; JavaScript-Syntaxprüfung und `git diff --check` waren ebenfalls erfolgreich.
+- Inhalt und Format des CSV-Exports,
+- Zeitraumbegrenzung,
+- Klassifikationsdaten,
+- Betrag und direkte Vorgangs-ID,
+- BOM und Excel-Trennzeichenhinweis,
+- HTTP-Download und `Content-Disposition`,
+- Fehlerbehandlung bei ungültigem Zeitraum.
 
-### Diff- und Branch-Prüfung
+Der gemeldete vollständige Dashboard-Testlauf ist erfolgreich. Es werden keine echten externen Aktionen oder produktiven externen Dienste für den Export verwendet.
 
-- GitHub Compare: `ahead`
-- Ahead: 1 Commit
-- Behind: 0 Commits
-- Fehlende Compare-Dateien: keine
-- Zusätzliche Compare-Dateien: keine
-- Runner-validierte Pfade und GitHub-Änderungen stimmen überein.
+### Architektur und Scope
+
+Die Umsetzung verwendet den bestehenden `DashboardDataStore`, die vorhandenen Transaktions-, Split- und Vorgangstabellen sowie den bestehenden HTTP-Handler. Es wurde keine neue Persistenz- oder Verknüpfungsarchitektur eingeführt. Der zusätzliche UI-Button bleibt im bestehenden Finanzübersichtsbereich.
+
+Der GitHub-Compare ist `ahead` mit einem Commit, ohne fehlende oder zusätzliche Dateien gegenüber der Runner-Validierung. Die Änderung des Implementierungsberichts entspricht dem neuen Arbeitspaket und stellt keinen fachlichen Scope-Creep dar.
 
 ### Nicht blockierende Hinweise
 
-Die Dokumente werden derzeit als Dateinamen in der Kategorie-Einzelansicht dargestellt. Ein direkter Link zum vorhandenen Originaldokument-Endpunkt wäre eine optionale UX-Verbesserung, ist für den geprüften Muss-Zustand jedoch kein Blocker. Ebenso sind die einzelnen SQL-Abfragen pro Transaktion bei großen Zeiträumen ein möglicher späterer Optimierungspunkt, aber kein funktionaler Fehler im Arbeitspaket.
+In `server.py` wird `classification_status` doppelt importiert. Das ist funktional unkritisch, sollte aber bereinigt werden. Die neuen Exporttests prüfen noch nicht ausführlich die Split-Ausgabe mit mehreren Splits; hierfür wäre eine zusätzliche Testabdeckung sinnvoll. Eine native XLSX-Datei ist für das formulierte Arbeitspaket nicht zwingend erforderlich, da der Titel ausdrücklich einen Excel-kompatiblen Export zulässt.
