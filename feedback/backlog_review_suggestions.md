@@ -1,1 +1,3 @@
-Für eine spätere Verbesserung könnten die Suchtext-Funktion und ihre Betragsformatierung in ein direkt importierbares, isoliert testbares JavaScript-Modul ausgelagert werden. Zusätzlich wären Randfalltests für negative, fehlende und ungültige Beträge sinnvoll.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
