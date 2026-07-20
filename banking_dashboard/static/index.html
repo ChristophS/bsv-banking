@@ -52,6 +52,17 @@
         type="button"
         role="tab"
         aria-selected="false"
+        aria-controls="financial-overview-panel"
+        id="financial-overview-tab"
+        data-tab="financial-overview"
+      >
+        Finanzübersicht
+      </button>
+      <button
+        class="tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
         aria-controls="vorgaenge-panel"
         id="vorgaenge-tab"
         data-tab="vorgaenge"
@@ -172,6 +183,46 @@
             <div id="dashboard-upcoming-termine"></div>
           </section>
         </div>
+      </div>
+    </section>
+
+    <section
+      class="panel"
+      id="financial-overview-panel"
+      role="tabpanel"
+      aria-labelledby="financial-overview-tab"
+      hidden
+    >
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Periodenprüfung</p>
+          <h2>Finanzübersicht</h2>
+          <p class="panel-description">
+            Fehlende Klassifizierungszuordnungen und Belege je Transaktion.
+          </p>
+        </div>
+        <div class="result-count" aria-live="polite">
+          <strong id="financial-overview-count">0</strong>
+          <span>Transaktionen</span>
+        </div>
+      </div>
+      <form class="toolbar" id="financial-overview-form">
+        <div class="date-filter" aria-label="Zeitraum der Finanzübersicht">
+          <label><span>Von</span><input id="financial-date-from" type="date" required></label>
+          <span class="date-separator" aria-hidden="true">bis</span>
+          <label><span>Bis</span><input id="financial-date-to" type="date" required></label>
+          <button class="primary-action" type="submit">Aktualisieren</button>
+        </div>
+      </form>
+      <div class="financial-overview-grid">
+        <section>
+          <h3>1. Fehlende Zuordnungen (<span id="missing-assignment-count">0</span>)</h3>
+          <div id="missing-assignment-list" class="financial-check-list"></div>
+        </section>
+        <section>
+          <h3>2. Fehlende Belege (<span id="missing-receipt-count">0</span>)</h3>
+          <div id="missing-receipt-list" class="financial-check-list"></div>
+        </section>
       </div>
     </section>
 
