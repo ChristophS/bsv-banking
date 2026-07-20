@@ -173,6 +173,7 @@ const elements = {
   vorgangCount: document.querySelector("#vorgang-count"),
   vorgangCountLabel: document.querySelector("#vorgang-count-label"),
   vorgangCreate: document.querySelector("#vorgang-create"),
+  documentCreate: document.querySelector("#document-create"),
   todoPanel: document.querySelector("#todo-panel"),
   todoSearch: document.querySelector("#todo-search"),
   todoHideCompleted: document.querySelector("#todo-hide-completed"),
@@ -409,6 +410,7 @@ elements.vorgangHideCompleted.addEventListener("change", () => {
 elements.vorgangCreate.addEventListener("click", () => {
   openVorgangCreateDialog();
 });
+elements.documentCreate.addEventListener("click", openDocumentCreateDialog);
 
 elements.todoSearch.addEventListener("input", () => {
   clearTimeout(todoSearchTimer);
@@ -7109,6 +7111,86 @@ function setVorgangLoading(loading) {
     elements.vorgangTable.hidden = true;
     elements.vorgangEmpty.hidden = true;
   }
+}
+
+function openDocumentCreateDialog() {
+  elements.dialog.classList.remove("is-vorgang", "has-rule-workspace");
+  elements.detailEyebrow.textContent = "Dokument speichern";
+  elements.detailTitle.textContent = "Neues Dokument";
+  elements.detailSubtitle.textContent =
+    "Ein Vorgang kann später zugeordnet werden.";
+  const form = document.createElement("form");
+  form.className = "vorgang-create-form";
+  const grid = mailElement("div", "detail-grid");
+  const fileField = compactInputField("Datei", "document_file", "", "file");
+  fileField.classList.add("is-wide");
+  fileField.querySelector("input").required = true;
+  const category = selectField("Kategorie", "category", {
+    sonstige_dokumente: "Sonstige Dokumente",
+    rechnungen: "Rechnungen",
+    spendenbescheinigungen: "Spendenbescheinigungen",
+  }, "sonstige_dokumente");
+  grid.append(
+    fileField,
+    category,
+    compactInputField("Dokumentdatum", "document_date", "", "date"),
+    compactInputField("Aussteller", "issuer", ""),
+    compactInputField("Empfänger", "recipient", ""),
+    compactInputField("Beschreibung", "description", ""),
+  );
+  const actions = entityFormActions("Dokument speichern");
+  form.append(grid, actions.container);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = form.elements.document_file.files[0];
+    if (!file) return;
+    actions.submit.disabled = true;
+    setAssignmentStatus(actions.status, "saving", "Dokument wird gespeichert");
+    try {
+      const contentBase64 = await fileAsBase64(file);
+      const response = await fetch("/api/belege", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          content_base64: contentBase64,
+          filename: file.name,
+          content_type: file.type,
+          metadata: {
+            category: form.elements.category.value,
+            document_date: form.elements.document_date.value,
+            issuer: form.elements.issuer.value,
+            recipient: form.elements.recipient.value,
+            description: form.elements.description.value,
+          },
+        }),
+      });
+      const payload = await readResponse(response);
+      elements.dialog.close();
+      await Promise.all([
+        loadOverview(),
+        openEntityPreview("beleg", payload.beleg.beleg_id),
+      ]);
+    } catch (error) {
+      setAssignmentStatus(actions.status, "error", error.message);
+    } finally {
+      actions.submit.disabled = false;
+    }
+  });
+  elements.detailContent.replaceChildren(form);
+  elements.dialog.showModal();
+}
+
+function fileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      resolve(String(reader.result).split(",", 2)[1] || "");
+    });
+    reader.addEventListener("error", () => {
+      reject(new Error("Datei konnte nicht gelesen werden."));
+    });
+    reader.readAsDataURL(file);
+  });
 }
 
 async function openVorgangCreateDialog(source = null) {
