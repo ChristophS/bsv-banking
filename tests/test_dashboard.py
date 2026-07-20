@@ -2969,6 +2969,23 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn("balance_minor: Number(rawAmount)", javascript)
         self.assertNotIn("delete-balance-correction", html)
 
+    def test_vorgang_create_form_offers_create_and_complete_action(self):
+        javascript = (
+            Path(__file__).parents[1] / "banking_dashboard/static/app.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('"Vorgang erstellen und abschließen"', javascript)
+        self.assertIn('completeSubmit.dataset.completed = "true"', javascript)
+        self.assertIn(
+            'event.submitter?.dataset.completed === "true"',
+            javascript,
+        )
+        self.assertIn(
+            "readVorgangForm(form, completeRequested)",
+            javascript,
+        )
+        self.assertIn('actions.append(submit, completeSubmit, status)', javascript)
+
     def test_balance_corrections_are_collapsed_before_transaction_table(self):
         with urlopen(self.base_url + "/", timeout=5) as response:
             html = response.read().decode("utf-8")
