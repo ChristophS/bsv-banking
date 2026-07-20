@@ -1,18 +1,10 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Dokumente ohne Vorgang speichern
-
-**Priorität:** hoch
-
-**Grund:** Dokumente wie eine Bestätigung über eine Bandenwerbung sollen gespeichert werden können, ohne dafür einen Vorgang anlegen zu müssen.
-
-**Feedback:**
-
-- Ich möchte gerne Dokumente speichern können ohne einen Vorgang anzulegen.
-
-## 2. Nullbuchungen aus zwei ausgeglichenen Transaktionen erfassen
+## 1. Nullbuchungen aus zwei ausgeglichenen Transaktionen erfassen
 
 **Priorität:** hoch
 
@@ -24,7 +16,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Zwei Transaktionen fasse ich zusammen, die ergeben zusammen 0 € und sollen als ein Vorgang zusammengefasst und erledigt werden.
 - Transaktionstyp „Nullbuchung“, Oberkategorie „Sonstiges“, Unterkategorie „Nullbuchung“, Sphäre „Ideeller Bereich“.
 
-## 3. Transaktionssuche bei der Vorgangszuordnung korrigieren
+## 2. Transaktionssuche bei der Vorgangszuordnung korrigieren
 
 **Priorität:** hoch
 
@@ -35,7 +27,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Wenn ich einem Vorgang eine Transaktion zuordnen will, findet die Suche nichts.
 - Ich gebe zum Beispiel den Betrag ein und es bleibt ohne Treffer.
 
-## 4. Finanzübersicht: fehlende Zuordnungen und Belege aggregieren
+## 3. Finanzübersicht: fehlende Zuordnungen und Belege aggregieren
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -55,7 +47,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Man soll zunächst sehen welche Zuordnungen fehlen.
 - Dann bei welchen Transaktionen Belege fehlen.
 
-## 5. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
+## 4. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -74,7 +66,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Wie viel in jeder Oberkategorie (Ober- und Unterkategorie Kombination) ausgegeben wurde.
 - Wenn eine Transaktion mehrere Vorgänge hat, so soll diese auch nur einmal angezeigt werden.
 
-## 6. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
+## 5. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -92,7 +84,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Dann kann man auf Einzelebene mit den Dokumenten runter.
 
-## 7. Finanzübersicht als Excel-kompatiblen Export bereitstellen
+## 6. Finanzübersicht als Excel-kompatiblen Export bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
