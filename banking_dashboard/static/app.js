@@ -7234,12 +7234,6 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
       true,
     ),
   );
-  const completed = mailElement("label", "checkbox-field is-wide");
-  const completedInput = document.createElement("input");
-  completedInput.type = "checkbox";
-  completedInput.name = "completed";
-  completed.append(completedInput, mailElement("span", "", "Direkt abschließen"));
-  grid.append(completed);
   fieldset.append(grid);
   form.append(fieldset);
 
@@ -7255,12 +7249,22 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
   const actions = mailElement("div", "vorgang-form-actions");
   const submit = mailElement("button", "primary-action", "Vorgang erstellen");
   submit.type = "submit";
+  submit.dataset.completed = "false";
+  const completeSubmit = mailElement(
+    "button",
+    "secondary-action",
+    "Vorgang erstellen und abschließen",
+  );
+  completeSubmit.type = "submit";
+  completeSubmit.dataset.completed = "true";
   const status = mailElement("span", "save-state");
-  actions.append(submit, status);
+  actions.append(submit, completeSubmit, status);
   form.append(formError, actions);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const completeRequested = event.submitter?.dataset.completed === "true";
     submit.disabled = true;
+    completeSubmit.disabled = true;
     formError.hidden = true;
     formError.textContent = "";
     status.className = "save-state is-saving";
@@ -7269,7 +7273,7 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
       const response = await fetch("/api/vorgaenge", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(readVorgangForm(form)),
+        body: JSON.stringify(readVorgangForm(form, completeRequested)),
       });
       const payload = await readResponse(response);
       rememberVorgangType(form.elements.vorgangstyp.value);
@@ -7282,6 +7286,7 @@ function renderVorgangCreateForm(source, suggestionsPayload) {
       await openVorgang(payload.vorgang.vorgangs_id);
     } catch (error) {
       submit.disabled = false;
+      completeSubmit.disabled = false;
       status.className = "save-state is-error";
       status.textContent = "Erstellen fehlgeschlagen";
       formError.textContent = error.message;
@@ -7943,12 +7948,12 @@ function entityFormActions(label) {
   return {container, submit, status};
 }
 
-function readVorgangForm(form) {
+function readVorgangForm(form, completed = false) {
   const payload = {
     title: form.elements.title.value,
     description: form.elements.description.value,
     vorgangstyp: form.elements.vorgangstyp.value,
-    completed: form.elements.completed.checked,
+    completed,
   };
   return {...payload, ...readSuggestionFields(form)};
 }
