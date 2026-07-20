@@ -1,27 +1,10 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
-
-**Epic-ID:** epic-finanzuebersicht
-
-**Epic-Titel:** Finanzübersicht für Kassenprüfung und Steuerberatung
-
-**Epic-Ziel:** Eine periodenbezogene Finanzübersicht bereitstellen, die finanzielle Vollständigkeit, Klassifikationen, Belege, Kategorien und Transaktionsdetails für Kassenprüfung und Steuerberatung auswertbar macht.
-
-**Teilpaket:** Teil 2
-
-**Priorität:** mittel
-
-**Grund:** Die Finanzübersicht soll die Ausgaben je Kombination aus Oberkategorie und Unterkategorie ausweisen und Transaktionen mit mehreren Vorgängen nur einmal berücksichtigen.
-
-**Feedback:**
-
-- Wie viel in jeder Oberkategorie (Ober- und Unterkategorie Kombination) ausgegeben wurde.
-- Wenn eine Transaktion mehrere Vorgänge hat, so soll diese auch nur einmal angezeigt werden.
-
-## 2. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
+## 1. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -39,7 +22,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Dann kann man auf Einzelebene mit den Dokumenten runter.
 
-## 3. Finanzübersicht als Excel-kompatiblen Export bereitstellen
+## 2. Finanzübersicht als Excel-kompatiblen Export bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
