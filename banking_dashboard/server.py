@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import base64
 import binascii
+import csv
 import hashlib
 import html
+import io
 import json
 import mimetypes
 import re
@@ -79,6 +81,7 @@ from transaction_store.database import (
     replace_transaction_splits,
     sync_belege_directory,
 )
+from transaction_store.classification import classification_status
 from transaction_store.classification import (
     aggregate_classification_status,
     classification_status,
@@ -657,6 +660,101 @@ class DashboardDataStore:
             "missing_receipt_count": len(missing_receipts),
             "expense_categories": category_items,
         }
+
+    def financial_overview_export(
+        self,
+        date_from: str | None,
+        date_to: str | None,
+    ) -> tuple[str, bytes]:
+        default_from, default_to = default_transaction_period()
+        normalized_from = _parse_iso_date(date_from or default_from, "von")
+        normalized_to = _parse_iso_date(date_to or default_to, "bis")
+        if normalized_from > normalized_to:
+            raise ValueError(
+                "Das Startdatum darf nicht nach dem Enddatum liegen."
+            )
+
+        headers = (
+            "Transaktions-ID", "Buchungsdatum", "Valutadatum", "Kontoname",
+            "Kontonummer", "Zahlungsbeteiligter", "Gegenkonto",
+            "Buchungstext", "Verwendungszweck", "Betrag", "Währung",
+            "Split-ID", "Split-Beschreibung", "Transaktionstyp",
+            "Oberkategorie", "Unterkategorie", "Sphäre",
+            "Fachliche Beschreibung", "Klassifikationsstatus",
+            "Vorgangs-IDs",
+        )
+        output = io.StringIO(newline="")
+        output.write("sep=;\r\n")
+        writer = csv.writer(output, delimiter=";", lineterminator="\r\n")
+        writer.writerow(headers)
+        with closing(self._connect()) as connection:
+            transactions = connection.execute(
+                """
+                SELECT transaction_id, booking_date, value_date, account_name,
+                       account_number, counterparty, counterparty_account,
+                       booking_text, purpose, amount, currency,
+                       transaction_type, top_category, sub_category, sphere,
+                       professional_description
+                FROM transactions
+                WHERE booking_date >= ? AND booking_date <= ?
+                ORDER BY booking_date, transaction_id
+                """,
+                (normalized_from, normalized_to),
+            ).fetchall()
+            for transaction in transactions:
+                transaction_id = str(transaction["transaction_id"])
+                splits = connection.execute(
+                    """
+                    SELECT split_id, description, amount_minor,
+                           transaction_type, top_category, sub_category,
+                           sphere, professional_description, vorgangs_id
+                    FROM transaction_splits
+                    WHERE transaction_id = ?
+                    ORDER BY sort_order, split_id
+                    """,
+                    (transaction_id,),
+                ).fetchall()
+                linked_vorgaenge = [
+                    str(row[0])
+                    for row in connection.execute(
+                        """
+                        SELECT vorgangs_id FROM transaktion_vorgaenge
+                        WHERE transaktions_id = ? ORDER BY vorgangs_id
+                        """,
+                        (transaction_id,),
+                    ).fetchall()
+                ]
+                classification_rows = splits or [None]
+                for split in classification_rows:
+                    classification = split if split is not None else transaction
+                    vorgaenge = list(linked_vorgaenge)
+                    if split is not None and split["vorgangs_id"]:
+                        vorgaenge.append(str(split["vorgangs_id"]))
+                    amount = (
+                        _minor_to_decimal_string(int(split["amount_minor"]))
+                        if split is not None
+                        else str(transaction["amount"] or "")
+                    )
+                    values = [
+                        transaction_id,
+                        transaction["booking_date"], transaction["value_date"],
+                        transaction["account_name"], transaction["account_number"],
+                        transaction["counterparty"], transaction["counterparty_account"],
+                        transaction["booking_text"], transaction["purpose"],
+                        amount.replace(".", ","), transaction["currency"],
+                        split["split_id"] if split is not None else "",
+                        split["description"] if split is not None else "",
+                        classification["transaction_type"],
+                        classification["top_category"],
+                        classification["sub_category"],
+                        classification["sphere"],
+                        classification["professional_description"],
+                        classification_status(classification).value,
+                        ", ".join(sorted(set(vorgaenge))),
+                    ]
+                    writer.writerow(["" if value is None else value for value in values])
+        filename = f"finanzuebersicht_{normalized_from}_{normalized_to}.csv"
+        return filename, output.getvalue().encode("utf-8-sig")
 
     def transaction_detail(
         self,
@@ -6025,6 +6123,18 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     )
                 )
                 return
+            if parsed.path == "/api/financial-overview/export":
+                query = parse_qs(parsed.query)
+                filename, content = self.server.data_store.financial_overview_export(
+                    query.get("date_from", [None])[0],
+                    query.get("date_to", [None])[0],
+                )
+                self._download_response(
+                    content,
+                    filename,
+                    "text/csv; charset=utf-8",
+                )
+                return
             if parsed.path == "/api/mail/settings":
                 self._json_response(self.server.mail_manager.settings())
                 return
@@ -7393,6 +7503,28 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self._security_headers()
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        try:
+            self.wfile.write(content)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            return
+
+    def _download_response(
+        self,
+        content: bytes,
+        filename: str,
+        content_type: str,
+    ) -> None:
+        safe_filename = re.sub(r'[^A-Za-z0-9._-]+', "_", filename)
+        self.send_response(HTTPStatus.OK)
+        self._security_headers()
+        self.send_header("Content-Type", content_type)
+        self.send_header(
+            "Content-Disposition",
+            f'attachment; filename="{safe_filename}"',
+        )
         self.send_header("Content-Length", str(len(content)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()

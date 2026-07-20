@@ -1,4 +1,6 @@
 import base64
+import csv
+import io
 import json
 import re
 import sqlite3
@@ -458,6 +460,31 @@ class DashboardDataStoreTests(unittest.TestCase):
         self.assertEqual([], overview["missing_receipts"])
         with self.assertRaisesRegex(ValueError, "Startdatum"):
             self.store.financial_overview("2026-07-01", "2026-06-01")
+
+    def test_financial_overview_export_contains_transaction_and_classification_details(self):
+        filename, content = self.store.financial_overview_export(
+            "2026-05-01",
+            "2026-06-30",
+        )
+
+        self.assertEqual(
+            "finanzuebersicht_2026-05-01_2026-06-30.csv",
+            filename,
+        )
+        self.assertTrue(content.startswith(b"\xef\xbb\xbf"))
+        lines = content.decode("utf-8-sig").splitlines()
+        self.assertEqual("sep=;", lines[0])
+        rows = list(csv.DictReader(io.StringIO("\n".join(lines[1:])), delimiter=";"))
+        self.assertEqual({"tx_newer", "tx_older"}, {row["Transaktions-ID"] for row in rows})
+        older = next(row for row in rows if row["Transaktions-ID"] == "tx_older")
+        self.assertEqual("Spielbetrieb", older["Oberkategorie"])
+        self.assertEqual("Eintritt", older["Unterkategorie"])
+        self.assertEqual(
+            "vollstaendig_klassifiziert",
+            older["Klassifikationsstatus"],
+        )
+        self.assertEqual("-12,34", older["Betrag"])
+        self.assertEqual("vorgang_tx_older", older["Vorgangs-IDs"])
 
     def test_financial_overview_groups_expenses_without_duplicate_vorgaenge(self):
         with closing(connect_database(self.database_path)) as connection:
@@ -3093,6 +3120,28 @@ class DashboardHTTPTests(unittest.TestCase):
         self.server.server_close()
         self.thread.join(timeout=5)
         self.temporary_directory.cleanup()
+
+    def test_financial_overview_export_is_downloadable_over_http(self):
+        with urlopen(
+            self.base_url
+            + "/api/financial-overview/export?date_from=2026-05-01&date_to=2026-06-30",
+            timeout=5,
+        ) as response:
+            content = response.read()
+            self.assertEqual("text/csv; charset=utf-8", response.headers["Content-Type"])
+            self.assertEqual(
+                'attachment; filename="finanzuebersicht_2026-05-01_2026-06-30.csv"',
+                response.headers["Content-Disposition"],
+            )
+        self.assertTrue(content.startswith(b"\xef\xbb\xbfsep=;"))
+
+        with self.assertRaises(HTTPError) as raised:
+            urlopen(
+                self.base_url
+                + "/api/financial-overview/export?date_from=2026-07-01&date_to=2026-06-30",
+                timeout=5,
+            )
+        self.assertEqual(400, raised.exception.code)
 
     def test_balance_correction_api_validates_persists_and_is_idempotent(self):
         payload = {

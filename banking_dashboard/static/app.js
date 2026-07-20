@@ -97,6 +97,7 @@ const elements = {
   financialDateFrom: document.querySelector("#financial-date-from"),
   financialDateTo: document.querySelector("#financial-date-to"),
   financialOverviewCount: document.querySelector("#financial-overview-count"),
+  financialOverviewExport: document.querySelector("#financial-overview-export"),
   missingAssignmentCount: document.querySelector("#missing-assignment-count"),
   missingAssignmentList: document.querySelector("#missing-assignment-list"),
   missingReceiptCount: document.querySelector("#missing-receipt-count"),
@@ -689,6 +690,17 @@ async function loadOverview() {
 elements.financialOverviewForm.addEventListener("submit", (event) => {
   event.preventDefault();
   loadFinancialOverview();
+});
+
+elements.financialOverviewExport.addEventListener("click", () => {
+  const dateFrom = elements.financialDateFrom.value || state.dateFrom;
+  const dateTo = elements.financialDateTo.value || state.dateTo;
+  if (!dateFrom || !dateTo || dateFrom > dateTo) {
+    showError("Bitte einen gültigen Zeitraum auswählen.");
+    return;
+  }
+  const parameters = new URLSearchParams({date_from: dateFrom, date_to: dateTo});
+  window.location.assign(`/api/financial-overview/export?${parameters}`);
 });
 
 async function loadFinancialOverview() {
