@@ -416,6 +416,78 @@ class DashboardDataStoreTests(unittest.TestCase):
     def tearDown(self):
         self.temporary_directory.cleanup()
 
+    def _insert_opposite_transaction(self, transaction_id="tx_opposite"):
+        with closing(connect_database(self.database_path)) as connection:
+            connection.execute(
+                """
+                INSERT INTO transactions (
+                    transaction_id, fingerprint, occurrence, provider,
+                    account_id, account_name, account_number, booking_date,
+                    value_date, counterparty, amount, currency, booking_text,
+                    purpose, amount_minor, source_info, raw_fields_json,
+                    first_seen_at, counterparty_account, creditor_id,
+                    mandate_reference
+                ) VALUES (
+                    ?, ?, 1, 'testbank', 'acct_test', 'Hauptkonto', 'DE001',
+                    '2026-06-11', '2026-06-11', 'Gegenbuchung', '-25.00',
+                    'EUR', 'Ueberweisung', 'Ausgleich', -2500, 'Testquelle',
+                    '{}', '2026-06-11T09:00:00+00:00', '', '', ''
+                )
+                """,
+                (transaction_id, f"fp_{transaction_id}"),
+            )
+            connection.commit()
+
+    def test_nullbuchung_groups_classifies_and_completes_two_transactions(self):
+        self._insert_opposite_transaction()
+
+        result = self.store.create_vorgang(
+            {
+                "title": "Ausgleich",
+                "vorgangstyp": "Nullbuchung",
+                "transaction_ids": ["tx_newer", "tx_opposite"],
+            }
+        )
+
+        self.assertEqual("Nullbuchung", result["vorgangstyp"])
+        self.assertEqual("abgeschlossen", result["status"])
+        self.assertTrue(result["status_manuell"])
+        self.assertEqual(
+            ["tx_newer", "tx_opposite"],
+            sorted(item["transaktions_id"] for item in result["transaktionen"]),
+        )
+        for transaction_id in ("tx_newer", "tx_opposite"):
+            transaction = self.store.transaction_detail(transaction_id)
+            self.assertEqual("Nullbuchung", transaction["transaktionstyp"])
+            self.assertEqual("Sonstiges", transaction["oberkategorie"])
+            self.assertEqual("Nullbuchung", transaction["unterkategorie"])
+            self.assertEqual("Ideeller Bereich", transaction["sphaere"])
+
+    def test_invalid_nullbuchung_leaves_transactions_unchanged(self):
+        before = self.store.transaction_detail("tx_newer")
+
+        with self.assertRaisesRegex(ValueError, "genau zwei"):
+            self.store.create_vorgang(
+                {
+                    "vorgangstyp": "Nullbuchung",
+                    "transaction_ids": ["tx_newer"],
+                }
+            )
+
+        after = self.store.transaction_detail("tx_newer")
+        self.assertEqual(before, after)
+
+        with self.assertRaisesRegex(ValueError, "zusammen 0 EUR"):
+            self.store.create_vorgang(
+                {
+                    "vorgangstyp": "Nullbuchung",
+                    "transaction_ids": ["tx_newer", "tx_older"],
+                }
+            )
+
+        self.assertEqual(before, self.store.transaction_detail("tx_newer"))
+        self.assertEqual([], self.store.list_vorgaenge(search="Nullbuchung"))
+
     def _create_test_mail(
         self,
         inbox_id: str,

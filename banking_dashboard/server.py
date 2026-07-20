@@ -165,6 +165,13 @@ VORGANG_CREATE_FIELDS = {
     "termin_ids",
 }
 VORGANG_UPDATE_FIELDS = set(VORGANG_CREATE_FIELDS)
+NULLBUCHUNG_TYPE = "Nullbuchung"
+NULLBUCHUNG_CLASSIFICATION = {
+    "transaction_type": NULLBUCHUNG_TYPE,
+    "top_category": "Sonstiges",
+    "sub_category": NULLBUCHUNG_TYPE,
+    "sphere": "Ideeller Bereich",
+}
 TERMIN_CREATE_FIELDS = {
     "title",
     "description",
@@ -1100,12 +1107,13 @@ class DashboardDataStore:
         values = self._validated_vorgang_values(payload, require_title=False)
         vorgangs_id = f"vorgang_{uuid4().hex}"
         now = datetime.now().astimezone().isoformat()
-        status = (
-            "abgeschlossen"
-            if values["completed"]
-            else "in_bearbeitung"
-        )
         with closing(self._connect(writable=True)) as connection:
+            self._prepare_nullbuchung(connection, values)
+            status = (
+                "abgeschlossen"
+                if values["completed"]
+                else "in_bearbeitung"
+            )
             if values["completed"]:
                 self._validate_vorgang_completion_values(
                     connection,
@@ -1194,13 +1202,14 @@ class DashboardDataStore:
             ),
         }
         values = self._validated_vorgang_values(merged, require_title=False)
-        status = (
-            "abgeschlossen"
-            if values["completed"]
-            else "in_bearbeitung"
-        )
         now = datetime.now().astimezone().isoformat()
         with closing(self._connect(writable=True)) as connection:
+            self._prepare_nullbuchung(connection, values)
+            status = (
+                "abgeschlossen"
+                if values["completed"]
+                else "in_bearbeitung"
+            )
             if values["completed"]:
                 self._validate_vorgang_completion_values(
                     connection,
@@ -1382,7 +1391,57 @@ class DashboardDataStore:
                 ORDER BY CASEFOLD(TRIM(vorgangstyp))
                 """
             ).fetchall()
-        return [str(row["vorgangstyp"]) for row in rows]
+        return sorted(
+            {NULLBUCHUNG_TYPE, *(str(row["vorgangstyp"]) for row in rows)},
+            key=str.casefold,
+        )
+
+    @staticmethod
+    def _prepare_nullbuchung(
+        connection: sqlite3.Connection,
+        values: dict[str, Any],
+    ) -> None:
+        if values["vorgangstyp"].casefold() != NULLBUCHUNG_TYPE.casefold():
+            return
+        values["vorgangstyp"] = NULLBUCHUNG_TYPE
+        values["completed"] = True
+        transaction_ids = values["transaction_ids"]
+        if len(transaction_ids) != 2:
+            raise ValueError(
+                "Eine Nullbuchung muss genau zwei Transaktionen enthalten."
+            )
+        placeholders = ", ".join("?" for _ in transaction_ids)
+        rows = connection.execute(
+            f"""
+            SELECT transaction_id, amount_minor, currency
+            FROM transactions
+            WHERE transaction_id IN ({placeholders})
+            """,
+            tuple(transaction_ids),
+        ).fetchall()
+        found = {str(row["transaction_id"]) for row in rows}
+        missing = [item for item in transaction_ids if item not in found]
+        if missing:
+            raise LookupError(
+                "Transaktion wurde nicht gefunden: " + ", ".join(missing)
+            )
+        if any(str(row["currency"] or "").upper() != "EUR" for row in rows):
+            raise ValueError(
+                "Eine Nullbuchung darf nur EUR-Transaktionen enthalten."
+            )
+        if sum(int(row["amount_minor"]) for row in rows) != 0:
+            raise ValueError(
+                "Die beiden Transaktionen einer Nullbuchung muessen zusammen 0 EUR ergeben."
+            )
+        connection.execute(
+            f"""
+            UPDATE transactions
+            SET transaction_type = ?, top_category = ?,
+                sub_category = ?, sphere = ?
+            WHERE transaction_id IN ({placeholders})
+            """,
+            (*NULLBUCHUNG_CLASSIFICATION.values(), *transaction_ids),
+        )
 
     def update_vorgang_status(
         self,

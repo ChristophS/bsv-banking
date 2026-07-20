@@ -2,13 +2,11 @@
 
 ## Branchname
 
-`agent2/rework-20260720-094638`
+`agent2/codex-20260720-094956`
 
 ## Geänderte Dateien
 
 - `banking_dashboard/server.py`
-- `banking_dashboard/static/app.js`
-- `banking_dashboard/static/index.html`
 - `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
 
@@ -17,68 +15,54 @@ die unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Dokumente können über die neue Aktion „Dokument speichern“ lokal hochgeladen
-  und katalogisiert werden, ohne einen Vorgang anzulegen oder auszuwählen.
-- Der vorhandene Belegkatalog, die Kategorieordner und die Tabelle `belege`
-  werden weiterverwendet; es wurde keine neue Persistenzstruktur eingeführt.
-- `create_document_from_bytes` legt die bestehende Verknüpfung in
-  `vorgang_belege` nur noch an, wenn eine Vorgangs-ID angegeben ist. Bestehende
-  Aufrufer mit Vorgang behalten ihr bisheriges Verhalten.
-- Der neue lokale Endpunkt `POST /api/belege` validiert JSON, Base64-Inhalt und
-  Metadaten und liefert den gespeicherten Beleg zurück.
-- Nach dem Speichern wird der Beleg in der vorhandenen Detailansicht geöffnet
-  und kann dort später über die bestehende Funktion einem Vorgang zugeordnet
-  werden.
-- Ungültig kodierte Uploads hinterlassen weder Dateien noch Belegdatensätze.
+- Der vorhandene Vorgangserstellweg unterstützt den Vorgangstyp
+  `Nullbuchung` als feste Auswahl.
+- Eine Nullbuchung muss genau zwei EUR-Transaktionen enthalten, deren
+  Centbeträge sich exakt zu 0 addieren.
+- Beide Transaktionen werden über die bestehende Zuordnung
+  `transaktion_vorgaenge` in einem zentralen Vorgang zusammengefasst.
+- Beide Transaktionen erhalten atomar die feste Klassifikation
+  Transaktionstyp `Nullbuchung`, Oberkategorie `Sonstiges`, Unterkategorie
+  `Nullbuchung` und Sphäre `Ideeller Bereich`.
+- Der Nullbuchungsvorgang wird direkt als `abgeschlossen` angelegt. Dieselben
+  Regeln gelten, wenn ein bestehender Vorgang in eine Nullbuchung geändert
+  wird.
+- Ungültige Nullbuchungen hinterlassen weder Teilklassifikationen noch einen
+  teilweise angelegten oder geänderten Vorgang.
 
 ## Nicht umgesetzte Punkte
 
-- Keine neue Dokumentenverwaltung oder eigenständige Dokumenttabelle, da der
-  vorhandene Belegkatalog das benötigte fachliche Modell bereits bereitstellt.
+- Keine neue Tabelle, kein neuer Endpunkt und keine neue Grundstruktur, da der
+  bestehende Vorgangs- und Verknüpfungsweg alle Anforderungen abdeckt.
 - Keine unabhängigen Backlog-Punkte und keine externen Aktionen.
 
 ## Ausgeführte Tests
 
 ```text
-"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k "document_upload"
+"C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py -k nullbuchung
 "C:\Users\chsue\AppData\Local\Programs\Python\Python312\python.exe" -m pytest tests/test_dashboard.py
 ```
 
-Zusätzlich wurden `banking_dashboard/server.py` und `tests/test_dashboard.py`
-mit `py_compile` geprüft sowie `git diff --check` ausgeführt.
-
 ## Testergebnis
 
-- Gezielter Upload-Testlauf: 2 Tests bestanden.
-- Vollständiger Dashboard-Testlauf: 140 Tests bestanden.
-- 6 optionale Browser-Tests wurden übersprungen.
-- Syntaxprüfung und Diff-Prüfung erfolgreich.
+- Gezielter Nullbuchungs-Testlauf: 2 Tests bestanden.
+- Vollständiger Dashboard-Testlauf: 142 Tests bestanden.
+- 6 bestehende optionale Tests wurden übersprungen.
 
 ## Bekannte Einschränkungen
 
-- Der Upload-Request ist auf 25 MiB begrenzt. Wegen der Base64-Kodierung ist
-  die praktisch mögliche Dateigröße entsprechend kleiner.
-- Die sechs optionalen Browser-Tests wurden von der bestehenden Suite aufgrund
-  fehlender lokaler Browser-Testvoraussetzungen übersprungen. Der Upload ist
-  durch Store-/HTTP-Tests abgesichert.
+- Nullbuchungen sind fachlich auf EUR beschränkt, entsprechend der Vorgabe
+  „0 €“.
+- Eine separate Schnellaktion wurde nicht ergänzt; `Nullbuchung` steht im
+  vorhandenen Vorgangstyp-Feld als feste Auswahl bereit.
 
 ## Hinweise für den Review-Agenten
 
-- Der manuelle Upload verwendet bewusst den vorhandenen Beleg-Erstellweg und
-  erzeugt ohne `vorgangs_id` keinen Datensatz in `vorgang_belege`.
+- Die Sonderbehandlung liegt bewusst innerhalb derselben SQLite-Transaktion
+  wie Vorgangserstellung, Klassifikation und Verknüpfung.
 - Die Tests heißen
-  `test_document_upload_can_be_saved_without_vorgang` und
-  `test_document_upload_rejects_invalid_content_without_persistence`.
+  `test_nullbuchung_groups_classifies_and_completes_two_transactions` und
+  `test_invalid_nullbuchung_leaves_transactions_unchanged`.
 - Die vorbestehenden Änderungen an `feedback/Review-report.md` und
   `feedback/agent2_prompt.md` gehören nicht zu dieser Umsetzung.
 - Es wurden weder Commit noch Push ausgeführt.
-
-## Nachbesserung nach Review
-
-- Der blockierende `SyntaxError` in der Signatur von
-  `DashboardDataStore.create_document_from_bytes` wurde behoben:
-  `source_reference` steht nun vor dem optionalen Parameter `vorgangs_id`.
-- Die fachliche Implementierung und alle Aufrufer bleiben unverändert, da die
-  Methode ausschließlich mit Keyword-Argumenten aufgerufen wird.
-- Die Syntaxprüfung, die beiden gezielten Upload-Tests und die vollständige
-  Dashboard-Testdatei wurden auf dem Rework-Branch erneut ausgeführt.
