@@ -8,34 +8,44 @@
 
 ## Zusammenfassung
 
-Die gewünschte Aktion „Vorgang erstellen und abschließen“ ist im bestehenden Erstellformular umgesetzt. Die gewählte Aktion übergibt ausschließlich dann completed: true an den vorhandenen Endpunkt; der bestehende Erstell-, Verknüpfungs- und Abschlussablauf bleibt erhalten. Der GitHub-Compare ist sauber und enthält keine unerwarteten Änderungen.
+Die Umsetzung erfüllt die Muss-Anforderung: Dokumente können über die neue UI-Aktion und den lokalen POST-Endpunkt ohne Vorgang gespeichert werden. Der bestehende Belegkatalog sowie die Verknüpfungstabelle werden weiterverwendet; ohne Vorgangs-ID wird keine Vorgangsverknüpfung angelegt. Erfolgs- und Fehlerfälle sind durch HTTP-/Persistenztests abgesichert. Der GitHub-Compare ist gegenüber main zwei Commits voraus und enthält die erwarteten Implementierungs-, UI- und Testdateien.
 
-## Review-Ergebnis
+# Technischer Review
 
-**Akzeptiert.**
+## Entscheidung
 
-### Erfüllte Anforderungen
+**Akzeptiert**
 
-- Das Formular zur manuellen Vorgangserstellung enthält den Button „Vorgang erstellen und abschließen“.
-- Der normale Button „Vorgang erstellen“ übergibt weiterhin `completed: false`.
-- Der neue Button markiert seine Aktion über `data-completed="true"`; im Submit-Handler wird der auslösende Button über `event.submitter` ausgewertet.
-- `readVorgangForm(form, completeRequested)` übergibt den Abschlusswunsch an den bestehenden `/api/vorgaenge`-Endpunkt.
-- Der bestehende fachliche Abschlussablauf und die vorhandenen Verknüpfungsstrukturen werden weiterverwendet; Backend, Persistenz und Architektur wurden nicht unnötig verändert.
-- Beide Buttons werden während der Anfrage deaktiviert und im Fehlerfall wieder aktiviert.
-- Ein automatisierter Test prüft die neue Beschriftung sowie die zentrale Verdrahtung der Abschlussaktion.
+## Prüfung der Muss-Anforderungen
 
-### Diff- und Branch-Prüfung
+- Dokumente können über die neue Aktion „Dokument speichern“ ohne Auswahl oder Erstellung eines Vorgangs hochgeladen werden.
+- Der lokale Endpunkt `POST /api/belege` akzeptiert Base64-Inhalt und Metadaten und liefert den gespeicherten Beleg zurück.
+- `create_document_from_bytes` verwendet weiterhin den bestehenden Belegkatalog und legt `vorgang_belege` nur bei vorhandener Vorgangs-ID an.
+- Die bestehende Detailansicht kann nach dem Speichern geöffnet und zur späteren Zuordnung verwendet werden.
+- Fehlerhafte Base64-Inhalte werden vor der Persistierung abgewiesen.
 
-- GitHub Compare: `ahead`, 1 Commit vor `main`, 0 Commits dahinter.
-- Keine fehlenden oder zusätzlichen Dateien im Compare.
-- Die tatsächlichen Änderungen betreffen die erwarteten UI- und Testdateien sowie den Implementierungsbericht.
-- Keine geschützten oder offensichtlich unerlaubten Dateien wurden geändert.
-- Keine echten externen Aktionen oder produktiven Daten wurden in Tests eingeführt.
+## Architektur und Datenmodell
 
-### Testbewertung
+Die Umsetzung erweitert die vorhandene Beleg-Persistenz und führt keine parallele Dokumenttabelle oder alternative Verknüpfungsstruktur ein. Vorgänge bleiben das zentrale fachliche Objekt; Dokumente können jedoch unabhängig davon im bestehenden Belegkatalog existieren. Das entspricht den Vorgaben des Arbeitspakets.
 
-Der ergänzte Test deckt die wesentlichen statischen UI-Verbindungen ab. Die vorhandenen Backend- und HTTP-Tests sichern den bereits unterstützten Direktabschluss über `completed: true` ab. Ein zusätzlicher Browser-Verhaltenstest wäre wünschenswert, ist für die Freigabe aber nicht zwingend erforderlich.
+## Tests
 
-### Ergebnis
+Die neuen Tests decken ab:
 
-Die Muss-Anforderung und die Akzeptanzkriterien sind erfüllt. Keine blockierenden Mängel festgestellt.
+- erfolgreiches Speichern eines Dokuments ohne Vorgang,
+- leere Vorgangsverknüpfungen nach dem Upload,
+- Kategorisierung im bestehenden Belegmodell,
+- Speicherung des Dateiinhalts,
+- Auffindbarkeit als nicht zugewiesenes Dokument,
+- Zurückweisung ungültiger Base64-Daten,
+- keine Datei- oder Datenbankänderung bei ungültigem Inhalt.
+
+Der Implementation Report nennt zusätzlich einen vollständigen Dashboard-Testlauf mit 140 bestandenen Tests. Die sechs übersprungenen Browser-Tests betreffen fehlende lokale Browser-Voraussetzungen und stellen in diesem Kontext keinen Blocker dar.
+
+## GitHub- und Runner-Status
+
+Der GitHub-Compare ist `ahead` mit zwei Commits und `behind_by=0`. Es fehlen keine erwarteten Dateien im Compare. Die zusätzlichen Compare-Dateien (`app.js`, `index.html`, `tests/test_dashboard.py`) entsprechen den im Diff und Bericht beschriebenen UI- und Teständerungen; daraus ergibt sich kein unbrauchbarer Branch-Zustand.
+
+## Nicht blockierende Hinweise
+
+Die Größenbegrenzung und die serverseitige Validierung sind vorhanden. Eine zusätzliche clientseitige Vorprüfung der Dateigröße sowie Tests für explizite Vorgangsverknüpfungen und Grenzfälle wären sinnvoll, sind für die Abnahme dieses Arbeitspakets aber nicht zwingend erforderlich.
