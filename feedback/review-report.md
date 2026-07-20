@@ -8,39 +8,37 @@
 
 ## Zusammenfassung
 
-Die Nullbuchungsfunktion ist im bestehenden Vorgangs- und Verknüpfungsmodell umgesetzt. Genau zwei EUR-Transaktionen werden auf einen ausgeglichenen Centbetrag geprüft, klassifiziert, verknüpft und der Vorgang wird atomar als abgeschlossen angelegt. Die relevanten Erfolgs- und Fehlerfälle sind durch Tests abgedeckt. Der GitHub-Compare ist sauber und enthält genau die erwarteten Änderungen.
+Die Betragssuche in den Zuordnungsvorschlägen wurde korrekt erweitert. Der Suchindex enthält neben dem Rohwert nun auch den in der UI angezeigten, deutsch formatierten EUR-Betrag. Der relevante Regressionstest ist vorhanden und der GitHub-Compare ist sauber.
 
-# Technischer Review
+## Review-Ergebnis
 
-## Ergebnis
+**Entscheidung: Akzeptiert**
 
-**Akzeptiert.**
+### Erfüllte Anforderungen
 
-## Geprüfte Anforderungen
+- Die Suche in den Zuordnungsvorschlägen verwendet weiterhin die bestehende `createSuggestionSection`-Struktur.
+- `suggestionSearchText(item)` ergänzt den Rohbetrag um den formatierten Betrag aus `currencyFormatter`.
+- Eine Suche nach `123.45` sowie nach dem sichtbaren deutschen Format `123,45` kann dadurch dieselbe Transaktion finden.
+- Die bestehende Vorgangs-, Vorschlags- und Verknüpfungsarchitektur bleibt erhalten.
+- Es wurden keine externen Aktionen oder produktiven Banking-Aktionen eingeführt.
 
-- Der Vorgangstyp `Nullbuchung` wird unabhängig von bestehenden Vorgangstypen angeboten.
-- Eine Nullbuchung akzeptiert genau zwei Transaktionen.
-- Beide Transaktionen müssen in EUR vorliegen.
-- Die Beträge werden auf Centbasis geprüft und müssen zusammen exakt 0 ergeben.
-- Beide Transaktionen werden über die bestehende Tabelle `transaktion_vorgaenge` mit einem zentralen Vorgang verknüpft.
-- Die feste Klassifikation wird gesetzt:
-  - Transaktionstyp: `Nullbuchung`
-  - Oberkategorie: `Sonstiges`
-  - Unterkategorie: `Nullbuchung`
-  - Sphäre: `Ideeller Bereich`
-- Der Nullbuchungsvorgang wird automatisch als `abgeschlossen` mit manuellem Status angelegt.
-- Die Logik gilt ebenfalls beim Ändern eines bestehenden Vorgangs in eine Nullbuchung.
-- Die Sonderlogik läuft innerhalb derselben SQLite-Transaktion wie Klassifikation, Vorgangserstellung und Verknüpfung.
-- Bei ungültigen Eingaben werden wegen der Transaktionsgrenzen keine Teiländerungen persistiert.
+### Technische Prüfung
 
-## Architektur und Scope
+In `banking_dashboard/static/app.js` wurde die bisher inline aufgebaute Suchtext-Erzeugung durch `suggestionSearchText(item)` ersetzt. Der neue Suchtext enthält weiterhin die bisherigen Felder und zusätzlich `formattedAmount`.
 
-Die Umsetzung verwendet den vorhandenen `DashboardDataStore`, die bestehende Vorgangserstellung sowie die vorhandenen Transaktions- und Verknüpfungstabellen. Es wurden keine neuen Tabellen, externen Aktionen oder unabhängigen Backlog-Punkte eingeführt. Der GitHub-Compare ist `ahead` mit einem Commit, ohne fehlende oder zusätzliche Compare-Dateien.
+Der Betrag wird nur bei einem vorhandenen Wert formatiert. Die anschließende Kleinschreibung mit `toLocaleLowerCase("de-DE")` passt zur bestehenden Suchlogik in `createSuggestionSection`.
 
-## Tests
+### Tests
 
-Die beiden gezielten Nullbuchungstests decken den erfolgreichen Fall sowie ungültige Anzahl- und Betragskombinationen ab. Laut Implementierungsbericht bestehen außerdem alle 142 Dashboard-Tests; sechs optionale Tests wurden übersprungen. Die zentralen Anforderungen sind damit plausibel lokal abgesichert.
+Der Test `test_suggestion_search_text_includes_displayed_transaction_amount` extrahiert die Funktion und führt sie mit Node.js aus. Er prüft, dass der Suchtext für den API-Wert `123.45` den deutschen Betrag `123,45` enthält. Damit ist die zentrale Regression abgesichert.
 
-## Nicht blockierende Hinweise
+Der Implementation Report nennt 143 bestandene Dashboard-Tests sowie eine erfolgreiche Diff-Prüfung. Im vorliegenden Diff ist der neue Test enthalten.
 
-Zusätzliche Tests für fehlende Transaktionen, Fremdwährungen und die Änderung bestehender Vorgänge wären sinnvoll. Außerdem könnte die Betragsvalidierung defensive Fehlerbehandlung für unerwartete `NULL`- oder Nicht-Integer-Werte ergänzen. Diese Punkte verhindern die Freigabe nicht.
+### Repository- und Compare-Prüfung
+
+- GitHub Compare: `ahead_by=1`, `behind_by=0`
+- Keine fehlenden oder zusätzlichen Dateien im Compare
+- Geänderte Quelldatei und Testdatei entsprechen dem Arbeitspaket
+- Die Änderung am Implementierungsbericht ist lediglich eine Aktualisierung der Umsetzungsdokumentation
+
+Es wurden keine blockierenden Abweichungen festgestellt.
