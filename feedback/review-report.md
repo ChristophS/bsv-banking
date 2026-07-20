@@ -8,31 +8,42 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen: Ausgaben werden periodenbezogen je Ober-/Unterkategorie aggregiert, negative Buchungs- und Splitbeträge werden centgenau berücksichtigt und Transaktionen werden unabhängig von mehreren Vorgangsverknüpfungen nur einmal gezählt. API, bestehende Finanzübersicht und UI wurden erweitert; ein passender Regressionstest ist vorhanden. GitHub Compare ist sauber und enthält genau die Runner-Änderungen.
+Die Kategorienübersicht enthält nun je Kategorie die zugehörigen Einzeltransaktionen einschließlich deduplizierter Dokumentmetadaten aus den bestehenden Vorgangs- und Split-Verknüpfungen. Die UI ermöglicht das Aufklappen der Kategorien und öffnet beim Klick den bestehenden Transaktionsdialog. Die zentrale Architektur bleibt erhalten, passende Backend- und Regressionstests wurden ergänzt, und der GitHub-Compare ist sauber.
 
-# Technischer Review
+## Review-Ergebnis
 
-## Ergebnis
+### Entscheidung
 
-Die Umsetzung wird freigegeben.
+**Freigegeben.**
 
-## Geprüfte Anforderungen
+### Geprüfte Anforderungen
 
-- Ausgaben werden in `DashboardDataStore.financial_overview` je Kombination aus Oberkategorie und Unterkategorie aggregiert.
-- Es werden nur negative Buchungs- beziehungsweise Splitbeträge als Ausgaben berücksichtigt.
-- Bei vorhandenen Splits werden die Splitbeträge und Splitklassifikationen verwendet; ohne Splits werden die Transaktionsdaten verwendet.
-- Die Aggregation greift nicht auf `transaktion_vorgaenge` zu. Dadurch führt eine Transaktion mit mehreren Vorgängen nicht zu einer mehrfachen Summierung.
-- Die API liefert Centbeträge, Dezimaldarstellung, Währung und die Anzahl eindeutig gezählter Transaktionen.
-- Die Finanzübersicht zeigt die neue Kategorieauswertung im bestehenden UI-Bereich an.
-- Nicht klassifizierte Kategorien werden sichtbar als „Ohne Oberkategorie“ beziehungsweise „Ohne Unterkategorie“ dargestellt.
-- Die zentrale Vorgangs- und Verknüpfungsarchitektur bleibt erhalten.
+- Die Finanzübersicht liefert weiterhin die bestehende periodenbezogene Kategorienaggregation.
+- Jede Ausgabenkategorie enthält nun eine Liste der zugehörigen Einzeltransaktionen.
+- Einzeltransaktionen enthalten Buchungsdaten, Betrag, Währung und zugeordnete Dokumentmetadaten.
+- Dokumente werden über die vorhandenen fachlichen Verknüpfungen ermittelt:
+  - direkte `transaktion_vorgaenge`-Verknüpfungen
+  - `transaction_splits.vorgangs_id`-Verknüpfungen
+  - `vorgang_belege` und `belege`
+- Mehrfach passende Vorgänge führen dank `SELECT DISTINCT` nicht zu doppelten Dokumenten.
+- Die Kategorieaggregation und Transaktionszählung bleiben gegen Mehrfachverknüpfungen geschützt.
+- Die Oberfläche verwendet native aufklappbare Kategorien und öffnet beim Klick auf eine Einzeltransaktion den bestehenden Transaktionsdialog.
+- Vorgänge, Tabellen und bestehende Verknüpfungsstrukturen wurden nicht ersetzt oder umgangen.
+- Es wurden keine externen Aktionen oder produktiven Datenzugriffe in der neuen Logik eingeführt.
 
-## Tests und Qualität
+### Tests und Nachweise
 
-Der ergänzte Regressionstest prüft explizit, dass eine Transaktion mit mehreren Vorgängen nur einmal in der Ausgabenkategorie erscheint. Laut Implementierungsbericht liefen die Dashboard-Tests, die JavaScript-Syntaxprüfung und `git diff --check` erfolgreich.
+Der neue Backend-Test deckt die Dokumentzuordnung zu einer Kategorie-Transaktion ab. Der bestehende Aggregationstest prüft zusätzlich die eingebettete Transaktionsliste und den dokumentlosen Fall. Laut Implementierungsbericht liefen 147 Dashboard-Tests erfolgreich; JavaScript-Syntaxprüfung und `git diff --check` waren ebenfalls erfolgreich.
 
-Der GitHub Compare ist konsistent mit den Runner-Dateien: Es fehlen keine geprüften Änderungen und es gibt keine unerwarteten zusätzlichen Dateien. Der Branch ist einen Commit vor `main` und nicht hinter der Basis.
+### Diff- und Branch-Prüfung
 
-## Nicht blockierende Hinweise
+- GitHub Compare: `ahead`
+- Ahead: 1 Commit
+- Behind: 0 Commits
+- Fehlende Compare-Dateien: keine
+- Zusätzliche Compare-Dateien: keine
+- Runner-validierte Pfade und GitHub-Änderungen stimmen überein.
 
-Die vorhandene Testabdeckung könnte noch Fälle mit mehreren Kategorien, mehreren Splits derselben Kategorie und unterschiedlichen Währungen ergänzen. Außerdem sollte die bekannte EUR-Darstellung bei Währungen ungleich EUR künftig fachlich sauber behandelt werden. Diese Punkte verhindern die Freigabe nicht.
+### Nicht blockierende Hinweise
+
+Die Dokumente werden derzeit als Dateinamen in der Kategorie-Einzelansicht dargestellt. Ein direkter Link zum vorhandenen Originaldokument-Endpunkt wäre eine optionale UX-Verbesserung, ist für den geprüften Muss-Zustand jedoch kein Blocker. Ebenso sind die einzelnen SQL-Abfragen pro Transaktion bei großen Zeiträumen ein möglicher späterer Optimierungspunkt, aber kein funktionaler Fehler im Arbeitspaket.
