@@ -728,10 +728,11 @@ function renderExpenseCategories(categories) {
     return;
   }
   for (const category of categories) {
-    const item = mailElement("div", "financial-check-item");
+    const item = mailElement("details", "financial-category-item");
     const topCategory = category.oberkategorie || "Ohne Oberkategorie";
     const subCategory = category.unterkategorie || "Ohne Unterkategorie";
-    item.append(
+    const summary = mailElement("summary", "financial-check-item");
+    summary.append(
       mailElement("strong", "", `${topCategory} · ${subCategory}`),
       mailElement(
         "span",
@@ -739,6 +740,27 @@ function renderExpenseCategories(categories) {
         `${formatOptionalCurrency(category.ausgaben)} · ${integerFormatter.format(category.transaction_count)} Transaktionen`,
       ),
     );
+    const transactions = mailElement("div", "financial-category-transactions");
+    for (const transaction of category.transactions || []) {
+      const button = mailElement("button", "financial-transaction-item");
+      button.type = "button";
+      const documents = transaction.dokumente || [];
+      const documentText = documents.length
+        ? documents.map((document) => document.dateiname || document.beleg_id).join(", ")
+        : "Keine Dokumente";
+      button.append(
+        mailElement(
+          "strong",
+          "",
+          `${formatDate(transaction.datum)} · ${transaction.zahlungsbeteiligter || "Ohne Zahlungsbeteiligten"}`,
+        ),
+        mailElement("span", "", `${formatOptionalCurrency(transaction.betrag)} · ${transaction.verwendungszweck || "Ohne Verwendungszweck"}`),
+        mailElement("span", "financial-transaction-documents", `Dokumente: ${documentText}`),
+      );
+      button.addEventListener("click", () => openTransaction(transaction.transaktions_id));
+      transactions.append(button);
+    }
+    item.append(summary, transactions);
     elements.expenseCategoryList.append(item);
   }
 }

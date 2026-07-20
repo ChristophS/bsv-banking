@@ -488,17 +488,45 @@ class DashboardDataStoreTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            [
-                {
-                    "oberkategorie": "Spielbetrieb",
-                    "unterkategorie": "Eintritt",
-                    "waehrung": "EUR",
-                    "ausgaben_cent": 1234,
-                    "ausgaben": "12.34",
-                    "transaction_count": 1,
-                }
-            ],
-            overview["expense_categories"],
+            1234,
+            overview["expense_categories"][0]["ausgaben_cent"],
+        )
+        category = overview["expense_categories"][0]
+        self.assertEqual("Spielbetrieb", category["oberkategorie"])
+        self.assertEqual("Eintritt", category["unterkategorie"])
+        self.assertEqual("EUR", category["waehrung"])
+        self.assertEqual("12.34", category["ausgaben"])
+        self.assertEqual(1, category["transaction_count"])
+        self.assertEqual(
+            ["tx_older"],
+            [item["transaktions_id"] for item in category["transactions"]],
+        )
+        self.assertEqual([], category["transactions"][0]["dokumente"])
+
+    def test_financial_overview_includes_documents_for_category_transactions(self):
+        with closing(connect_database(self.database_path)) as connection:
+            connection.execute(
+                """
+                INSERT INTO vorgang_belege (
+                    vorgangs_id, beleg_id, erstellt_am
+                ) VALUES (
+                    'vorgang_tx_older', 'beleg_1',
+                    '2026-06-11T08:00:00+00:00'
+                )
+                """
+            )
+            connection.commit()
+
+        overview = self.store.financial_overview(
+            "2026-05-01",
+            "2026-06-30",
+        )
+
+        transaction = overview["expense_categories"][0]["transactions"][0]
+        self.assertEqual("tx_older", transaction["transaktions_id"])
+        self.assertEqual(
+            ["beleg_1.pdf"],
+            [item["dateiname"] for item in transaction["dokumente"]],
         )
 
     def _insert_opposite_transaction(self, transaction_id="tx_opposite"):

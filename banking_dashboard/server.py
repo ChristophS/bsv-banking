@@ -530,10 +530,25 @@ class DashboardDataStore:
                             "waehrung": currency,
                             "ausgaben_cent": 0,
                             "transaction_ids": set(),
+                            "transactions": {},
                         },
                     )
                     category["ausgaben_cent"] += abs(amount_minor)
                     category["transaction_ids"].add(transaction_id)
+                    category["transactions"].setdefault(
+                        transaction_id,
+                        {
+                            "transaktions_id": transaction_id,
+                            "datum": str(row["booking_date"]),
+                            "zahlungsbeteiligter": str(
+                                row["counterparty"] or ""
+                            ),
+                            "verwendungszweck": str(row["purpose"] or ""),
+                            "betrag": str(row["amount"] or ""),
+                            "waehrung": currency,
+                            "dokumente": [],
+                        },
+                    )
                 missing_fields = sorted(
                     {
                         label
@@ -576,6 +591,33 @@ class DashboardDataStore:
                 if not has_receipt:
                     missing_receipts.append(item)
 
+            for category in expense_categories.values():
+                for transaction in category["transactions"].values():
+                    documents = connection.execute(
+                        """
+                        SELECT DISTINCT b.beleg_id, b.dateiname, b.kategorie,
+                                        b.dokumentdatum, b.betrag
+                        FROM belege AS b
+                        JOIN vorgang_belege AS vb ON vb.beleg_id = b.beleg_id
+                        WHERE vb.vorgangs_id IN (
+                            SELECT tv.vorgangs_id
+                            FROM transaktion_vorgaenge AS tv
+                            WHERE tv.transaktions_id = ?
+                            UNION
+                            SELECT split.vorgangs_id
+                            FROM transaction_splits AS split
+                            WHERE split.transaction_id = ?
+                              AND split.vorgangs_id IS NOT NULL
+                        )
+                        ORDER BY b.dateiname, b.beleg_id
+                        """,
+                        (
+                            transaction["transaktions_id"],
+                            transaction["transaktions_id"],
+                        ),
+                    ).fetchall()
+                    transaction["dokumente"] = [dict(row) for row in documents]
+
         category_items = []
         for category in expense_categories.values():
             amount_minor = int(category["ausgaben_cent"])
@@ -587,6 +629,14 @@ class DashboardDataStore:
                     "ausgaben_cent": amount_minor,
                     "ausgaben": _minor_to_decimal_string(amount_minor),
                     "transaction_count": len(category["transaction_ids"]),
+                    "transactions": sorted(
+                        category["transactions"].values(),
+                        key=lambda item: (
+                            str(item["datum"]),
+                            str(item["transaktions_id"]),
+                        ),
+                        reverse=True,
+                    ),
                 }
             )
         category_items.sort(

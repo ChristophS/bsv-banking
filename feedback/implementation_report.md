@@ -2,13 +2,13 @@
 
 ## Branchname
 
-`agent2/codex-20260720-130436`
+`agent2/codex-20260720-131017`
 
 ## Geänderte Dateien
 
 - `banking_dashboard/server.py`
 - `banking_dashboard/static/app.js`
-- `banking_dashboard/static/index.html`
+- `banking_dashboard/static/styles.css`
 - `tests/test_dashboard.py`
 - `feedback/implementation_report.md`
 
@@ -17,20 +17,19 @@ die unversionierte Datei `feedback/agent2_prompt.md` wurden nicht verändert.
 
 ## Umgesetzte Punkte
 
-- Die bestehende periodenbezogene Finanzübersicht weist Ausgaben je Kombination
-  aus Ober- und Unterkategorie aus.
-- Ausgaben werden centgenau aus negativen Transaktionsbeträgen ermittelt und in
-  der API zusätzlich als Dezimalwert ausgegeben.
-- Bei vorhandenen Transaktionssplits werden deren Beträge und Kategorien
-  aggregiert; andernfalls werden Betrag und Kategorien der Transaktion genutzt.
-- Eine Transaktion wird unabhängig von der Anzahl ihrer Vorgangsverknüpfungen
-  nur einmal summiert und je Kategorie nur einmal gezählt.
-- Nicht klassifizierte Ausgaben werden unter leeren Kategorien zurückgegeben
-  und in der Oberfläche verständlich als „Ohne Oberkategorie“ beziehungsweise
-  „Ohne Unterkategorie“ angezeigt.
-- Die vorhandene Store-, API- und UI-Struktur der Finanzübersicht wurde
-  weiterverwendet; es wurde keine neue Persistenzstruktur eingeführt.
-- Ein Regressionstest deckt die Aggregation bei mehreren Vorgängen ab.
+- Die Kategorien der periodenbezogenen Finanzübersicht enthalten nun die
+  jeweils zugehörigen Einzeltransaktionen.
+- Zu jeder Einzeltransaktion liefert die bestehende Finanzübersicht die über
+  direkte Vorgangsverknüpfungen oder Split-Vorgänge zugeordneten Dokumente.
+- Dokumente werden bei mehreren passenden Vorgängen nur einmal ausgegeben.
+- Kategorien lassen sich in der Oberfläche aufklappen. Die Einzelzeilen zeigen
+  Buchungsdaten und Dokumentnamen; ein Klick öffnet den bestehenden
+  Transaktionsdialog.
+- Die zentrale Vorgangs- und Belegverknüpfung wurde weiterverwendet; es wurde
+  keine neue Persistenzstruktur und keine direkte Transaktion-Beleg-Beziehung
+  eingeführt.
+- Die bestehende Kategorieaggregation bleibt unverändert centgenau und zählt
+  Transaktionen auch bei mehreren Vorgängen nur einmal.
 
 ## Nicht umgesetzte Punkte
 
@@ -48,26 +47,28 @@ git diff --check
 
 ## Testergebnis
 
-- Dashboard-Testlauf: 146 Tests bestanden.
+- Dashboard-Testlauf: 147 Tests bestanden.
 - 6 bestehende optionale browserabhängige Tests wurden übersprungen.
 - JavaScript-Syntaxprüfung und Diff-Prüfung ohne Fehler.
 
 ## Bekannte Einschränkungen
 
-- Als Ausgabe gilt fachlich ein negativer Buchungs- beziehungsweise
-  Split-Centbetrag; die Darstellung zeigt den ausgegebenen Betrag positiv an.
-- Kategorien verschiedener Währungen werden getrennt aggregiert. Die bestehende
-  Betragsdarstellung der Oberfläche ist weiterhin auf die bisherige
-  Standardwährung ausgelegt.
+- Die Dokumente werden in der Kategorie-Einzelansicht mit ihren Dateinamen
+  angezeigt. Geöffnet wird bewusst die vorhandene Transaktionsdetailansicht;
+  es wurde kein zweiter Dokumentdialog eingeführt.
+- Kategorien verschiedener Währungen bleiben getrennt aggregiert. Die
+  bestehende Betragsdarstellung der Oberfläche verwendet weiterhin deren
+  bisherige Standardwährungslogik.
 - Die optionalen Browsertests wurden in der lokalen Umgebung übersprungen.
 
 ## Hinweise für den Review-Agenten
 
-- Die Aggregation liegt in `DashboardDataStore.financial_overview` und greift
-  nicht auf `transaktion_vorgaenge` zu. Dadurch entstehen bei mehreren
-  Vorgangsverknüpfungen keine vervielfachten Beträge.
-- Der neue Regressionstest heißt
-  `test_financial_overview_groups_expenses_without_duplicate_vorgaenge`.
+- Die Erweiterung liegt in `DashboardDataStore.financial_overview` und nutzt
+  `transaktion_vorgaenge`, `transaction_splits`, `vorgang_belege` und `belege`.
+- Der neue Test heißt
+  `test_financial_overview_includes_documents_for_category_transactions`.
+- Der bestehende Aggregationstest prüft zusätzlich die eingebettete
+  Transaktionsliste und den dokumentlosen Fall.
 - Die vorbestehende Änderung an `feedback/Review-report.md` gehört nicht zu
   dieser Umsetzung.
 - Es wurden weder Commit noch Push ausgeführt.
