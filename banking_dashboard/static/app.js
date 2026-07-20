@@ -7528,18 +7528,7 @@ function createSuggestionSection(
       "is-suggested",
       item.source === "suggestion" || item.relation === "conversation",
     );
-    row.dataset.searchText = [
-      item.label,
-      item.id,
-      item.reason,
-      item.date,
-      item.amount,
-      item.status,
-      item.category,
-      item.sender,
-      item.preview,
-      ...(item.classification_missing || []),
-    ].filter(Boolean).join(" ").toLocaleLowerCase("de-DE");
+    row.dataset.searchText = suggestionSearchText(item);
     const label = mailElement("label", "suggestion-choice");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -7593,6 +7582,27 @@ function createSuggestionSection(
   });
   section.append(searchLabel, list);
   return section;
+}
+
+function suggestionSearchText(item) {
+  const formattedAmount = item.amount === null
+    || item.amount === undefined
+    || item.amount === ""
+    ? ""
+    : currencyFormatter.format(Number(item.amount));
+  return [
+      item.label,
+      item.id,
+      item.reason,
+      item.date,
+      item.amount,
+      formattedAmount,
+      item.status,
+      item.category,
+      item.sender,
+      item.preview,
+      ...(item.classification_missing || []),
+    ].filter(Boolean).join(" ").toLocaleLowerCase("de-DE");
 }
 
 function transactionClassificationSummary(item) {
