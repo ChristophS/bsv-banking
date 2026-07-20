@@ -3034,8 +3034,8 @@ class DashboardDataStore:
         filename: str,
         content_type: str,
         metadata: dict[str, Any],
-        vorgangs_id: str | None = None,
         source_reference: str,
+        vorgangs_id: str | None = None,
     ) -> dict[str, Any]:
         cleaned_vorgangs_id = str(vorgangs_id or "").strip()
         if not isinstance(content, bytes) or not content:

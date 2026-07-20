@@ -2,7 +2,7 @@
 
 ## Branchname
 
-`agent2/codex-20260720-093838`
+`agent2/rework-20260720-094638`
 
 ## Geänderte Dateien
 
@@ -72,3 +72,13 @@ mit `py_compile` geprüft sowie `git diff --check` ausgeführt.
 - Die vorbestehenden Änderungen an `feedback/Review-report.md` und
   `feedback/agent2_prompt.md` gehören nicht zu dieser Umsetzung.
 - Es wurden weder Commit noch Push ausgeführt.
+
+## Nachbesserung nach Review
+
+- Der blockierende `SyntaxError` in der Signatur von
+  `DashboardDataStore.create_document_from_bytes` wurde behoben:
+  `source_reference` steht nun vor dem optionalen Parameter `vorgangs_id`.
+- Die fachliche Implementierung und alle Aufrufer bleiben unverändert, da die
+  Methode ausschließlich mit Keyword-Argumenten aufgerufen wird.
+- Die Syntaxprüfung, die beiden gezielten Upload-Tests und die vollständige
+  Dashboard-Testdatei wurden auf dem Rework-Branch erneut ausgeführt.
