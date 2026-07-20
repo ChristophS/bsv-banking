@@ -8,38 +8,31 @@
 
 ## Zusammenfassung
 
-Die Finanzübersicht ist vollständig umgesetzt. Zeitraumfilter, Aggregation fehlender Klassifizierungen und Belege, Split-Unterstützung, Vorgangsverknüpfungen, Detailnavigation sowie lokale Regressionstests sind vorhanden. Der GitHub-Compare ist sauber und enthält genau die erwarteten Änderungen.
+Die Umsetzung erfüllt die Muss-Anforderungen: Ausgaben werden periodenbezogen je Ober-/Unterkategorie aggregiert, negative Buchungs- und Splitbeträge werden centgenau berücksichtigt und Transaktionen werden unabhängig von mehreren Vorgangsverknüpfungen nur einmal gezählt. API, bestehende Finanzübersicht und UI wurden erweitert; ein passender Regressionstest ist vorhanden. GitHub Compare ist sauber und enthält genau die Runner-Änderungen.
 
-# Review
+# Technischer Review
 
-## Entscheidung
+## Ergebnis
 
-**Angenommen**
+Die Umsetzung wird freigegeben.
 
 ## Geprüfte Anforderungen
 
-- Frei wählbarer Zeitraum mit Von- und Bis-Datum: umgesetzt.
-- Anzeige fehlender Klassifizierungszuordnungen je Transaktion: umgesetzt.
-- Anzeige der jeweils fehlenden Klassifikationsfelder: umgesetzt.
-- Berücksichtigung von Transaktionssplits bei der Klassifikationsprüfung: umgesetzt.
-- Anzeige fehlender Belege je Transaktion: umgesetzt.
-- Ermittlung der Belege über bestehende Vorgangsverknüpfungen einschließlich Split-Vorgängen: umgesetzt.
-- Öffnen der vorhandenen Transaktionsdetailansicht aus Ergebniszeilen: umgesetzt.
-- Vorhandene Vorgangs- und Verknüpfungsstrukturen bleiben erhalten: umgesetzt.
-- Lokale automatisierte Tests ergänzt: umgesetzt.
+- Ausgaben werden in `DashboardDataStore.financial_overview` je Kombination aus Oberkategorie und Unterkategorie aggregiert.
+- Es werden nur negative Buchungs- beziehungsweise Splitbeträge als Ausgaben berücksichtigt.
+- Bei vorhandenen Splits werden die Splitbeträge und Splitklassifikationen verwendet; ohne Splits werden die Transaktionsdaten verwendet.
+- Die Aggregation greift nicht auf `transaktion_vorgaenge` zu. Dadurch führt eine Transaktion mit mehreren Vorgängen nicht zu einer mehrfachen Summierung.
+- Die API liefert Centbeträge, Dezimaldarstellung, Währung und die Anzahl eindeutig gezählter Transaktionen.
+- Die Finanzübersicht zeigt die neue Kategorieauswertung im bestehenden UI-Bereich an.
+- Nicht klassifizierte Kategorien werden sichtbar als „Ohne Oberkategorie“ beziehungsweise „Ohne Unterkategorie“ dargestellt.
+- Die zentrale Vorgangs- und Verknüpfungsarchitektur bleibt erhalten.
 
-## Technische Bewertung
+## Tests und Qualität
 
-Die fachliche Aggregation liegt nachvollziehbar in `DashboardDataStore.financial_overview`. Der neue Endpunkt `/api/financial-overview` verwendet die vorhandene Datastore- und Request-Handler-Struktur. Datumswerte werden validiert und umgekehrte Zeiträume werden mit einem verständlichen Fehler abgelehnt.
+Der ergänzte Regressionstest prüft explizit, dass eine Transaktion mit mehreren Vorgängen nur einmal in der Ausgabenkategorie erscheint. Laut Implementierungsbericht liefen die Dashboard-Tests, die JavaScript-Syntaxprüfung und `git diff --check` erfolgreich.
 
-Die Klassifikationsprüfung verwendet bei vorhandenen Splits deren Klassifikationsfelder und fällt ansonsten auf die Transaktion zurück. Die Belegprüfung berücksichtigt sowohl direkte Transaktions-Vorgangsverknüpfungen als auch Vorgänge, die an einem Split hinterlegt sind. Damit werden die bestehenden fachlichen Verknüpfungen weiterverwendet und keine parallele Persistenzstruktur eingeführt.
-
-Die UI ergänzt einen eigenen Finanzübersichtsbereich mit Zeitraumformular, getrennten Abschnitten für fehlende Zuordnungen und Belege sowie anklickbaren Ergebniszeilen. Die JavaScript-Syntax und die bestehenden Dashboard-Tests wurden laut Bericht erfolgreich geprüft.
-
-## Tests und Compare
-
-Die neuen Regressionstests decken Aggregation, Zeitraumfilterung und Datumsgrenzen ab. Der GitHub-Branch ist gegenüber `main` um einen Commit voraus, nicht hinterher und enthält keine fehlenden oder unerwarteten Dateien im Compare.
+Der GitHub Compare ist konsistent mit den Runner-Dateien: Es fehlen keine geprüften Änderungen und es gibt keine unerwarteten zusätzlichen Dateien. Der Branch ist einen Commit vor `main` und nicht hinter der Basis.
 
 ## Nicht blockierende Hinweise
 
-HTTP-spezifische Regressionstests für den neuen Endpunkt wären eine sinnvolle Ergänzung. Außerdem führt die aktuelle Implementierung mehrere Einzelabfragen pro Transaktion aus; das ist für den aktuellen Umfang funktional korrekt, kann aber bei größeren Datenmengen optimiert werden. Die fachliche Behandlung katalogisierter, aber physisch nicht vorhandener Belege sollte bei Bedarf noch explizit festgelegt werden.
+Die vorhandene Testabdeckung könnte noch Fälle mit mehreren Kategorien, mehreren Splits derselben Kategorie und unterschiedlichen Währungen ergänzen. Außerdem sollte die bekannte EUR-Darstellung bei Währungen ungleich EUR künftig fachlich sauber behandelt werden. Diese Punkte verhindern die Freigabe nicht.
