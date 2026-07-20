@@ -1,3 +1,4 @@
+import base64
 import json
 import re
 import sqlite3
@@ -5519,6 +5520,70 @@ function mailElement() { throw new Error("Bei leeren Resultaten nicht erwartet")
                 ["vorgang_tx_older"],
                 json.load(response)["beleg"]["vorgangs_ids"],
             )
+
+    def test_document_upload_can_be_saved_without_vorgang(self):
+        content = b"Bestaetigung Bandenwerbung"
+        request = Request(
+            self.base_url + "/api/belege",
+            data=json.dumps(
+                {
+                    "content_base64": base64.b64encode(content).decode("ascii"),
+                    "filename": "bandenwerbung.txt",
+                    "content_type": "text/plain",
+                    "metadata": {
+                        "category": "sonstige_dokumente",
+                        "description": "Bestaetigung",
+                    },
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+            beleg = json.load(response)["beleg"]
+
+        self.assertEqual([], beleg["vorgangs_ids"])
+        self.assertEqual("sonstige_dokumente", beleg["kategorie"])
+        self.assertEqual(content, Path(beleg["dateipfad"]).read_bytes())
+        with urlopen(
+            self.base_url + "/api/belege?unassigned_only=true", timeout=5
+        ) as response:
+            unassigned_ids = {
+                item["beleg_id"] for item in json.load(response)["belege"]
+            }
+        self.assertIn(beleg["beleg_id"], unassigned_ids)
+
+    def test_document_upload_rejects_invalid_content_without_persistence(self):
+        before_files = set(self.server.data_store.belege_directory.rglob("*"))
+        with closing(
+            connect_database(self.server.data_store.database_path)
+        ) as connection:
+            before_count = connection.execute(
+                "SELECT COUNT(*) FROM belege"
+            ).fetchone()[0]
+        request = Request(
+            self.base_url + "/api/belege",
+            data=json.dumps(
+                {"content_base64": "not base64!", "filename": "beleg.txt"}
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as raised:
+            urlopen(request, timeout=5)
+        self.assertEqual(400, raised.exception.code)
+        with closing(
+            connect_database(self.server.data_store.database_path)
+        ) as connection:
+            self.assertEqual(
+                before_count,
+                connection.execute("SELECT COUNT(*) FROM belege").fetchone()[0],
+            )
+        self.assertEqual(
+            before_files,
+            set(self.server.data_store.belege_directory.rglob("*")),
+        )
 
     def test_vorgang_api_rejects_invalid_input_without_persistence(self):
         before = len(self.server.data_store.list_vorgaenge())

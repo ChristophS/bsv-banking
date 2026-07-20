@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-import json
+import base64
+import binascii
 import hashlib
 import html
+import json
 import mimetypes
 import re
 import sqlite3
@@ -133,6 +135,7 @@ TRANSACTION_SPLIT_PAYLOAD_FIELDS = {
 }
 MAX_CLASSIFICATION_FIELD_LENGTH = 2000
 MAX_JSON_BODY_SIZE = 64 * 1024
+MAX_DOCUMENT_BODY_SIZE = 25 * 1024 * 1024
 MAX_VORGANG_TITLE_LENGTH = 300
 MAX_VORGANG_DESCRIPTION_LENGTH = 10_000
 MAX_VORGANG_LINKS = 200
@@ -3031,12 +3034,10 @@ class DashboardDataStore:
         filename: str,
         content_type: str,
         metadata: dict[str, Any],
-        vorgangs_id: str,
+        vorgangs_id: str | None = None,
         source_reference: str,
     ) -> dict[str, Any]:
         cleaned_vorgangs_id = str(vorgangs_id or "").strip()
-        if not cleaned_vorgangs_id:
-            raise ValueError("Vorgangs-ID fehlt.")
         if not isinstance(content, bytes) or not content:
             raise ValueError("Dokumentinhalt fehlt.")
         category = _normalize_document_category(metadata.get("category"))
@@ -3058,7 +3059,7 @@ class DashboardDataStore:
         wrote_target = False
         try:
             with closing(self._connect(writable=True)) as connection:
-                if connection.execute(
+                if cleaned_vorgangs_id and connection.execute(
                     "SELECT 1 FROM vorgaenge WHERE vorgangs_id = ?",
                     (cleaned_vorgangs_id,),
                 ).fetchone() is None:
@@ -3113,14 +3114,15 @@ class DashboardDataStore:
                             now,
                         ),
                     )
-                connection.execute(
-                    """
-                    INSERT OR IGNORE INTO vorgang_belege (
-                        vorgangs_id, beleg_id, erstellt_am
-                    ) VALUES (?, ?, ?)
-                    """,
-                    (cleaned_vorgangs_id, beleg_id, now),
-                )
+                if cleaned_vorgangs_id:
+                    connection.execute(
+                        """
+                        INSERT OR IGNORE INTO vorgang_belege (
+                            vorgangs_id, beleg_id, erstellt_am
+                        ) VALUES (?, ?, ?)
+                        """,
+                        (cleaned_vorgangs_id, beleg_id, now),
+                    )
                 connection.commit()
         except Exception:
             if wrote_target:
@@ -6513,6 +6515,46 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     status=HTTPStatus.CREATED,
                 )
                 return
+            if parsed.path == "/api/belege":
+                payload = self._read_document_json_body()
+                allowed = {
+                    "content_base64",
+                    "filename",
+                    "content_type",
+                    "metadata",
+                    "vorgangs_id",
+                }
+                unknown = sorted(set(payload) - allowed)
+                if unknown:
+                    raise ValueError(
+                        "Unbekannte Dokumentfelder: " + ", ".join(unknown)
+                    )
+                encoded = payload.get("content_base64")
+                if not isinstance(encoded, str) or not encoded:
+                    raise ValueError("Dokumentinhalt fehlt.")
+                try:
+                    content = base64.b64decode(encoded, validate=True)
+                except (ValueError, binascii.Error) as exc:
+                    raise ValueError(
+                        "Dokumentinhalt ist ungueltig kodiert."
+                    ) from exc
+                metadata = payload.get("metadata", {})
+                if not isinstance(metadata, dict):
+                    raise ValueError("Dokumentmetadaten muessen ein Objekt sein.")
+                self._json_response(
+                    {
+                        "beleg": self.server.data_store.create_document_from_bytes(
+                            content=content,
+                            filename=str(payload.get("filename") or "dokument"),
+                            content_type=str(payload.get("content_type") or ""),
+                            metadata=metadata,
+                            vorgangs_id=str(payload.get("vorgangs_id") or ""),
+                            source_reference="manual-upload",
+                        )
+                    },
+                    status=HTTPStatus.CREATED,
+                )
+                return
             if parsed.path == "/api/vorgaenge/suggestions":
                 self._json_response(
                     self.server.data_store.suggest_related_entities(
@@ -7027,6 +7069,22 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             raise ValueError("Ungültiger JSON-Inhalt.") from exc
         if not isinstance(payload, dict):
             raise ValueError("JSON-Inhalt muss ein Objekt sein.")
+        return payload
+
+    def _read_document_json_body(self) -> dict[str, Any]:
+        raw_length = self.headers.get("Content-Length", "")
+        try:
+            length = int(raw_length)
+        except ValueError as exc:
+            raise ValueError("Ungueltige Inhaltslaenge.") from exc
+        if length <= 0 or length > MAX_DOCUMENT_BODY_SIZE:
+            raise ValueError("Dokument ist zu gross oder leer.")
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("Ungueltige JSON-Daten.") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("JSON-Daten muessen ein Objekt sein.")
         return payload
 
     def _static_response(self, request_path: str) -> None:
