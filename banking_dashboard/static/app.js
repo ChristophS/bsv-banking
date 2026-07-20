@@ -92,6 +92,15 @@ const elements = {
     ...document.querySelectorAll("[data-dashboard-route]"),
   ],
   transactionPanel: document.querySelector("#transactions-panel"),
+  financialOverviewPanel: document.querySelector("#financial-overview-panel"),
+  financialOverviewForm: document.querySelector("#financial-overview-form"),
+  financialDateFrom: document.querySelector("#financial-date-from"),
+  financialDateTo: document.querySelector("#financial-date-to"),
+  financialOverviewCount: document.querySelector("#financial-overview-count"),
+  missingAssignmentCount: document.querySelector("#missing-assignment-count"),
+  missingAssignmentList: document.querySelector("#missing-assignment-list"),
+  missingReceiptCount: document.querySelector("#missing-receipt-count"),
+  missingReceiptList: document.querySelector("#missing-receipt-list"),
   vorgaengePanel: document.querySelector("#vorgaenge-panel"),
   terminePanel: document.querySelector("#termine-panel"),
   budgetPanel: document.querySelector("#budget-panel"),
@@ -333,6 +342,9 @@ elements.tabs.forEach((tab) => {
     if (tab.dataset.tab === "transactions") {
       state.unclassifiedTransactionsOnly = false;
       loadTransactions();
+    }
+    if (tab.dataset.tab === "financial-overview") {
+      loadFinancialOverview();
     }
     activateTab(tab.dataset.tab);
   });
@@ -614,6 +626,7 @@ function activateTab(name) {
   const activeName = availableTabs.has(name) ? name : "dashboard";
   const isDashboard = activeName === "dashboard";
   const isTransactions = activeName === "transactions";
+  const isFinancialOverview = activeName === "financial-overview";
   const isVorgaenge = activeName === "vorgaenge";
   const isTodos = activeName === "todos";
   const isTermine = activeName === "termine";
@@ -622,6 +635,7 @@ function activateTab(name) {
   const isOtherTasks = activeName === "other-tasks";
   elements.dashboardPanel.hidden = !isDashboard;
   elements.transactionPanel.hidden = !isTransactions;
+  elements.financialOverviewPanel.hidden = !isFinancialOverview;
   elements.vorgaengePanel.hidden = !isVorgaenge;
   elements.todoPanel.hidden = !isTodos;
   elements.terminePanel.hidden = !isTermine;
@@ -668,6 +682,56 @@ async function loadOverview() {
     renderOverview();
   } catch (error) {
     showError(error.message);
+  }
+}
+
+elements.financialOverviewForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  loadFinancialOverview();
+});
+
+async function loadFinancialOverview() {
+  const dateFrom = elements.financialDateFrom.value || state.dateFrom;
+  const dateTo = elements.financialDateTo.value || state.dateTo;
+  if (!dateFrom || !dateTo || dateFrom > dateTo) {
+    showError("Bitte einen gültigen Zeitraum auswählen.");
+    return;
+  }
+  elements.financialDateFrom.value = dateFrom;
+  elements.financialDateTo.value = dateTo;
+  const parameters = new URLSearchParams({date_from: dateFrom, date_to: dateTo});
+  try {
+    const response = await fetch(`/api/financial-overview?${parameters}`);
+    const payload = await readResponse(response);
+    elements.financialOverviewCount.textContent = integerFormatter.format(payload.transaction_count);
+    renderFinancialCheckList(
+      elements.missingAssignmentList,
+      payload.missing_assignments,
+      (item) => `Fehlt: ${item.fehlende_zuordnungen.join(", ")}`,
+    );
+    renderFinancialCheckList(elements.missingReceiptList, payload.missing_receipts, () => "Beleg fehlt");
+    elements.missingAssignmentCount.textContent = integerFormatter.format(payload.missing_assignment_count);
+    elements.missingReceiptCount.textContent = integerFormatter.format(payload.missing_receipt_count);
+  } catch (error) {
+    showError(error.message);
+  }
+}
+
+function renderFinancialCheckList(container, items, detailText) {
+  container.replaceChildren();
+  if (!items.length) {
+    container.append(mailElement("p", "dashboard-preview-empty", "Keine offenen Punkte."));
+    return;
+  }
+  for (const item of items) {
+    const button = mailElement("button", "financial-check-item");
+    button.type = "button";
+    button.append(
+      mailElement("strong", "", `${formatDate(item.datum)} · ${item.zahlungsbeteiligter || "Ohne Zahlungsbeteiligten"}`),
+      mailElement("span", "", `${detailText(item)} · ${formatOptionalCurrency(item.betrag)}`),
+    );
+    button.addEventListener("click", () => openTransaction(item.transaktions_id));
+    container.append(button);
   }
 }
 

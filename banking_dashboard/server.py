@@ -463,6 +463,103 @@ class DashboardDataStore:
             "available": bool(date_from and date_to),
         }
 
+    def financial_overview(
+        self,
+        date_from: str | None,
+        date_to: str | None,
+    ) -> dict[str, Any]:
+        default_from, default_to = default_transaction_period()
+        normalized_from = _parse_iso_date(date_from or default_from, "von")
+        normalized_to = _parse_iso_date(date_to or default_to, "bis")
+        if normalized_from > normalized_to:
+            raise ValueError(
+                "Das Startdatum darf nicht nach dem Enddatum liegen."
+            )
+
+        classification_fields = (
+            ("transaction_type", "Transaktionstyp"),
+            ("top_category", "Oberkategorie"),
+            ("sub_category", "Unterkategorie"),
+            ("sphere", "Sphäre"),
+        )
+        with closing(self._connect()) as connection:
+            transactions = connection.execute(
+                """
+                SELECT transaction_id, booking_date, counterparty, purpose,
+                       amount, currency, transaction_type, top_category,
+                       sub_category, sphere
+                FROM transactions
+                WHERE booking_date >= ? AND booking_date <= ?
+                ORDER BY booking_date DESC, transaction_id
+                """,
+                (normalized_from, normalized_to),
+            ).fetchall()
+            missing_assignments = []
+            missing_receipts = []
+            for row in transactions:
+                transaction_id = str(row["transaction_id"])
+                splits = connection.execute(
+                    """
+                    SELECT transaction_type, top_category, sub_category, sphere
+                    FROM transaction_splits
+                    WHERE transaction_id = ?
+                    ORDER BY sort_order, split_id
+                    """,
+                    (transaction_id,),
+                ).fetchall()
+                classification_rows = splits or [row]
+                missing_fields = sorted(
+                    {
+                        label
+                        for classification_row in classification_rows
+                        for column, label in classification_fields
+                        if not str(classification_row[column] or "").strip()
+                    }
+                )
+                item = {
+                    "transaktions_id": transaction_id,
+                    "datum": str(row["booking_date"]),
+                    "zahlungsbeteiligter": str(row["counterparty"] or ""),
+                    "verwendungszweck": str(row["purpose"] or ""),
+                    "betrag": str(row["amount"] or ""),
+                    "waehrung": str(row["currency"] or ""),
+                }
+                if missing_fields:
+                    missing_assignments.append(
+                        {**item, "fehlende_zuordnungen": missing_fields}
+                    )
+                has_receipt = connection.execute(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM vorgang_belege AS vb
+                        WHERE vb.vorgangs_id IN (
+                            SELECT tv.vorgangs_id
+                            FROM transaktion_vorgaenge AS tv
+                            WHERE tv.transaktions_id = ?
+                            UNION
+                            SELECT split.vorgangs_id
+                            FROM transaction_splits AS split
+                            WHERE split.transaction_id = ?
+                              AND split.vorgangs_id IS NOT NULL
+                        )
+                    )
+                    """,
+                    (transaction_id, transaction_id),
+                ).fetchone()[0]
+                if not has_receipt:
+                    missing_receipts.append(item)
+
+        return {
+            "date_from": normalized_from,
+            "date_to": normalized_to,
+            "transaction_count": len(transactions),
+            "missing_assignments": missing_assignments,
+            "missing_assignment_count": len(missing_assignments),
+            "missing_receipts": missing_receipts,
+            "missing_receipt_count": len(missing_receipts),
+        }
+
     def transaction_detail(
         self,
         transaktions_id: str,
@@ -5820,6 +5917,15 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/api/overview":
                 self._json_response(self.server.data_store.overview_counts())
+                return
+            if parsed.path == "/api/financial-overview":
+                query = parse_qs(parsed.query)
+                self._json_response(
+                    self.server.data_store.financial_overview(
+                        query.get("date_from", [None])[0],
+                        query.get("date_to", [None])[0],
+                    )
+                )
                 return
             if parsed.path == "/api/mail/settings":
                 self._json_response(self.server.mail_manager.settings())

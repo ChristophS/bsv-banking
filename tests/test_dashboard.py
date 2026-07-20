@@ -416,6 +416,49 @@ class DashboardDataStoreTests(unittest.TestCase):
     def tearDown(self):
         self.temporary_directory.cleanup()
 
+    def test_financial_overview_aggregates_missing_assignments_and_receipts(self):
+        with closing(connect_database(self.database_path)) as connection:
+            connection.execute(
+                """
+                UPDATE transaction_splits
+                SET sub_category = ''
+                WHERE transaction_id = 'tx_newer'
+                """
+            )
+            connection.commit()
+
+        overview = self.store.financial_overview(
+            "2026-05-01",
+            "2026-06-30",
+        )
+
+        self.assertEqual(2, overview["transaction_count"])
+        self.assertEqual(1, overview["missing_assignment_count"])
+        self.assertEqual(
+            "tx_newer",
+            overview["missing_assignments"][0]["transaktions_id"],
+        )
+        self.assertEqual(
+            ["Unterkategorie"],
+            overview["missing_assignments"][0]["fehlende_zuordnungen"],
+        )
+        self.assertEqual(1, overview["missing_receipt_count"])
+        self.assertEqual(
+            "tx_older",
+            overview["missing_receipts"][0]["transaktions_id"],
+        )
+
+    def test_financial_overview_respects_period_and_validates_bounds(self):
+        overview = self.store.financial_overview(
+            "2026-06-01",
+            "2026-06-30",
+        )
+
+        self.assertEqual(1, overview["transaction_count"])
+        self.assertEqual([], overview["missing_receipts"])
+        with self.assertRaisesRegex(ValueError, "Startdatum"):
+            self.store.financial_overview("2026-07-01", "2026-06-01")
+
     def _insert_opposite_transaction(self, transaction_id="tx_opposite"):
         with closing(connect_database(self.database_path)) as connection:
             connection.execute(
