@@ -8,33 +8,34 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderungen. Nach erfolgreicher Erstellung des Vorgangs wird die Ausgangsmail über DashboardMailManager.mark_read als gelesen markiert. Bei einem Fehler in create_vorgang wird dieser Aufruf nicht erreicht. Die Änderung bleibt im vorgesehenen Importablauf, verwendet bestehende Strukturen und wird durch Erfolgs- und Fehlerfalltests mit Fake-Mail-Backend abgedeckt.
+Die gewünschte Aktion „Vorgang erstellen und abschließen“ ist im bestehenden Erstellformular umgesetzt. Die gewählte Aktion übergibt ausschließlich dann completed: true an den vorhandenen Endpunkt; der bestehende Erstell-, Verknüpfungs- und Abschlussablauf bleibt erhalten. Der GitHub-Compare ist sauber und enthält keine unerwarteten Änderungen.
 
 ## Review-Ergebnis
 
-**Entscheidung: Akzeptiert**
+**Akzeptiert.**
 
-### Geprüfte Anforderungen
+### Erfüllte Anforderungen
 
-- Die Änderung erfolgt unmittelbar nach dem erfolgreichen Aufruf von `create_vorgang` im bestehenden Mail-zu-Vorgang-Import.
-- Die Ausgangsmail wird über die vorhandene `DashboardMailManager.mark_read`-Abstraktion als gelesen markiert.
-- Schlägt `create_vorgang` fehl, wird `mark_read` nicht aufgerufen.
-- Es wurden keine neuen Mail- oder Vorgangsstrukturen eingeführt und keine manuellen Mail-Funktionen verändert.
-- Die Tests verwenden ausschließlich das vorhandene Fake-Mail-Backend.
-
-### Tests
-
-Die neuen Tests decken beide zentralen Fälle ab:
-
-- `test_mail_is_marked_read_after_vorgang_import`
-- `test_failed_vorgang_import_does_not_mark_mail_read`
-
-Laut Implementierungsbericht bestanden außerdem die vollständige Mail-Integrationssuite sowie die Dashboard-Suite. Der GitHub-Diff enthält die erwarteten Änderungen in Produktivcode und Tests.
+- Das Formular zur manuellen Vorgangserstellung enthält den Button „Vorgang erstellen und abschließen“.
+- Der normale Button „Vorgang erstellen“ übergibt weiterhin `completed: false`.
+- Der neue Button markiert seine Aktion über `data-completed="true"`; im Submit-Handler wird der auslösende Button über `event.submitter` ausgewertet.
+- `readVorgangForm(form, completeRequested)` übergibt den Abschlusswunsch an den bestehenden `/api/vorgaenge`-Endpunkt.
+- Der bestehende fachliche Abschlussablauf und die vorhandenen Verknüpfungsstrukturen werden weiterverwendet; Backend, Persistenz und Architektur wurden nicht unnötig verändert.
+- Beide Buttons werden während der Anfrage deaktiviert und im Fehlerfall wieder aktiviert.
+- Ein automatisierter Test prüft die neue Beschriftung sowie die zentrale Verdrahtung der Abschlussaktion.
 
 ### Diff- und Branch-Prüfung
 
-- GitHub Compare ist `ahead` mit einem Commit und ohne fehlende oder zusätzliche Dateien.
-- Der tatsächliche Diff stimmt mit dem Implementierungsbericht überein.
-- Die Änderung ist auf den vorgesehenen Importablauf und die zugehörigen Tests begrenzt.
+- GitHub Compare: `ahead`, 1 Commit vor `main`, 0 Commits dahinter.
+- Keine fehlenden oder zusätzlichen Dateien im Compare.
+- Die tatsächlichen Änderungen betreffen die erwarteten UI- und Testdateien sowie den Implementierungsbericht.
+- Keine geschützten oder offensichtlich unerlaubten Dateien wurden geändert.
+- Keine echten externen Aktionen oder produktiven Daten wurden in Tests eingeführt.
 
-Damit sind die Akzeptanzkriterien erfüllt.
+### Testbewertung
+
+Der ergänzte Test deckt die wesentlichen statischen UI-Verbindungen ab. Die vorhandenen Backend- und HTTP-Tests sichern den bereits unterstützten Direktabschluss über `completed: true` ab. Ein zusätzlicher Browser-Verhaltenstest wäre wünschenswert, ist für die Freigabe aber nicht zwingend erforderlich.
+
+### Ergebnis
+
+Die Muss-Anforderung und die Akzeptanzkriterien sind erfüllt. Keine blockierenden Mängel festgestellt.
