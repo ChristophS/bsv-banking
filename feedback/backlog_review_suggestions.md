@@ -1,1 +1,3 @@
-Für ein späteres Folgepaket kann geprüft werden, ob zusätzlich zur Excel-kompatiblen CSV eine native XLSX-Arbeitsmappe mit mehreren Tabellenblättern, Formatierungen und separaten Tabellen für Transaktionen, Splits und Vorgangsverknüpfungen benötigt wird.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
