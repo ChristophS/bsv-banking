@@ -430,6 +430,32 @@ button {
 
 .financial-check-item span { color: var(--ink-muted); }
 
+.financial-category-item > summary {
+  list-style-position: inside;
+}
+
+.financial-category-transactions {
+  display: grid;
+  gap: 8px;
+  padding: 0 0 12px 18px;
+}
+
+.financial-transaction-item {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.financial-transaction-item span { color: var(--ink-muted); }
+
+.financial-transaction-documents { font-size: 13px; }
+
 @media (max-width: 800px) {
   .financial-overview-grid { grid-template-columns: 1fr; }
 }
