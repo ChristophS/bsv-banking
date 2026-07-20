@@ -6818,6 +6818,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 "termin_ids": _list_of_strings(links.get("termin_ids", [])),
             }
         )
+        self.server.mail_manager.mark_read(inbox_id)
         vorgangs_id = str(vorgang["vorgangs_id"])
         imported_documents = []
         for document in _list_value(payload.get("documents")):
