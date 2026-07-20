@@ -8,44 +8,39 @@
 
 ## Zusammenfassung
 
-Die Umsetzung erfüllt die Muss-Anforderung: Dokumente können über die neue UI-Aktion und den lokalen POST-Endpunkt ohne Vorgang gespeichert werden. Der bestehende Belegkatalog sowie die Verknüpfungstabelle werden weiterverwendet; ohne Vorgangs-ID wird keine Vorgangsverknüpfung angelegt. Erfolgs- und Fehlerfälle sind durch HTTP-/Persistenztests abgesichert. Der GitHub-Compare ist gegenüber main zwei Commits voraus und enthält die erwarteten Implementierungs-, UI- und Testdateien.
+Die Nullbuchungsfunktion ist im bestehenden Vorgangs- und Verknüpfungsmodell umgesetzt. Genau zwei EUR-Transaktionen werden auf einen ausgeglichenen Centbetrag geprüft, klassifiziert, verknüpft und der Vorgang wird atomar als abgeschlossen angelegt. Die relevanten Erfolgs- und Fehlerfälle sind durch Tests abgedeckt. Der GitHub-Compare ist sauber und enthält genau die erwarteten Änderungen.
 
 # Technischer Review
 
-## Entscheidung
+## Ergebnis
 
-**Akzeptiert**
+**Akzeptiert.**
 
-## Prüfung der Muss-Anforderungen
+## Geprüfte Anforderungen
 
-- Dokumente können über die neue Aktion „Dokument speichern“ ohne Auswahl oder Erstellung eines Vorgangs hochgeladen werden.
-- Der lokale Endpunkt `POST /api/belege` akzeptiert Base64-Inhalt und Metadaten und liefert den gespeicherten Beleg zurück.
-- `create_document_from_bytes` verwendet weiterhin den bestehenden Belegkatalog und legt `vorgang_belege` nur bei vorhandener Vorgangs-ID an.
-- Die bestehende Detailansicht kann nach dem Speichern geöffnet und zur späteren Zuordnung verwendet werden.
-- Fehlerhafte Base64-Inhalte werden vor der Persistierung abgewiesen.
+- Der Vorgangstyp `Nullbuchung` wird unabhängig von bestehenden Vorgangstypen angeboten.
+- Eine Nullbuchung akzeptiert genau zwei Transaktionen.
+- Beide Transaktionen müssen in EUR vorliegen.
+- Die Beträge werden auf Centbasis geprüft und müssen zusammen exakt 0 ergeben.
+- Beide Transaktionen werden über die bestehende Tabelle `transaktion_vorgaenge` mit einem zentralen Vorgang verknüpft.
+- Die feste Klassifikation wird gesetzt:
+  - Transaktionstyp: `Nullbuchung`
+  - Oberkategorie: `Sonstiges`
+  - Unterkategorie: `Nullbuchung`
+  - Sphäre: `Ideeller Bereich`
+- Der Nullbuchungsvorgang wird automatisch als `abgeschlossen` mit manuellem Status angelegt.
+- Die Logik gilt ebenfalls beim Ändern eines bestehenden Vorgangs in eine Nullbuchung.
+- Die Sonderlogik läuft innerhalb derselben SQLite-Transaktion wie Klassifikation, Vorgangserstellung und Verknüpfung.
+- Bei ungültigen Eingaben werden wegen der Transaktionsgrenzen keine Teiländerungen persistiert.
 
-## Architektur und Datenmodell
+## Architektur und Scope
 
-Die Umsetzung erweitert die vorhandene Beleg-Persistenz und führt keine parallele Dokumenttabelle oder alternative Verknüpfungsstruktur ein. Vorgänge bleiben das zentrale fachliche Objekt; Dokumente können jedoch unabhängig davon im bestehenden Belegkatalog existieren. Das entspricht den Vorgaben des Arbeitspakets.
+Die Umsetzung verwendet den vorhandenen `DashboardDataStore`, die bestehende Vorgangserstellung sowie die vorhandenen Transaktions- und Verknüpfungstabellen. Es wurden keine neuen Tabellen, externen Aktionen oder unabhängigen Backlog-Punkte eingeführt. Der GitHub-Compare ist `ahead` mit einem Commit, ohne fehlende oder zusätzliche Compare-Dateien.
 
 ## Tests
 
-Die neuen Tests decken ab:
-
-- erfolgreiches Speichern eines Dokuments ohne Vorgang,
-- leere Vorgangsverknüpfungen nach dem Upload,
-- Kategorisierung im bestehenden Belegmodell,
-- Speicherung des Dateiinhalts,
-- Auffindbarkeit als nicht zugewiesenes Dokument,
-- Zurückweisung ungültiger Base64-Daten,
-- keine Datei- oder Datenbankänderung bei ungültigem Inhalt.
-
-Der Implementation Report nennt zusätzlich einen vollständigen Dashboard-Testlauf mit 140 bestandenen Tests. Die sechs übersprungenen Browser-Tests betreffen fehlende lokale Browser-Voraussetzungen und stellen in diesem Kontext keinen Blocker dar.
-
-## GitHub- und Runner-Status
-
-Der GitHub-Compare ist `ahead` mit zwei Commits und `behind_by=0`. Es fehlen keine erwarteten Dateien im Compare. Die zusätzlichen Compare-Dateien (`app.js`, `index.html`, `tests/test_dashboard.py`) entsprechen den im Diff und Bericht beschriebenen UI- und Teständerungen; daraus ergibt sich kein unbrauchbarer Branch-Zustand.
+Die beiden gezielten Nullbuchungstests decken den erfolgreichen Fall sowie ungültige Anzahl- und Betragskombinationen ab. Laut Implementierungsbericht bestehen außerdem alle 142 Dashboard-Tests; sechs optionale Tests wurden übersprungen. Die zentralen Anforderungen sind damit plausibel lokal abgesichert.
 
 ## Nicht blockierende Hinweise
 
-Die Größenbegrenzung und die serverseitige Validierung sind vorhanden. Eine zusätzliche clientseitige Vorprüfung der Dateigröße sowie Tests für explizite Vorgangsverknüpfungen und Grenzfälle wären sinnvoll, sind für die Abnahme dieses Arbeitspakets aber nicht zwingend erforderlich.
+Zusätzliche Tests für fehlende Transaktionen, Fremdwährungen und die Änderung bestehender Vorgänge wären sinnvoll. Außerdem könnte die Betragsvalidierung defensive Fehlerbehandlung für unerwartete `NULL`- oder Nicht-Integer-Werte ergänzen. Diese Punkte verhindern die Freigabe nicht.
