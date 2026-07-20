@@ -1,3 +1,3 @@
-- HTTP-Regressionstests für den Finanzübersichts-Endpunkt ergänzen.
-- Bei wachsendem Transaktionsbestand die Aggregationsabfragen bündeln und Performance messen.
-- Fachliche Definition von „Beleg vorhanden“ zwischen Katalogzuordnung und physischer Datei abschließend dokumentieren.
+# Review Backlog Suggestions
+
+Keine offenen Review-Vorschläge.
