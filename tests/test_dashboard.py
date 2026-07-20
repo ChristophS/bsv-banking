@@ -3072,6 +3072,42 @@ class DashboardHTTPTests(unittest.TestCase):
         self.assertIn('id="total-balance-note"', html[:corrections_start])
         self.assertIn('class="balance-note"', html[:corrections_start])
 
+    def test_suggestion_search_text_includes_displayed_transaction_amount(self):
+        javascript = (
+            Path(__file__).parents[1] / "banking_dashboard/static/app.js"
+        ).read_text(encoding="utf-8")
+        start = javascript.index("function suggestionSearchText")
+        opening_brace = javascript.index("{", javascript.index(")", start))
+        depth = 0
+        for index in range(opening_brace, len(javascript)):
+            if javascript[index] == "{":
+                depth += 1
+            elif javascript[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    function_source = javascript[start:index + 1]
+                    break
+        else:
+            self.fail("JavaScript-Funktion suggestionSearchText ist unvollständig.")
+
+        node_test = "\n".join([
+            'const assert = require("node:assert/strict");',
+            'const currencyFormatter = new Intl.NumberFormat("de-DE", '
+            '{style: "currency", currency: "EUR"});',
+            function_source,
+            'const text = suggestionSearchText({id: "tx-1", amount: "123.45"});',
+            'assert.match(text, /123[,.]45/);',
+            'assert.equal(text.includes("123,45"), true);',
+        ])
+        result = subprocess.run(
+            ["node", "-e", node_test],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_assignment_dialog_submit_flow_handles_validation_success_and_error(self):
         javascript_path = Path(__file__).parents[1] / "banking_dashboard/static/app.js"
         javascript = javascript_path.read_text(encoding="utf-8")
