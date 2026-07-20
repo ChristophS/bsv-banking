@@ -1,28 +1,10 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Finanzübersicht: fehlende Zuordnungen und Belege aggregieren
-
-**Epic-ID:** epic-finanzuebersicht
-
-**Epic-Titel:** Finanzübersicht für Kassenprüfung und Steuerberatung
-
-**Epic-Ziel:** Eine periodenbezogene Finanzübersicht bereitstellen, die finanzielle Vollständigkeit, Klassifikationen, Belege, Kategorien und Transaktionsdetails für Kassenprüfung und Steuerberatung auswertbar macht.
-
-**Teilpaket:** Teil 1
-
-**Priorität:** mittel
-
-**Grund:** Die gewünschte Finanzübersicht soll zunächst für einen beliebigen Zeitraum fehlende Klassifizierungszuordnungen und fehlende Belege je Transaktion ausweisen.
-
-**Feedback:**
-
-- Eine aktuelle Übersicht für einen beliebigen Zeitraum erstellen können.
-- Man soll zunächst sehen welche Zuordnungen fehlen.
-- Dann bei welchen Transaktionen Belege fehlen.
-
-## 2. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
+## 1. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -41,7 +23,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Wie viel in jeder Oberkategorie (Ober- und Unterkategorie Kombination) ausgegeben wurde.
 - Wenn eine Transaktion mehrere Vorgänge hat, so soll diese auch nur einmal angezeigt werden.
 
-## 3. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
+## 2. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -59,7 +41,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Dann kann man auf Einzelebene mit den Dokumenten runter.
 
-## 4. Finanzübersicht als Excel-kompatiblen Export bereitstellen
+## 3. Finanzübersicht als Excel-kompatiblen Export bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
