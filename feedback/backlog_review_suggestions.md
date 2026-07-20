@@ -1,3 +1,3 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+- Ausgabeaggregation um explizite Mehrwährungsdarstellung erweitern.
+- Centbetragsformatierung ohne Float-Konvertierung implementieren.
+- Zusätzliche parametrische Tests für Split- und Mehrkategorienfälle ergänzen.
