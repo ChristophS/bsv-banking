@@ -1,19 +1,10 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Transaktionssuche bei der Vorgangszuordnung korrigieren
-
-**Priorität:** hoch
-
-**Grund:** Die Suche findet bei der Zuordnung einer Transaktion zu einem Vorgang keine Treffer, beispielsweise bei einer Suche nach dem Betrag.
-
-**Feedback:**
-
-- Wenn ich einem Vorgang eine Transaktion zuordnen will, findet die Suche nichts.
-- Ich gebe zum Beispiel den Betrag ein und es bleibt ohne Treffer.
-
-## 2. Finanzübersicht: fehlende Zuordnungen und Belege aggregieren
+## 1. Finanzübersicht: fehlende Zuordnungen und Belege aggregieren
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -33,7 +24,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Man soll zunächst sehen welche Zuordnungen fehlen.
 - Dann bei welchen Transaktionen Belege fehlen.
 
-## 3. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
+## 2. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -52,7 +43,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Wie viel in jeder Oberkategorie (Ober- und Unterkategorie Kombination) ausgegeben wurde.
 - Wenn eine Transaktion mehrere Vorgänge hat, so soll diese auch nur einmal angezeigt werden.
 
-## 4. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
+## 3. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -70,7 +61,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Dann kann man auf Einzelebene mit den Dokumenten runter.
 
-## 5. Finanzübersicht als Excel-kompatiblen Export bereitstellen
+## 4. Finanzübersicht als Excel-kompatiblen Export bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
