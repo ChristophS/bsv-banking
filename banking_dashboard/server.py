@@ -486,8 +486,8 @@ class DashboardDataStore:
             transactions = connection.execute(
                 """
                 SELECT transaction_id, booking_date, counterparty, purpose,
-                       amount, currency, transaction_type, top_category,
-                       sub_category, sphere
+                       amount, amount_minor, currency, transaction_type,
+                       top_category, sub_category, sphere
                 FROM transactions
                 WHERE booking_date >= ? AND booking_date <= ?
                 ORDER BY booking_date DESC, transaction_id
@@ -496,11 +496,13 @@ class DashboardDataStore:
             ).fetchall()
             missing_assignments = []
             missing_receipts = []
+            expense_categories: dict[tuple[str, str, str], dict[str, Any]] = {}
             for row in transactions:
                 transaction_id = str(row["transaction_id"])
                 splits = connection.execute(
                     """
-                    SELECT transaction_type, top_category, sub_category, sphere
+                    SELECT amount_minor, transaction_type, top_category,
+                           sub_category, sphere
                     FROM transaction_splits
                     WHERE transaction_id = ?
                     ORDER BY sort_order, split_id
@@ -508,6 +510,30 @@ class DashboardDataStore:
                     (transaction_id,),
                 ).fetchall()
                 classification_rows = splits or [row]
+                for classification_row in classification_rows:
+                    amount_minor = int(classification_row["amount_minor"])
+                    if amount_minor >= 0:
+                        continue
+                    top_category = str(
+                        classification_row["top_category"] or ""
+                    ).strip()
+                    sub_category = str(
+                        classification_row["sub_category"] or ""
+                    ).strip()
+                    currency = str(row["currency"] or "")
+                    key = (top_category, sub_category, currency)
+                    category = expense_categories.setdefault(
+                        key,
+                        {
+                            "oberkategorie": top_category,
+                            "unterkategorie": sub_category,
+                            "waehrung": currency,
+                            "ausgaben_cent": 0,
+                            "transaction_ids": set(),
+                        },
+                    )
+                    category["ausgaben_cent"] += abs(amount_minor)
+                    category["transaction_ids"].add(transaction_id)
                 missing_fields = sorted(
                     {
                         label
@@ -550,6 +576,27 @@ class DashboardDataStore:
                 if not has_receipt:
                     missing_receipts.append(item)
 
+        category_items = []
+        for category in expense_categories.values():
+            amount_minor = int(category["ausgaben_cent"])
+            category_items.append(
+                {
+                    "oberkategorie": category["oberkategorie"],
+                    "unterkategorie": category["unterkategorie"],
+                    "waehrung": category["waehrung"],
+                    "ausgaben_cent": amount_minor,
+                    "ausgaben": _minor_to_decimal_string(amount_minor),
+                    "transaction_count": len(category["transaction_ids"]),
+                }
+            )
+        category_items.sort(
+            key=lambda item: (
+                str(item["oberkategorie"]).casefold(),
+                str(item["unterkategorie"]).casefold(),
+                str(item["waehrung"]).casefold(),
+            )
+        )
+
         return {
             "date_from": normalized_from,
             "date_to": normalized_to,
@@ -558,6 +605,7 @@ class DashboardDataStore:
             "missing_assignment_count": len(missing_assignments),
             "missing_receipts": missing_receipts,
             "missing_receipt_count": len(missing_receipts),
+            "expense_categories": category_items,
         }
 
     def transaction_detail(

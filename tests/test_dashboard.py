@@ -459,6 +459,48 @@ class DashboardDataStoreTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Startdatum"):
             self.store.financial_overview("2026-07-01", "2026-06-01")
 
+    def test_financial_overview_groups_expenses_without_duplicate_vorgaenge(self):
+        with closing(connect_database(self.database_path)) as connection:
+            connection.execute(
+                """
+                INSERT INTO vorgaenge (
+                    vorgangs_id, titel, beschreibung, vorgangstyp,
+                    status, erstellt_am, aktualisiert_am
+                ) VALUES (
+                    'vorgang_tx_older_2', '', '', 'Ausgabe',
+                    'in_bearbeitung', '2026-06-11T08:00:00+00:00',
+                    '2026-06-11T08:00:00+00:00'
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO transaktion_vorgaenge (
+                    transaktions_id, vorgangs_id
+                ) VALUES ('tx_older', 'vorgang_tx_older_2')
+                """
+            )
+            connection.commit()
+
+        overview = self.store.financial_overview(
+            "2026-05-01",
+            "2026-06-30",
+        )
+
+        self.assertEqual(
+            [
+                {
+                    "oberkategorie": "Spielbetrieb",
+                    "unterkategorie": "Eintritt",
+                    "waehrung": "EUR",
+                    "ausgaben_cent": 1234,
+                    "ausgaben": "12.34",
+                    "transaction_count": 1,
+                }
+            ],
+            overview["expense_categories"],
+        )
+
     def _insert_opposite_transaction(self, transaction_id="tx_opposite"):
         with closing(connect_database(self.database_path)) as connection:
             connection.execute(

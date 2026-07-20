@@ -101,6 +101,7 @@ const elements = {
   missingAssignmentList: document.querySelector("#missing-assignment-list"),
   missingReceiptCount: document.querySelector("#missing-receipt-count"),
   missingReceiptList: document.querySelector("#missing-receipt-list"),
+  expenseCategoryList: document.querySelector("#expense-category-list"),
   vorgaengePanel: document.querySelector("#vorgaenge-panel"),
   terminePanel: document.querySelector("#termine-panel"),
   budgetPanel: document.querySelector("#budget-panel"),
@@ -710,10 +711,35 @@ async function loadFinancialOverview() {
       (item) => `Fehlt: ${item.fehlende_zuordnungen.join(", ")}`,
     );
     renderFinancialCheckList(elements.missingReceiptList, payload.missing_receipts, () => "Beleg fehlt");
+    renderExpenseCategories(payload.expense_categories || []);
     elements.missingAssignmentCount.textContent = integerFormatter.format(payload.missing_assignment_count);
     elements.missingReceiptCount.textContent = integerFormatter.format(payload.missing_receipt_count);
   } catch (error) {
     showError(error.message);
+  }
+}
+
+function renderExpenseCategories(categories) {
+  elements.expenseCategoryList.replaceChildren();
+  if (!categories.length) {
+    elements.expenseCategoryList.append(
+      mailElement("p", "dashboard-preview-empty", "Keine Ausgaben im Zeitraum."),
+    );
+    return;
+  }
+  for (const category of categories) {
+    const item = mailElement("div", "financial-check-item");
+    const topCategory = category.oberkategorie || "Ohne Oberkategorie";
+    const subCategory = category.unterkategorie || "Ohne Unterkategorie";
+    item.append(
+      mailElement("strong", "", `${topCategory} · ${subCategory}`),
+      mailElement(
+        "span",
+        "",
+        `${formatOptionalCurrency(category.ausgaben)} · ${integerFormatter.format(category.transaction_count)} Transaktionen`,
+      ),
+    );
+    elements.expenseCategoryList.append(item);
   }
 }
 
