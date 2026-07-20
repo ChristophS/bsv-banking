@@ -1,18 +1,10 @@
 # Backlog
 
+**Planungsstatus:** strukturiert
+
 Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen später separat bearbeitet werden.
 
-## 1. Vorgang beim Erstellen direkt erstellen und abschließen
-
-**Priorität:** hoch
-
-**Grund:** Beim Erstellen eines Vorgangs soll eine Aktion „Vorgang erstellen und abschließen“ verfügbar sein. Diese bereits früher gewünschte Funktion fehlt offenbar noch.
-
-**Feedback:**
-
-- Ich möchte gerne beim Erstellen eines Vorgangs einen Button haben: „Vorgang erstellen und abschließen“.
-
-## 2. Dokumente ohne Vorgang speichern
+## 1. Dokumente ohne Vorgang speichern
 
 **Priorität:** hoch
 
@@ -22,7 +14,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Ich möchte gerne Dokumente speichern können ohne einen Vorgang anzulegen.
 
-## 3. Nullbuchungen aus zwei ausgeglichenen Transaktionen erfassen
+## 2. Nullbuchungen aus zwei ausgeglichenen Transaktionen erfassen
 
 **Priorität:** hoch
 
@@ -34,7 +26,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Zwei Transaktionen fasse ich zusammen, die ergeben zusammen 0 € und sollen als ein Vorgang zusammengefasst und erledigt werden.
 - Transaktionstyp „Nullbuchung“, Oberkategorie „Sonstiges“, Unterkategorie „Nullbuchung“, Sphäre „Ideeller Bereich“.
 
-## 4. Transaktionssuche bei der Vorgangszuordnung korrigieren
+## 3. Transaktionssuche bei der Vorgangszuordnung korrigieren
 
 **Priorität:** hoch
 
@@ -45,7 +37,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Wenn ich einem Vorgang eine Transaktion zuordnen will, findet die Suche nichts.
 - Ich gebe zum Beispiel den Betrag ein und es bleibt ohne Treffer.
 
-## 5. Finanzübersicht: fehlende Zuordnungen und Belege aggregieren
+## 4. Finanzübersicht: fehlende Zuordnungen und Belege aggregieren
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -65,7 +57,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Man soll zunächst sehen welche Zuordnungen fehlen.
 - Dann bei welchen Transaktionen Belege fehlen.
 
-## 6. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
+## 5. Finanzübersicht: Ausgaben nach Ober- und Unterkategorie anzeigen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -84,7 +76,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 - Wie viel in jeder Oberkategorie (Ober- und Unterkategorie Kombination) ausgegeben wurde.
 - Wenn eine Transaktion mehrere Vorgänge hat, so soll diese auch nur einmal angezeigt werden.
 
-## 7. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
+## 6. Finanzübersicht: Transaktionsdetails mit Dokumenten bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
@@ -102,7 +94,7 @@ Diese Punkte wurden nicht in das nächste Arbeitspaket aufgenommen und sollen sp
 
 - Dann kann man auf Einzelebene mit den Dokumenten runter.
 
-## 8. Finanzübersicht als Excel-kompatiblen Export bereitstellen
+## 7. Finanzübersicht als Excel-kompatiblen Export bereitstellen
 
 **Epic-ID:** epic-finanzuebersicht
 
