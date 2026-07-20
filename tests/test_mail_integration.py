@@ -1709,6 +1709,56 @@ class MailIntegrationHTTPTests(unittest.TestCase):
         self.assertTrue(payload["marked_read"])
         self.assertEqual(["mail-1"], self.backend.read)
 
+    def test_mail_is_marked_read_after_vorgang_import(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": {"title": "Vorgang aus Mail"},
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {},
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with urlopen(import_request, timeout=5) as response:
+            self.assertEqual(201, response.status)
+
+        self.assertEqual(["mail-1"], self.backend.read)
+
+    def test_failed_vorgang_import_does_not_mark_mail_read(self):
+        with urlopen(self.base_url + "/api/mail", timeout=5) as response:
+            inbox_id = json.load(response)["messages"][0]["id"]
+        self.server.data_store.create_vorgang = Mock(
+            side_effect=ValueError("Vorgang konnte nicht erstellt werden.")
+        )
+        import_request = Request(
+            self.base_url + f"/api/mail/{inbox_id}/vorgang-import",
+            data=json.dumps(
+                {
+                    "vorgang": {"title": "Fehlerhafter Vorgang"},
+                    "documents": [],
+                    "todos": [],
+                    "termine": [],
+                    "links": {},
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with self.assertRaises(HTTPError) as raised:
+            urlopen(import_request, timeout=5)
+
+        self.assertEqual(400, raised.exception.code)
+        self.assertEqual([], self.backend.read)
+
     def test_stale_mail_removed_disappears_from_visible_mail_overview(self):
         self.backend.messages.append(
             {
