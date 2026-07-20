@@ -1,3 +1,1 @@
-# Review Backlog Suggestions
-
-Keine offenen Review-Vorschläge.
+Als spätere Verbesserung kann ein dedizierter Browser- oder JavaScript-Verhaltenstest ergänzt werden, der beide Submit-Aktionen mit Mock-Requests ausführt und die exakten Payloads sowie die Fehlerbehandlung prüft.
